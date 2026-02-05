@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Table,
   TableBody,
   TableCell,
@@ -21,8 +31,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, FileText, Calendar, Eye } from 'lucide-react';
+import { Search, FileText, Calendar, Eye, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 
 interface Bill {
   id: string;
@@ -50,6 +61,8 @@ export default function BillsHistory() {
   const { data: settings } = useBusinessSettings();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
+  const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
+  const queryClient = useQueryClient();
 
   const currencySymbol = settings?.currency_symbol || '₹';
 
@@ -77,6 +90,41 @@ export default function BillsHistory() {
       return data as BillItem[];
     },
     enabled: !!selectedBill,
+  });
+
+  // Delete bill mutation
+  const deleteBillMutation = useMutation({
+    mutationFn: async (billId: string) => {
+      // First delete bill items
+      const { error: itemsError } = await supabase
+        .from('bill_items')
+        .delete()
+        .eq('bill_id', billId);
+      if (itemsError) throw itemsError;
+
+      // Then delete the bill
+      const { error: billError } = await supabase
+        .from('bills')
+        .delete()
+        .eq('id', billId);
+      if (billError) throw billError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bills'] });
+      toast({
+        title: 'Bill deleted',
+        description: 'The bill has been permanently deleted.',
+      });
+      setBillToDelete(null);
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete bill. You may not have permission.',
+        variant: 'destructive',
+      });
+      console.error('Delete error:', error);
+    },
   });
 
   const filteredBills = bills.filter(
@@ -164,13 +212,23 @@ export default function BillsHistory() {
                         {currencySymbol}{Number(bill.total_amount).toFixed(2)}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setSelectedBill(bill)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setSelectedBill(bill)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setBillToDelete(bill)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -250,6 +308,27 @@ export default function BillsHistory() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!billToDelete} onOpenChange={() => setBillToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Bill #{billToDelete?.bill_number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the bill and all its items.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => billToDelete && deleteBillMutation.mutate(billToDelete.id)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteBillMutation.isPending ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
