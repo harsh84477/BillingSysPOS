@@ -280,8 +280,25 @@ export default function Billing() {
       printWindow.document.write(printContent);
       printWindow.document.close();
       printWindow.focus();
-      printWindow.print();
-      printWindow.close();
+      
+      // Wait for content to load before printing, then close after print dialog
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+      
+      // Also try to print after a short delay as fallback for browsers that don't fire onload
+      setTimeout(() => {
+        try {
+          printWindow.print();
+        } catch (e) {
+          // Already printed or window closed
+        }
+      }, 500);
+      
+      // Close window after print dialog is dismissed
+      printWindow.onafterprint = () => {
+        printWindow.close();
+      };
     }
   };
 
