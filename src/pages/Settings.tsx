@@ -408,6 +408,55 @@ export default function Settings() {
                 </form>
               </CardContent>
             </Card>
+
+            {/* Billing Display Options */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5" />
+                  Billing Display Options
+                </CardTitle>
+                <CardDescription>
+                  Control which fields are visible in the billing screen
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Show GST in Billing</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Display GST percentage input field in the billing screen
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings?.show_gst_in_billing ?? true}
+                    onCheckedChange={(checked) => {
+                      if (isAdmin) {
+                        updateSettings.mutate({ show_gst_in_billing: checked });
+                      }
+                    }}
+                    disabled={!isAdmin}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>Show Discount in Billing</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Display discount input field in the billing screen
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings?.show_discount_in_billing ?? true}
+                    onCheckedChange={(checked) => {
+                      if (isAdmin) {
+                        updateSettings.mutate({ show_discount_in_billing: checked });
+                      }
+                    }}
+                    disabled={!isAdmin}
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 

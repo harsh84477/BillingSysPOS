@@ -17,6 +17,8 @@ export interface BusinessSettings {
   bill_prefix: string;
   next_bill_number: number;
   theme: string;
+  show_gst_in_billing: boolean;
+  show_discount_in_billing: boolean;
   created_at: string;
   updated_at: string;
 }
