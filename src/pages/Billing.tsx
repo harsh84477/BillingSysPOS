@@ -191,9 +191,98 @@ export default function Billing() {
     generateBillNumber().then(setPreviewBillNumber);
   }, []);
 
+  // Print bill function
+  const printBill = (billNumber: string) => {
+    const printContent = `
+      <html>
+        <head>
+          <title>Bill #${billNumber}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; max-width: 300px; margin: 0 auto; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .header h1 { margin: 0; font-size: 18px; }
+            .header p { margin: 5px 0; font-size: 12px; color: #666; }
+            .bill-info { border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 10px 0; margin: 10px 0; }
+            .bill-info p { margin: 3px 0; font-size: 12px; }
+            .items { margin: 15px 0; }
+            .item { display: flex; justify-content: space-between; font-size: 12px; margin: 5px 0; }
+            .item-name { flex: 1; }
+            .item-qty { width: 40px; text-align: center; }
+            .item-price { width: 70px; text-align: right; }
+            .totals { border-top: 1px dashed #000; padding-top: 10px; margin-top: 10px; }
+            .total-row { display: flex; justify-content: space-between; font-size: 12px; margin: 3px 0; }
+            .grand-total { font-size: 16px; font-weight: bold; border-top: 1px solid #000; padding-top: 5px; margin-top: 5px; }
+            .footer { text-align: center; margin-top: 20px; font-size: 11px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>${settings?.business_name || 'My Business'}</h1>
+            ${settings?.address ? `<p>${settings.address}</p>` : ''}
+            ${settings?.phone ? `<p>Ph: ${settings.phone}</p>` : ''}
+          </div>
+          <div class="bill-info">
+            <p><strong>Bill #:</strong> ${billNumber}</p>
+            <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN')}</p>
+            <p><strong>Time:</strong> ${new Date().toLocaleTimeString('en-IN')}</p>
+            ${customerName || selectedCustomer?.name ? `<p><strong>Customer:</strong> ${customerName || selectedCustomer?.name}</p>` : ''}
+          </div>
+          <div class="items">
+            <div class="item" style="font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px;">
+              <span class="item-name">Item</span>
+              <span class="item-qty">Qty</span>
+              <span class="item-price">Amount</span>
+            </div>
+            ${cart.map(item => `
+              <div class="item">
+                <span class="item-name">${item.name}</span>
+                <span class="item-qty">${item.quantity}</span>
+                <span class="item-price">₹${(item.unitPrice * item.quantity).toFixed(2)}</span>
+              </div>
+            `).join('')}
+          </div>
+          <div class="totals">
+            <div class="total-row">
+              <span>Subtotal:</span>
+              <span>₹${cartCalculations.subtotal.toFixed(2)}</span>
+            </div>
+            ${discountValue > 0 ? `
+              <div class="total-row">
+                <span>Discount:</span>
+                <span>-₹${cartCalculations.discountAmount.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            ${gstPercent > 0 ? `
+              <div class="total-row">
+                <span>GST (${gstPercent}%):</span>
+                <span>₹${cartCalculations.taxAmount.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            <div class="total-row grand-total">
+              <span>Total:</span>
+              <span>₹${cartCalculations.total.toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="footer">
+            <p>Thank you for your purchase!</p>
+          </div>
+        </body>
+      </html>
+    `;
+    
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    }
+  };
+
   // Create bill mutation
   const createBillMutation = useMutation({
-    mutationFn: async (status: 'draft' | 'completed') => {
+    mutationFn: async (shouldPrint: boolean) => {
       const billNumber = await generateBillNumber();
 
       const { data: bill, error: billError } = await supabase
@@ -202,14 +291,14 @@ export default function Billing() {
           bill_number: billNumber,
           customer_id: selectedCustomerId,
           created_by: user?.id,
-          status,
+          status: 'completed' as const,
           subtotal: cartCalculations.subtotal,
           discount_type: 'flat',
           discount_value: discountValue,
           discount_amount: cartCalculations.discountAmount,
           tax_amount: cartCalculations.taxAmount,
           total_amount: cartCalculations.total,
-          completed_at: status === 'completed' ? new Date().toISOString() : null,
+          completed_at: new Date().toISOString(),
         })
         .select()
         .single();
@@ -232,22 +321,24 @@ export default function Billing() {
 
       if (itemsError) throw itemsError;
 
-      if (status === 'completed') {
-        for (const item of cart) {
-          const product = products.find((p) => p.id === item.productId);
-          if (product) {
-            const newQuantity = product.stock_quantity - item.quantity;
-            await supabase
-              .from('products')
-              .update({ stock_quantity: newQuantity })
-              .eq('id', item.productId);
-          }
+      // Update stock quantities
+      for (const item of cart) {
+        const product = products.find((p) => p.id === item.productId);
+        if (product) {
+          const newQuantity = product.stock_quantity - item.quantity;
+          await supabase
+            .from('products')
+            .update({ stock_quantity: newQuantity })
+            .eq('id', item.productId);
         }
       }
 
-      return bill;
+      return { bill, billNumber, shouldPrint };
     },
-    onSuccess: (_, status) => {
+    onSuccess: ({ billNumber, shouldPrint }) => {
+      if (shouldPrint) {
+        printBill(billNumber);
+      }
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
       setCart([]);
@@ -256,7 +347,7 @@ export default function Billing() {
       setDiscountValue(0);
       setGstPercent(0);
       generateBillNumber().then(setPreviewBillNumber);
-      toast.success(status === 'completed' ? 'Bill saved & printed!' : 'Bill saved as draft');
+      toast.success(shouldPrint ? 'Bill saved & printed!' : 'Bill saved successfully!');
     },
     onError: (error: Error) => {
       toast.error(`Error: ${error.message}`);
@@ -516,7 +607,7 @@ export default function Billing() {
                   variant="outline"
                   className="flex-1"
                   disabled={cart.length === 0 || createBillMutation.isPending}
-                  onClick={() => createBillMutation.mutate('draft')}
+                  onClick={() => createBillMutation.mutate(false)}
                 >
                   <Save className="mr-2 h-4 w-4" />
                   Save Bill
@@ -524,7 +615,7 @@ export default function Billing() {
                 <Button
                   className="flex-1"
                   disabled={cart.length === 0 || createBillMutation.isPending}
-                  onClick={() => createBillMutation.mutate('completed')}
+                  onClick={() => createBillMutation.mutate(true)}
                 >
                   <Printer className="mr-2 h-4 w-4" />
                   Save & Print
@@ -658,7 +749,7 @@ export default function Billing() {
                 variant="outline"
                 className="flex-1"
                 disabled={cart.length === 0 || createBillMutation.isPending}
-                onClick={() => createBillMutation.mutate('draft')}
+                onClick={() => createBillMutation.mutate(false)}
               >
                 <Save className="mr-2 h-4 w-4" />
                 Save
@@ -666,7 +757,7 @@ export default function Billing() {
               <Button
                 className="flex-1"
                 disabled={cart.length === 0 || createBillMutation.isPending}
-                onClick={() => createBillMutation.mutate('completed')}
+                onClick={() => createBillMutation.mutate(true)}
               >
                 <Printer className="mr-2 h-4 w-4" />
                 Save & Print
