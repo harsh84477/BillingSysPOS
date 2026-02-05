@@ -29,13 +29,17 @@ import {
   ChevronDown,
   Palette,
   User,
+  FileText,
+  FolderOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Billing', href: '/billing', icon: ShoppingCart },
+  { name: 'New Bill', href: '/billing', icon: ShoppingCart },
+  { name: 'Bills History', href: '/bills-history', icon: FileText },
   { name: 'Products', href: '/products', icon: Package },
+  { name: 'Categories', href: '/categories', icon: FolderOpen },
   { name: 'Customers', href: '/customers', icon: Users },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];

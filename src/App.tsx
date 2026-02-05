@@ -10,7 +10,9 @@ import AppLayout from "@/components/layout/AppLayout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Billing from "./pages/Billing";
+import BillsHistory from "./pages/BillsHistory";
 import Products from "./pages/Products";
+import Categories from "./pages/Categories";
 import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -37,7 +39,9 @@ const App = () => (
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/billing" element={<Billing />} />
+                <Route path="/bills-history" element={<BillsHistory />} />
                 <Route path="/products" element={<Products />} />
+                <Route path="/categories" element={<Categories />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>

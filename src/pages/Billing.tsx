@@ -5,22 +5,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -34,12 +25,12 @@ import {
   Plus,
   Minus,
   Trash2,
-  User,
   ShoppingCart,
-  FileText,
   Save,
-  CheckCircle,
-  Filter,
+  Printer,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
   Package,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -61,10 +52,12 @@ export default function Billing() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [discountType, setDiscountType] = useState<'flat' | 'percent'>('flat');
+  const [customerName, setCustomerName] = useState('');
   const [discountValue, setDiscountValue] = useState(0);
+  const [gstPercent, setGstPercent] = useState(0);
+  const [isCartExpanded, setIsCartExpanded] = useState(true);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -106,9 +99,8 @@ export default function Billing() {
     },
   });
 
-  const currencySymbol = settings?.currency_symbol || '$';
-  const taxRate = settings?.tax_rate || 0;
-  const taxInclusive = settings?.tax_inclusive || false;
+  const currencySymbol = '₹';
+  const taxRate = gstPercent || settings?.tax_rate || 0;
 
   // Filter products
   const filteredProducts = useMemo(() => {
@@ -122,15 +114,13 @@ export default function Billing() {
   // Cart calculations
   const cartCalculations = useMemo(() => {
     const subtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-    const discountAmount = discountType === 'percent' 
-      ? (subtotal * discountValue) / 100 
-      : discountValue;
+    const discountAmount = discountValue;
     const afterDiscount = subtotal - discountAmount;
-    const taxAmount = taxInclusive ? 0 : (afterDiscount * taxRate) / 100;
+    const taxAmount = (afterDiscount * taxRate) / 100;
     const total = afterDiscount + taxAmount;
 
     return { subtotal, discountAmount, taxAmount, total };
-  }, [cart, discountType, discountValue, taxRate, taxInclusive]);
+  }, [cart, discountValue, taxRate]);
 
   // Add to cart
   const addToCart = (product: typeof products[0]) => {
@@ -181,7 +171,6 @@ export default function Billing() {
     const day = String(today.getDate()).padStart(2, '0');
     const datePrefix = `${month}${day}`;
 
-    // Get today's bills count to determine sequence
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
     const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
 
@@ -195,13 +184,18 @@ export default function Billing() {
     return `${datePrefix}${String(sequence).padStart(4, '0')}`;
   };
 
+  // Get current preview bill number
+  const [previewBillNumber, setPreviewBillNumber] = useState('');
+  
+  React.useEffect(() => {
+    generateBillNumber().then(setPreviewBillNumber);
+  }, []);
+
   // Create bill mutation
   const createBillMutation = useMutation({
     mutationFn: async (status: 'draft' | 'completed') => {
-      // Get date-based bill number
       const billNumber = await generateBillNumber();
 
-      // Create bill
       const { data: bill, error: billError } = await supabase
         .from('bills')
         .insert({
@@ -210,7 +204,7 @@ export default function Billing() {
           created_by: user?.id,
           status,
           subtotal: cartCalculations.subtotal,
-          discount_type: discountType,
+          discount_type: 'flat',
           discount_value: discountValue,
           discount_amount: cartCalculations.discountAmount,
           tax_amount: cartCalculations.taxAmount,
@@ -222,7 +216,6 @@ export default function Billing() {
 
       if (billError) throw billError;
 
-      // Create bill items
       const billItems = cart.map((item) => ({
         bill_id: bill.id,
         product_id: item.productId,
@@ -239,8 +232,6 @@ export default function Billing() {
 
       if (itemsError) throw itemsError;
 
-
-      // If completed, deduct stock
       if (status === 'completed') {
         for (const item of cart) {
           const product = products.find((p) => p.id === item.productId);
@@ -259,11 +250,13 @@ export default function Billing() {
     onSuccess: (_, status) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
-      queryClient.invalidateQueries({ queryKey: ['businessSettings'] });
       setCart([]);
+      setCustomerName('');
       setSelectedCustomerId(null);
       setDiscountValue(0);
-      toast.success(status === 'completed' ? 'Bill completed!' : 'Bill saved as draft');
+      setGstPercent(0);
+      generateBillNumber().then(setPreviewBillNumber);
+      toast.success(status === 'completed' ? 'Bill saved & printed!' : 'Bill saved as draft');
     },
     onError: (error: Error) => {
       toast.error(`Error: ${error.message}`);
@@ -271,90 +264,103 @@ export default function Billing() {
   });
 
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] gap-4">
-      {/* Left Panel - Filters (Hidden on mobile, shown in sheet) */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button variant="outline" size="icon" className="lg:hidden fixed bottom-20 left-4 z-50 h-12 w-12 rounded-full shadow-lg">
-            <Filter className="h-5 w-5" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-64">
-          <SheetHeader>
-            <SheetTitle>Filters</SheetTitle>
-          </SheetHeader>
-          <FilterPanel
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-          />
-        </SheetContent>
-      </Sheet>
+    <div className="flex h-[calc(100vh-7rem)] gap-0">
+      {/* Left Panel - Categories */}
+      <div className="hidden lg:flex w-52 flex-shrink-0 flex-col border-r border-border bg-card">
+        <ScrollArea className="flex-1 p-2">
+          <div className="space-y-1">
+            {/* All Items Button */}
+            <button
+              onClick={() => setSelectedCategory('all')}
+              className={cn(
+                'flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all',
+                selectedCategory === 'all'
+                  ? 'bg-primary text-primary-foreground shadow-md'
+                  : 'hover:bg-accent'
+              )}
+            >
+              <Sparkles className="h-4 w-4" />
+              All Items
+            </button>
 
-      <Card className="hidden lg:flex w-56 flex-shrink-0 flex-col">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Categories</CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 p-2">
-          <FilterPanel
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-          />
-        </CardContent>
-      </Card>
+            {/* Category Buttons */}
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all',
+                  selectedCategory === category.id
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'hover:bg-accent'
+                )}
+              >
+                <span
+                  className="h-4 w-4 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: category.color || '#3B82F6' }}
+                />
+                <span className="truncate">{category.name}</span>
+              </button>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
 
       {/* Center Panel - Products */}
-      <div className="flex flex-1 flex-col gap-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+      <div className="flex flex-1 flex-col">
+        {/* Search Bar */}
+        <div className="p-3 border-b border-border bg-card">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-background"
+            />
+          </div>
         </div>
 
-        <ScrollArea className="flex-1">
+        {/* Products Grid */}
+        <ScrollArea className="flex-1 p-3">
           {filteredProducts.length === 0 ? (
             <div className="flex h-40 items-center justify-center text-muted-foreground">
               <Package className="mr-2 h-5 w-5" />
               No products found
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
               {filteredProducts.map((product) => (
                 <button
                   key={product.id}
                   onClick={() => addToCart(product)}
-                  className="flex flex-col rounded-lg border border-border bg-card p-3 text-left transition-all hover:border-primary hover:shadow-md"
+                  className="relative flex flex-col items-center rounded-lg border border-border bg-card p-2 text-center transition-all hover:border-primary hover:shadow-md group"
                 >
-                  <div className="flex items-start justify-between">
-                    <span className="font-medium text-sm line-clamp-2">{product.name}</span>
-                  </div>
-                  {product.categories && (
-                    <Badge
-                      variant="secondary"
-                      className="mt-1 w-fit text-xs"
-                      style={{ 
-                        backgroundColor: product.categories.color + '20',
-                        color: product.categories.color
-                      }}
-                    >
-                      {product.categories.name}
-                    </Badge>
-                  )}
-                  <div className="mt-auto pt-2 flex items-center justify-between">
-                    <span className="text-lg font-bold text-primary">
-                      {currencySymbol}{Number(product.selling_price).toFixed(2)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      Stock: {product.stock_quantity}
-                    </span>
-                  </div>
+                  {/* Stock Badge */}
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      'absolute -top-1 -right-1 text-[10px] px-1.5 py-0',
+                      product.stock_quantity <= product.low_stock_threshold
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-green-100 text-green-700'
+                    )}
+                  >
+                    {product.stock_quantity <= product.low_stock_threshold ? `${product.stock_quantity}` : `${product.stock_quantity}+`}
+                  </Badge>
+
+                  {/* Product Name */}
+                  <span className="text-xs font-medium line-clamp-2 mt-1 min-h-[2rem]">
+                    {product.name}
+                  </span>
+
+                  {/* Price */}
+                  <span className="text-sm font-bold text-primary mt-1">
+                    {currencySymbol}{Number(product.selling_price).toFixed(0)}
+                  </span>
                 </button>
               ))}
             </div>
@@ -362,191 +368,180 @@ export default function Billing() {
         </ScrollArea>
       </div>
 
-      {/* Right Panel - Cart */}
-      <Card className="hidden md:flex w-80 flex-shrink-0 flex-col lg:w-96">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <ShoppingCart className="h-5 w-5" />
-              Current Bill
-            </CardTitle>
-            <Badge variant="secondary">{cart.length} items</Badge>
-          </div>
-        </CardHeader>
+      {/* Right Panel - Cart (Collapsible) */}
+      <div
+        className={cn(
+          'hidden md:flex flex-col border-l border-border bg-card transition-all duration-300',
+          isCartExpanded ? 'w-80 lg:w-96' : 'w-12'
+        )}
+      >
+        {/* Collapse/Expand Button */}
+        <button
+          onClick={() => setIsCartExpanded(!isCartExpanded)}
+          className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-full z-10 bg-primary text-primary-foreground rounded-l-md p-1 shadow-md hover:bg-primary/90"
+          style={{ marginRight: isCartExpanded ? '24rem' : '3rem' }}
+        >
+          {isCartExpanded ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </button>
 
-        <CardContent className="flex flex-1 flex-col gap-4 overflow-hidden p-4">
-          {/* Customer Selection */}
-          <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" className="w-full justify-start">
-                <User className="mr-2 h-4 w-4" />
-                {selectedCustomer ? selectedCustomer.name : 'Select Customer'}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Select Customer</DialogTitle>
-              </DialogHeader>
-              <ScrollArea className="max-h-64">
-                <div className="space-y-2">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      setSelectedCustomerId(null);
-                      setIsCustomerDialogOpen(false);
-                    }}
-                  >
-                    Walk-in Customer
-                  </Button>
-                  {customers.map((customer) => (
-                    <Button
-                      key={customer.id}
-                      variant={selectedCustomerId === customer.id ? 'secondary' : 'ghost'}
-                      className="w-full justify-start"
-                      onClick={() => {
-                        setSelectedCustomerId(customer.id);
-                        setIsCustomerDialogOpen(false);
-                      }}
+        {isCartExpanded ? (
+          <>
+            {/* Bill Header */}
+            <div className="p-4 border-b border-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-bold">Bill #{previewBillNumber}</h2>
+                  <p className="text-sm text-muted-foreground">{totalItems} items</p>
+                </div>
+                <ShoppingCart className="h-6 w-6 text-muted-foreground" />
+              </div>
+            </div>
+
+            {/* Customer Name Input */}
+            <div className="px-4 py-2 border-b border-border">
+              <Input
+                placeholder="Customer name"
+                value={customerName || selectedCustomer?.name || ''}
+                onChange={(e) => setCustomerName(e.target.value)}
+                onClick={() => setIsCustomerDialogOpen(true)}
+                className="bg-background"
+              />
+            </div>
+
+            {/* Cart Items */}
+            <ScrollArea className="flex-1 px-4">
+              {cart.length === 0 ? (
+                <div className="flex flex-col h-40 items-center justify-center text-muted-foreground">
+                  <ShoppingCart className="h-12 w-12 mb-2 opacity-20" />
+                  <p>Cart is empty</p>
+                  <p className="text-xs">Tap products to add</p>
+                </div>
+              ) : (
+                <div className="space-y-2 py-2">
+                  {cart.map((item) => (
+                    <div
+                      key={item.productId}
+                      className="flex items-center gap-2 rounded-lg border border-border p-2 bg-background"
                     >
-                      <div className="text-left">
-                        <div>{customer.name}</div>
-                        {customer.phone && (
-                          <div className="text-xs text-muted-foreground">{customer.phone}</div>
-                        )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {currencySymbol}{item.unitPrice.toFixed(0)} × {item.quantity} = {currencySymbol}{(item.unitPrice * item.quantity).toFixed(0)}
+                        </p>
                       </div>
-                    </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => updateQuantity(item.productId, -1)}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-6 text-center text-sm font-medium">
+                          {item.quantity}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => updateQuantity(item.productId, 1)}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-destructive"
+                          onClick={() => removeFromCart(item.productId)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
                   ))}
                 </div>
-              </ScrollArea>
-            </DialogContent>
-          </Dialog>
+              )}
+            </ScrollArea>
 
-          {/* Cart Items */}
-          <ScrollArea className="flex-1">
-            {cart.length === 0 ? (
-              <div className="flex h-40 items-center justify-center text-muted-foreground">
-                Cart is empty
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {cart.map((item) => (
-                  <div
-                    key={item.productId}
-                    className="flex items-center gap-2 rounded-lg border border-border p-2"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{item.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {currencySymbol}{item.unitPrice.toFixed(2)} × {item.quantity}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => updateQuantity(item.productId, -1)}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-8 text-center text-sm font-medium">
-                        {item.quantity}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => updateQuantity(item.productId, 1)}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive"
-                        onClick={() => removeFromCart(item.productId)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-
-          {/* Discount */}
-          <div className="flex gap-2">
-            <Select
-              value={discountType}
-              onValueChange={(v) => setDiscountType(v as 'flat' | 'percent')}
-            >
-              <SelectTrigger className="w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="flat">{currencySymbol}</SelectItem>
-                <SelectItem value="percent">%</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              type="number"
-              placeholder="Discount"
-              value={discountValue || ''}
-              onChange={(e) => setDiscountValue(Number(e.target.value))}
-              min={0}
-            />
-          </div>
-
-          {/* Totals */}
-          <div className="space-y-1 border-t border-border pt-3">
-            <div className="flex justify-between text-sm">
-              <span>Subtotal</span>
-              <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
-            </div>
-            {cartCalculations.discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-destructive">
-                <span>Discount</span>
-                <span>-{currencySymbol}{cartCalculations.discountAmount.toFixed(2)}</span>
-              </div>
-            )}
-            {!taxInclusive && cartCalculations.taxAmount > 0 && (
+            {/* Totals Section */}
+            <div className="p-4 border-t border-border space-y-3">
+              {/* Subtotal */}
               <div className="flex justify-between text-sm">
-                <span>{settings?.tax_name || 'Tax'} ({taxRate}%)</span>
-                <span>{currencySymbol}{cartCalculations.taxAmount.toFixed(2)}</span>
+                <span>Subtotal</span>
+                <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
               </div>
-            )}
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total</span>
-              <span className="text-primary">
-                {currencySymbol}{cartCalculations.total.toFixed(2)}
-              </span>
-            </div>
-          </div>
 
-          {/* Actions */}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="flex-1"
-              disabled={cart.length === 0 || createBillMutation.isPending}
-              onClick={() => createBillMutation.mutate('draft')}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              Save Draft
-            </Button>
-            <Button
-              className="flex-1"
-              disabled={cart.length === 0 || createBillMutation.isPending}
-              onClick={() => createBillMutation.mutate('completed')}
-            >
-              <CheckCircle className="mr-2 h-4 w-4" />
-              Complete
-            </Button>
+              {/* Discount Input */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm">Discount</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm">{currencySymbol}</span>
+                  <Input
+                    type="number"
+                    value={discountValue || ''}
+                    onChange={(e) => setDiscountValue(Number(e.target.value))}
+                    className="w-20 h-8 text-right"
+                    min={0}
+                  />
+                </div>
+              </div>
+
+              {/* GST Input */}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm">GST %</span>
+                <div className="flex items-center gap-1">
+                  <Input
+                    type="number"
+                    value={gstPercent || ''}
+                    onChange={(e) => setGstPercent(Number(e.target.value))}
+                    className="w-20 h-8 text-right"
+                    min={0}
+                  />
+                  <span className="text-sm">%</span>
+                </div>
+              </div>
+
+              {/* Total */}
+              <div className="flex justify-between text-xl font-bold pt-2 border-t">
+                <span>Total</span>
+                <span className="text-primary">
+                  {currencySymbol}{cartCalculations.total.toFixed(2)}
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  disabled={cart.length === 0 || createBillMutation.isPending}
+                  onClick={() => createBillMutation.mutate('draft')}
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Bill
+                </Button>
+                <Button
+                  className="flex-1"
+                  disabled={cart.length === 0 || createBillMutation.isPending}
+                  onClick={() => createBillMutation.mutate('completed')}
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  Save & Print
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Collapsed state - just show cart icon */
+          <div className="flex flex-col items-center py-4">
+            <ShoppingCart className="h-6 w-6 text-muted-foreground" />
+            {cart.length > 0 && (
+              <Badge className="mt-2">{cart.length}</Badge>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
 
       {/* Mobile Cart Button */}
       <Sheet>
@@ -566,22 +561,16 @@ export default function Billing() {
         <SheetContent side="right" className="w-full sm:max-w-md p-0">
           <SheetHeader className="p-4 border-b">
             <SheetTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
-              Current Bill ({cart.length} items)
+              Bill #{previewBillNumber} ({totalItems} items)
             </SheetTitle>
           </SheetHeader>
           <div className="flex flex-col h-[calc(100%-4rem)] p-4 gap-4">
-            {/* Customer Selection - Mobile */}
-            <Button 
-              variant="outline" 
-              className="w-full justify-start"
-              onClick={() => setIsCustomerDialogOpen(true)}
-            >
-              <User className="mr-2 h-4 w-4" />
-              {selectedCustomer ? selectedCustomer.name : 'Select Customer'}
-            </Button>
+            <Input
+              placeholder="Customer name"
+              value={customerName || selectedCustomer?.name || ''}
+              onChange={(e) => setCustomerName(e.target.value)}
+            />
 
-            {/* Cart Items - Mobile */}
             <ScrollArea className="flex-1">
               {cart.length === 0 ? (
                 <div className="flex h-40 items-center justify-center text-muted-foreground">
@@ -597,7 +586,7 @@ export default function Billing() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{item.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {currencySymbol}{item.unitPrice.toFixed(2)} × {item.quantity}
+                          {currencySymbol}{item.unitPrice.toFixed(0)} × {item.quantity}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
@@ -633,56 +622,37 @@ export default function Billing() {
               )}
             </ScrollArea>
 
-            {/* Discount - Mobile */}
-            <div className="flex gap-2">
-              <Select
-                value={discountType}
-                onValueChange={(v) => setDiscountType(v as 'flat' | 'percent')}
-              >
-                <SelectTrigger className="w-24">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="flat">{currencySymbol}</SelectItem>
-                  <SelectItem value="percent">%</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                type="number"
-                placeholder="Discount"
-                value={discountValue || ''}
-                onChange={(e) => setDiscountValue(Number(e.target.value))}
-                min={0}
-              />
-            </div>
-
-            {/* Totals - Mobile */}
-            <div className="space-y-1 border-t border-border pt-3">
+            <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
                 <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
               </div>
-              {cartCalculations.discountAmount > 0 && (
-                <div className="flex justify-between text-sm text-destructive">
-                  <span>Discount</span>
-                  <span>-{currencySymbol}{cartCalculations.discountAmount.toFixed(2)}</span>
-                </div>
-              )}
-              {!taxInclusive && cartCalculations.taxAmount > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>{settings?.tax_name || 'Tax'} ({taxRate}%)</span>
-                  <span>{currencySymbol}{cartCalculations.taxAmount.toFixed(2)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-lg font-bold">
+              <div className="flex items-center justify-between">
+                <span className="text-sm">Discount</span>
+                <Input
+                  type="number"
+                  value={discountValue || ''}
+                  onChange={(e) => setDiscountValue(Number(e.target.value))}
+                  className="w-24 h-8"
+                  min={0}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">GST %</span>
+                <Input
+                  type="number"
+                  value={gstPercent || ''}
+                  onChange={(e) => setGstPercent(Number(e.target.value))}
+                  className="w-24 h-8"
+                  min={0}
+                />
+              </div>
+              <div className="flex justify-between text-lg font-bold pt-2 border-t">
                 <span>Total</span>
-                <span className="text-primary">
-                  {currencySymbol}{cartCalculations.total.toFixed(2)}
-                </span>
+                <span className="text-primary">{currencySymbol}{cartCalculations.total.toFixed(2)}</span>
               </div>
             </div>
 
-            {/* Actions - Mobile */}
             <div className="flex gap-2">
               <Button
                 variant="outline"
@@ -691,65 +661,63 @@ export default function Billing() {
                 onClick={() => createBillMutation.mutate('draft')}
               >
                 <Save className="mr-2 h-4 w-4" />
-                Draft
+                Save
               </Button>
               <Button
                 className="flex-1"
                 disabled={cart.length === 0 || createBillMutation.isPending}
                 onClick={() => createBillMutation.mutate('completed')}
               >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Complete
+                <Printer className="mr-2 h-4 w-4" />
+                Save & Print
               </Button>
             </div>
           </div>
         </SheetContent>
       </Sheet>
-    </div>
-  );
-}
 
-function FilterPanel({
-  categories,
-  selectedCategory,
-  onSelectCategory,
-}: {
-  categories: Array<{ id: string; name: string; color: string | null }>;
-  selectedCategory: string;
-  onSelectCategory: (id: string) => void;
-}) {
-  return (
-    <div className="space-y-1">
-      <button
-        onClick={() => onSelectCategory('all')}
-        className={cn(
-          'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
-          selectedCategory === 'all'
-            ? 'bg-primary text-primary-foreground'
-            : 'hover:bg-accent'
-        )}
-      >
-        <Package className="h-4 w-4" />
-        All Products
-      </button>
-      {categories.map((category) => (
-        <button
-          key={category.id}
-          onClick={() => onSelectCategory(category.id)}
-          className={cn(
-            'flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
-            selectedCategory === category.id
-              ? 'bg-primary text-primary-foreground'
-              : 'hover:bg-accent'
-          )}
-        >
-          <span
-            className="h-3 w-3 rounded-full"
-            style={{ backgroundColor: category.color || '#3B82F6' }}
-          />
-          {category.name}
-        </button>
-      ))}
+      {/* Customer Selection Dialog */}
+      <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Select Customer</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-64">
+            <div className="space-y-2">
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => {
+                  setSelectedCustomerId(null);
+                  setCustomerName('');
+                  setIsCustomerDialogOpen(false);
+                }}
+              >
+                Walk-in Customer
+              </Button>
+              {customers.map((customer) => (
+                <Button
+                  key={customer.id}
+                  variant={selectedCustomerId === customer.id ? 'secondary' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => {
+                    setSelectedCustomerId(customer.id);
+                    setCustomerName(customer.name);
+                    setIsCustomerDialogOpen(false);
+                  }}
+                >
+                  <div className="text-left">
+                    <div>{customer.name}</div>
+                    {customer.phone && (
+                      <div className="text-xs text-muted-foreground">{customer.phone}</div>
+                    )}
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
