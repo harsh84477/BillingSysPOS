@@ -140,6 +140,8 @@ export type Database = {
           logo_url: string | null
           next_bill_number: number
           phone: string | null
+          show_discount_in_billing: boolean
+          show_gst_in_billing: boolean
           tax_inclusive: boolean
           tax_name: string
           tax_rate: number
@@ -158,6 +160,8 @@ export type Database = {
           logo_url?: string | null
           next_bill_number?: number
           phone?: string | null
+          show_discount_in_billing?: boolean
+          show_gst_in_billing?: boolean
           tax_inclusive?: boolean
           tax_name?: string
           tax_rate?: number
@@ -176,6 +180,8 @@ export type Database = {
           logo_url?: string | null
           next_bill_number?: number
           phone?: string | null
+          show_discount_in_billing?: boolean
+          show_gst_in_billing?: boolean
           tax_inclusive?: boolean
           tax_name?: string
           tax_rate?: number
