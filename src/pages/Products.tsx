@@ -1,0 +1,397 @@
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useBusinessSettings } from '@/hooks/useBusinessSettings';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Plus, Pencil, Trash2, Package, Search, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
+
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  selling_price: number;
+  cost_price: number;
+  stock_quantity: number;
+  low_stock_threshold: number;
+  category_id: string | null;
+  is_active: boolean;
+  categories?: { name: string; color: string | null } | null;
+}
+
+export default function Products() {
+  const { isAdmin } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: settings } = useBusinessSettings();
+  const currencySymbol = settings?.currency_symbol || '$';
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Fetch categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('sort_order');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch products
+  const { data: products, isLoading } = useQuery({
+    queryKey: ['products', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*, categories(name, color)')
+        .order('name');
+      if (error) throw error;
+      return data as Product[];
+    },
+  });
+
+  // Create/Update product
+  const saveMutation = useMutation({
+    mutationFn: async (product: Partial<Product>) => {
+      if (editingProduct) {
+        const { error } = await supabase
+          .from('products')
+          .update(product)
+          .eq('id', editingProduct.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('products').insert([product as { name: string }]);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setIsDialogOpen(false);
+      setEditingProduct(null);
+      toast.success(editingProduct ? 'Product updated' : 'Product created');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  // Delete product
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Product deleted');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    saveMutation.mutate({
+      name: formData.get('name') as string,
+      description: formData.get('description') as string || null,
+      selling_price: Number(formData.get('selling_price')),
+      cost_price: Number(formData.get('cost_price')),
+      stock_quantity: Number(formData.get('stock_quantity')),
+      low_stock_threshold: Number(formData.get('low_stock_threshold')),
+      category_id: formData.get('category_id') as string || null,
+    });
+  };
+
+  const filteredProducts = products?.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Products</h1>
+          <p className="text-muted-foreground">Manage your product inventory</p>
+        </div>
+
+        {isAdmin && (
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) setEditingProduct(null);
+          }}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingProduct ? 'Edit Product' : 'Add Product'}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name *</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    defaultValue={editingProduct?.name}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    defaultValue={editingProduct?.description || ''}
+                    rows={2}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="selling_price">Selling Price *</Label>
+                    <Input
+                      id="selling_price"
+                      name="selling_price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      defaultValue={editingProduct?.selling_price || 0}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cost_price">Cost Price</Label>
+                    <Input
+                      id="cost_price"
+                      name="cost_price"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      defaultValue={editingProduct?.cost_price || 0}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="stock_quantity">Stock Quantity</Label>
+                    <Input
+                      id="stock_quantity"
+                      name="stock_quantity"
+                      type="number"
+                      min="0"
+                      defaultValue={editingProduct?.stock_quantity || 0}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="low_stock_threshold">Low Stock Alert</Label>
+                    <Input
+                      id="low_stock_threshold"
+                      name="low_stock_threshold"
+                      type="number"
+                      min="0"
+                      defaultValue={editingProduct?.low_stock_threshold || 10}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category_id">Category</Label>
+                  <Select name="category_id" defaultValue={editingProduct?.category_id || ''}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={saveMutation.isPending}>
+                    {saveMutation.isPending ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          ) : filteredProducts && filteredProducts.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className="text-right">Price</TableHead>
+                    <TableHead className="text-right">Stock</TableHead>
+                    {isAdmin && <TableHead className="w-24">Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
+                            <Package className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{product.name}</p>
+                            {product.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-1">
+                                {product.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {product.categories ? (
+                          <Badge
+                            variant="secondary"
+                            style={{
+                              backgroundColor: product.categories.color + '20',
+                              color: product.categories.color || undefined,
+                            }}
+                          >
+                            {product.categories.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {currencySymbol}{Number(product.selling_price).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {product.stock_quantity <= product.low_stock_threshold && (
+                            <AlertTriangle className="h-4 w-4 text-destructive" />
+                          )}
+                          <span
+                            className={
+                              product.stock_quantity <= product.low_stock_threshold
+                                ? 'text-destructive font-medium'
+                                : ''
+                            }
+                          >
+                            {product.stock_quantity}
+                          </span>
+                        </div>
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setEditingProduct(product);
+                                setIsDialogOpen(true);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive"
+                              onClick={() => {
+                                if (confirm('Delete this product?')) {
+                                  deleteMutation.mutate(product.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="flex h-40 items-center justify-center text-muted-foreground">
+              <Package className="mr-2 h-5 w-5" />
+              No products found
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
