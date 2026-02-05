@@ -462,45 +462,18 @@ export default function Billing() {
       {/* Right Panel - Cart (Collapsible) */}
       <div
         className={cn(
-          'hidden md:flex flex-col border-l border-border bg-card transition-all duration-300 relative',
-          isCartExpanded ? 'w-80 lg:w-96' : 'w-14'
+          'hidden md:flex flex-col border-l border-border bg-card transition-all duration-300',
+          isCartExpanded ? 'w-80 lg:w-96' : 'w-12'
         )}
       >
-        {/* Collapse/Expand Button - Fixed at top */}
-        <div className="flex items-center justify-center p-2 border-b border-border">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsCartExpanded(!isCartExpanded)}
-            className="w-full flex items-center justify-center gap-2"
-          >
-            {isCartExpanded ? (
-              <>
-                <ChevronRight className="h-4 w-4" />
-                <span className="text-xs">Collapse</span>
-              </>
-            ) : (
-              <ChevronLeft className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-
-        {/* Collapsed state - show cart icon with badge */}
-        {!isCartExpanded && (
-          <div className="flex flex-col items-center py-4 gap-2">
-            <div className="relative">
-              <ShoppingCart className="h-6 w-6 text-muted-foreground" />
-              {totalItems > 0 && (
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
-                  {totalItems}
-                </Badge>
-              )}
-            </div>
-            <span className="text-xs font-semibold text-primary writing-mode-vertical">
-              {currencySymbol}{cartCalculations.total.toFixed(0)}
-            </span>
-          </div>
-        )}
+        {/* Collapse/Expand Button */}
+        <button
+          onClick={() => setIsCartExpanded(!isCartExpanded)}
+          className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-full z-10 bg-primary text-primary-foreground rounded-l-md p-1 shadow-md hover:bg-primary/90"
+          style={{ marginRight: isCartExpanded ? '24rem' : '3rem' }}
+        >
+          {isCartExpanded ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+        </button>
 
         {isCartExpanded ? (
           <>
