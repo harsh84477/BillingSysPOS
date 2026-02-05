@@ -111,18 +111,18 @@ export default function Billing() {
     });
   }, [products, searchQuery, selectedCategory]);
 
-  // Cart calculations
+  // Cart calculations - using Math.round to avoid floating point issues
   const cartCalculations = useMemo(() => {
-    const subtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-    const discountAmount = discountValue;
+    const subtotal = cart.reduce((sum, item) => sum + Math.round(item.unitPrice) * item.quantity, 0);
+    const discountAmount = Math.round(discountValue);
     const afterDiscount = subtotal - discountAmount;
-    const taxAmount = (afterDiscount * taxRate) / 100;
+    const taxAmount = Math.round((afterDiscount * taxRate) / 100 * 100) / 100;
     const total = afterDiscount + taxAmount;
 
     return { subtotal, discountAmount, taxAmount, total };
   }, [cart, discountValue, taxRate]);
 
-  // Add to cart
+  // Add to cart - round prices to avoid floating point issues
   const addToCart = (product: typeof products[0]) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.productId === product.id);
@@ -138,8 +138,8 @@ export default function Billing() {
         {
           productId: product.id,
           name: product.name,
-          unitPrice: Number(product.selling_price),
-          costPrice: Number(product.cost_price),
+          unitPrice: Math.round(Number(product.selling_price)),
+          costPrice: Math.round(Number(product.cost_price)),
           quantity: 1,
         },
       ];
