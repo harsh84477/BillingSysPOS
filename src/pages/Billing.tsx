@@ -174,11 +174,32 @@ export default function Billing() {
     setCart((prev) => prev.filter((item) => item.productId !== productId));
   };
 
+  // Generate date-based bill number (MMDDXXXX format)
+  const generateBillNumber = async (): Promise<string> => {
+    const today = new Date();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const datePrefix = `${month}${day}`;
+
+    // Get today's bills count to determine sequence
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
+
+    const { count } = await supabase
+      .from('bills')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', startOfDay)
+      .lt('created_at', endOfDay);
+
+    const sequence = (count || 0) + 1;
+    return `${datePrefix}${String(sequence).padStart(4, '0')}`;
+  };
+
   // Create bill mutation
   const createBillMutation = useMutation({
     mutationFn: async (status: 'draft' | 'completed') => {
-      // Get next bill number
-      const billNumber = `${settings?.bill_prefix || 'INV-'}${String(settings?.next_bill_number || 1).padStart(5, '0')}`;
+      // Get date-based bill number
+      const billNumber = await generateBillNumber();
 
       // Create bill
       const { data: bill, error: billError } = await supabase
@@ -218,11 +239,6 @@ export default function Billing() {
 
       if (itemsError) throw itemsError;
 
-      // Update next bill number
-      await supabase
-        .from('business_settings')
-        .update({ next_bill_number: (settings?.next_bill_number || 1) + 1 })
-        .not('id', 'is', null);
 
       // If completed, deduct stock
       if (status === 'completed') {
