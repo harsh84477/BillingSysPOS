@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +12,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Sheet,
@@ -59,6 +60,16 @@ export default function Billing() {
   const [isCartExpanded, setIsCartExpanded] = useState(true);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  
+  // Long-press quantity dialog state
+  const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
+  const [quantityDialogProduct, setQuantityDialogProduct] = useState<typeof products[0] | null>(null);
+  const [quantityDialogValue, setQuantityDialogValue] = useState('');
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Cart quantity edit state
+  const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
+  const [editingCartQuantity, setEditingCartQuantity] = useState('');
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -158,6 +169,97 @@ export default function Billing() {
         )
         .filter((item) => item.quantity > 0)
     );
+  };
+
+  // Set exact quantity for cart item
+  const setQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCart((prev) =>
+      prev.map((item) =>
+        item.productId === productId
+          ? { ...item, quantity }
+          : item
+      )
+    );
+  };
+
+  // Add to cart with specific quantity (for long-press)
+  const addToCartWithQuantity = (product: typeof products[0], quantity: number) => {
+    if (quantity <= 0) return;
+    setCart((prev) => {
+      const existing = prev.find((item) => item.productId === product.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.productId === product.id
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      }
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          name: product.name,
+          unitPrice: Math.round(Number(product.selling_price)),
+          costPrice: Math.round(Number(product.cost_price)),
+          quantity,
+        },
+      ];
+    });
+  };
+
+  // Long press handlers
+  const handleProductTouchStart = useCallback((product: typeof products[0]) => {
+    longPressTimerRef.current = setTimeout(() => {
+      setQuantityDialogProduct(product);
+      setQuantityDialogValue('');
+      setQuantityDialogOpen(true);
+    }, 800); // 800ms for long press
+  }, []);
+
+  const handleProductTouchEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleQuantityDialogConfirm = () => {
+    const qty = parseInt(quantityDialogValue, 10);
+    if (quantityDialogProduct && qty > 0) {
+      addToCartWithQuantity(quantityDialogProduct, qty);
+      toast.success(`Added ${qty}× ${quantityDialogProduct.name}`);
+    }
+    setQuantityDialogOpen(false);
+    setQuantityDialogProduct(null);
+    setQuantityDialogValue('');
+  };
+
+  // Cart quantity edit handlers
+  const handleCartQuantityClick = (productId: string, currentQty: number) => {
+    setEditingCartItemId(productId);
+    setEditingCartQuantity(currentQty.toString());
+  };
+
+  const handleCartQuantityBlur = (productId: string) => {
+    const qty = parseInt(editingCartQuantity, 10);
+    if (!isNaN(qty)) {
+      setQuantity(productId, qty);
+    }
+    setEditingCartItemId(null);
+    setEditingCartQuantity('');
+  };
+
+  const handleCartQuantityKeyDown = (e: React.KeyboardEvent, productId: string) => {
+    if (e.key === 'Enter') {
+      handleCartQuantityBlur(productId);
+    } else if (e.key === 'Escape') {
+      setEditingCartItemId(null);
+      setEditingCartQuantity('');
+    }
   };
 
   // Remove from cart
@@ -470,7 +572,13 @@ export default function Billing() {
                   <button
                     key={product.id}
                     onClick={() => addToCart(product)}
-                    className="relative flex flex-col items-center justify-center rounded-xl border border-border bg-card p-3 text-center transition-all hover:border-primary hover:shadow-lg group min-w-[100px] max-w-[120px]"
+                    onMouseDown={() => handleProductTouchStart(product)}
+                    onMouseUp={handleProductTouchEnd}
+                    onMouseLeave={handleProductTouchEnd}
+                    onTouchStart={() => handleProductTouchStart(product)}
+                    onTouchEnd={handleProductTouchEnd}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="relative flex flex-col items-center justify-center rounded-xl border border-border bg-card p-3 text-center transition-all hover:border-primary hover:shadow-lg group min-w-[100px] max-w-[120px] select-none"
                   >
                     {/* Stock Badge */}
                     <Badge
@@ -577,9 +685,27 @@ export default function Billing() {
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-6 text-center text-sm font-medium">
-                          {item.quantity}
-                        </span>
+                        {editingCartItemId === item.productId ? (
+                          <Input
+                            type="number"
+                            value={editingCartQuantity}
+                            onChange={(e) => setEditingCartQuantity(e.target.value)}
+                            onBlur={() => handleCartQuantityBlur(item.productId)}
+                            onKeyDown={(e) => handleCartQuantityKeyDown(e, item.productId)}
+                            className="w-12 h-6 text-center text-sm font-medium p-1"
+                            autoFocus
+                            min={0}
+                          />
+                        ) : (
+                          <span 
+                            className="w-8 text-center text-sm font-medium cursor-pointer hover:bg-accent rounded px-1"
+                            onClick={() => handleCartQuantityClick(item.productId, item.quantity)}
+                            onDoubleClick={() => handleCartQuantityClick(item.productId, item.quantity)}
+                            title="Click to edit quantity"
+                          >
+                            {item.quantity}
+                          </span>
+                        )}
                         <Button
                           variant="outline"
                           size="icon"
@@ -741,7 +867,26 @@ export default function Billing() {
                         >
                           <Minus className="h-3 w-3" />
                         </Button>
-                        <span className="w-8 text-center font-medium">{item.quantity}</span>
+                        {editingCartItemId === item.productId ? (
+                          <Input
+                            type="number"
+                            value={editingCartQuantity}
+                            onChange={(e) => setEditingCartQuantity(e.target.value)}
+                            onBlur={() => handleCartQuantityBlur(item.productId)}
+                            onKeyDown={(e) => handleCartQuantityKeyDown(e, item.productId)}
+                            className="w-14 h-8 text-center font-medium p-1"
+                            autoFocus
+                            min={0}
+                          />
+                        ) : (
+                          <span 
+                            className="w-10 text-center font-medium cursor-pointer hover:bg-accent rounded px-1 py-1"
+                            onClick={() => handleCartQuantityClick(item.productId, item.quantity)}
+                            title="Tap to edit quantity"
+                          >
+                            {item.quantity}
+                          </span>
+                        )}
                         <Button
                           variant="outline"
                           size="icon"
@@ -863,6 +1008,42 @@ export default function Billing() {
               ))}
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Long-Press Quantity Dialog */}
+      <Dialog open={quantityDialogOpen} onOpenChange={setQuantityDialogOpen}>
+        <DialogContent className="sm:max-w-[320px]">
+          <DialogHeader>
+            <DialogTitle>Enter Quantity</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Add <span className="font-medium text-foreground">{quantityDialogProduct?.name}</span> to cart
+            </p>
+            <Input
+              type="number"
+              placeholder="Enter quantity..."
+              value={quantityDialogValue}
+              onChange={(e) => setQuantityDialogValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleQuantityDialogConfirm();
+                }
+              }}
+              className="text-lg h-12 text-center"
+              autoFocus
+              min={1}
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setQuantityDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleQuantityDialogConfirm} disabled={!quantityDialogValue || parseInt(quantityDialogValue, 10) <= 0}>
+              Add to Cart
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
