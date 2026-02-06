@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useBusinessSettings } from '@/hooks/useBusinessSettings';
@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
@@ -24,6 +25,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
   Table,
   TableBody,
   TableCell,
@@ -31,9 +39,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, FileText, Calendar, Eye, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { Search, FileText, Calendar, Eye, Trash2, Download, Filter, X } from 'lucide-react';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
+import { exportToExcel } from '@/lib/exportToExcel';
 
 interface Bill {
   id: string;
@@ -62,8 +71,15 @@ export default function BillsHistory() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [customerFilter, setCustomerFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  
   const queryClient = useQueryClient();
-
   const currencySymbol = settings?.currency_symbol || '₹';
 
   const { data: bills = [], isLoading } = useQuery({
@@ -77,6 +93,14 @@ export default function BillsHistory() {
       return data as Bill[];
     },
   });
+
+  // Get unique customers for filter
+  const uniqueCustomers = useMemo(() => {
+    const customers = bills
+      .filter(b => b.customers?.name)
+      .map(b => ({ id: b.customer_id!, name: b.customers!.name }));
+    return Array.from(new Map(customers.map(c => [c.id, c])).values());
+  }, [bills]);
 
   const { data: billItems = [] } = useQuery({
     queryKey: ['billItems', selectedBill?.id],
@@ -92,17 +116,14 @@ export default function BillsHistory() {
     enabled: !!selectedBill,
   });
 
-  // Delete bill mutation
   const deleteBillMutation = useMutation({
     mutationFn: async (billId: string) => {
-      // First delete bill items
       const { error: itemsError } = await supabase
         .from('bill_items')
         .delete()
         .eq('bill_id', billId);
       if (itemsError) throw itemsError;
 
-      // Then delete the bill
       const { error: billError } = await supabase
         .from('bills')
         .delete()
@@ -127,11 +148,65 @@ export default function BillsHistory() {
     },
   });
 
-  const filteredBills = bills.filter(
-    (bill) =>
-      bill.bill_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      bill.customers?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredBills = useMemo(() => {
+    return bills.filter((bill) => {
+      // Search filter
+      const matchesSearch = 
+        bill.bill_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        bill.customers?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Status filter
+      const matchesStatus = statusFilter === 'all' || bill.status === statusFilter;
+      
+      // Customer filter
+      const matchesCustomer = customerFilter === 'all' || 
+        (customerFilter === 'walk-in' && !bill.customer_id) ||
+        bill.customer_id === customerFilter;
+      
+      // Date range filter
+      let matchesDate = true;
+      if (dateFrom || dateTo) {
+        const billDate = parseISO(bill.created_at);
+        const from = dateFrom ? startOfDay(parseISO(dateFrom)) : new Date(0);
+        const to = dateTo ? endOfDay(parseISO(dateTo)) : new Date();
+        matchesDate = isWithinInterval(billDate, { start: from, end: to });
+      }
+      
+      return matchesSearch && matchesStatus && matchesCustomer && matchesDate;
+    });
+  }, [bills, searchQuery, statusFilter, customerFilter, dateFrom, dateTo]);
+
+  const clearFilters = () => {
+    setStatusFilter('all');
+    setCustomerFilter('all');
+    setDateFrom('');
+    setDateTo('');
+  };
+
+  const hasActiveFilters = statusFilter !== 'all' || customerFilter !== 'all' || dateFrom || dateTo;
+
+  const handleExportExcel = () => {
+    if (filteredBills.length === 0) {
+      toast({ title: 'No data to export', variant: 'destructive' });
+      return;
+    }
+
+    exportToExcel(
+      filteredBills,
+      [
+        { key: 'bill_number', header: 'Bill #' },
+        { key: 'created_at', header: 'Date', format: (v) => format(new Date(v as string), 'dd/MM/yyyy HH:mm') },
+        { key: 'customers', header: 'Customer', format: (v) => (v as { name: string } | null)?.name || 'Walk-in' },
+        { key: 'status', header: 'Status' },
+        { key: 'subtotal', header: 'Subtotal', format: (v) => Number(v).toFixed(2) },
+        { key: 'discount_amount', header: 'Discount', format: (v) => Number(v).toFixed(2) },
+        { key: 'tax_amount', header: 'Tax', format: (v) => Number(v).toFixed(2) },
+        { key: 'total_amount', header: 'Total', format: (v) => Number(v).toFixed(2) },
+      ],
+      `bills-history-${format(new Date(), 'yyyy-MM-dd')}`
+    );
+    toast({ title: 'Exported successfully' });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -153,20 +228,95 @@ export default function BillsHistory() {
           <h1 className="text-2xl font-bold">Bills History</h1>
           <p className="text-muted-foreground">View all your past bills and invoices</p>
         </div>
+        <Button onClick={handleExportExcel} variant="outline">
+          <Download className="mr-2 h-4 w-4" />
+          Export Excel
+        </Button>
       </div>
 
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by bill number or customer..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by bill number or customer..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button 
+                variant={hasActiveFilters ? "default" : "outline"} 
+                size="icon"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
             </div>
+            
+            {showFilters && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-muted/50 rounded-lg">
+                <div className="space-y-1">
+                  <Label className="text-xs">Status</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-1">
+                  <Label className="text-xs">Customer</Label>
+                  <Select value={customerFilter} onValueChange={setCustomerFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Customers</SelectItem>
+                      <SelectItem value="walk-in">Walk-in</SelectItem>
+                      {uniqueCustomers.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-1">
+                  <Label className="text-xs">From Date</Label>
+                  <Input 
+                    type="date" 
+                    value={dateFrom} 
+                    onChange={(e) => setDateFrom(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-1">
+                  <Label className="text-xs">To Date</Label>
+                  <Input 
+                    type="date" 
+                    value={dateTo} 
+                    onChange={(e) => setDateTo(e.target.value)}
+                  />
+                </div>
+                
+                {hasActiveFilters && (
+                  <div className="col-span-2 md:col-span-4">
+                    <Button variant="ghost" size="sm" onClick={clearFilters}>
+                      <X className="mr-1 h-3 w-3" />
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -180,7 +330,7 @@ export default function BillsHistory() {
               No bills found
             </div>
           ) : (
-            <ScrollArea className="h-[calc(100vh-20rem)]">
+            <ScrollArea className="h-[calc(100vh-24rem)]">
               <Table>
                 <TableHeader>
                   <TableRow>

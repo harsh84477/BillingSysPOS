@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -32,8 +32,10 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2, Package, Search, AlertTriangle, icons } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Search, AlertTriangle, icons, Download, Filter, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { exportToExcel } from '@/lib/exportToExcel';
 
 interface Product {
   id: string;
@@ -65,6 +67,12 @@ export default function Products() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('Package');
+  const [showFilters, setShowFilters] = useState(false);
+  
+  // Filters
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [stockFilter, setStockFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -164,9 +172,64 @@ export default function Products() {
     setIsDialogOpen(true);
   };
 
-  const filteredProducts = products?.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = useMemo(() => {
+    return products?.filter((p) => {
+      // Search filter
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      // Category filter
+      const matchesCategory = categoryFilter === 'all' || 
+        (categoryFilter === 'none' && !p.category_id) ||
+        p.category_id === categoryFilter;
+      
+      // Stock filter
+      let matchesStock = true;
+      if (stockFilter === 'low') {
+        matchesStock = p.stock_quantity <= p.low_stock_threshold;
+      } else if (stockFilter === 'out') {
+        matchesStock = p.stock_quantity === 0;
+      } else if (stockFilter === 'in-stock') {
+        matchesStock = p.stock_quantity > p.low_stock_threshold;
+      }
+      
+      // Status filter
+      const matchesStatus = statusFilter === 'all' || 
+        (statusFilter === 'active' && p.is_active) ||
+        (statusFilter === 'inactive' && !p.is_active);
+      
+      return matchesSearch && matchesCategory && matchesStock && matchesStatus;
+    }) || [];
+  }, [products, searchQuery, categoryFilter, stockFilter, statusFilter]);
+
+  const clearFilters = () => {
+    setCategoryFilter('all');
+    setStockFilter('all');
+    setStatusFilter('all');
+  };
+
+  const hasActiveFilters = categoryFilter !== 'all' || stockFilter !== 'all' || statusFilter !== 'all';
+
+  const handleExportExcel = () => {
+    if (filteredProducts.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    exportToExcel(
+      filteredProducts,
+      [
+        { key: 'name', header: 'Product Name' },
+        { key: 'categories', header: 'Category', format: (v) => (v as { name: string } | null)?.name || 'None' },
+        { key: 'selling_price', header: 'Selling Price', format: (v) => Number(v).toFixed(2) },
+        { key: 'cost_price', header: 'Cost Price', format: (v) => Number(v).toFixed(2) },
+        { key: 'stock_quantity', header: 'Stock' },
+        { key: 'low_stock_threshold', header: 'Low Stock Alert' },
+        { key: 'is_active', header: 'Status', format: (v) => v ? 'Active' : 'Inactive' },
+      ],
+      `products-${format(new Date(), 'yyyy-MM-dd')}`
+    );
+    toast.success('Exported successfully');
+  };
 
   return (
     <div className="space-y-6">
@@ -176,159 +239,233 @@ export default function Products() {
           <p className="text-muted-foreground">Manage your product inventory</p>
         </div>
 
-        {isAdmin && (
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) {
-              setEditingProduct(null);
-              setSelectedIcon('Package');
-            }
-          }}>
-            <DialogTrigger asChild>
-              <Button onClick={() => openDialog()}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Product
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingProduct ? 'Edit Product' : 'Add Product'}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name *</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    defaultValue={editingProduct?.name}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    defaultValue={editingProduct?.description || ''}
-                    rows={2}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+        <div className="flex gap-2">
+          <Button onClick={handleExportExcel} variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Export Excel
+          </Button>
+          
+          {isAdmin && (
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) {
+                setEditingProduct(null);
+                setSelectedIcon('Package');
+              }
+            }}>
+              <DialogTrigger asChild>
+                <Button onClick={() => openDialog()}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Product
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingProduct ? 'Edit Product' : 'Add Product'}
+                  </DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="selling_price">Selling Price *</Label>
+                    <Label htmlFor="name">Name *</Label>
                     <Input
-                      id="selling_price"
-                      name="selling_price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      defaultValue={editingProduct?.selling_price || 0}
+                      id="name"
+                      name="name"
+                      defaultValue={editingProduct?.name}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cost_price">Cost Price</Label>
-                    <Input
-                      id="cost_price"
-                      name="cost_price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      defaultValue={editingProduct?.cost_price || 0}
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      defaultValue={editingProduct?.description || ''}
+                      rows={2}
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="selling_price">Selling Price *</Label>
+                      <Input
+                        id="selling_price"
+                        name="selling_price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        defaultValue={editingProduct?.selling_price || 0}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cost_price">Cost Price</Label>
+                      <Input
+                        id="cost_price"
+                        name="cost_price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        defaultValue={editingProduct?.cost_price || 0}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="stock_quantity">Stock Quantity</Label>
+                      <Input
+                        id="stock_quantity"
+                        name="stock_quantity"
+                        type="number"
+                        min="0"
+                        defaultValue={editingProduct?.stock_quantity || 0}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="low_stock_threshold">Low Stock Alert</Label>
+                      <Input
+                        id="low_stock_threshold"
+                        name="low_stock_threshold"
+                        type="number"
+                        min="0"
+                        defaultValue={editingProduct?.low_stock_threshold || 10}
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-2">
-                    <Label htmlFor="stock_quantity">Stock Quantity</Label>
-                    <Input
-                      id="stock_quantity"
-                      name="stock_quantity"
-                      type="number"
-                      min="0"
-                      defaultValue={editingProduct?.stock_quantity || 0}
-                    />
+                    <Label htmlFor="category_id">Category</Label>
+                    <Select name="category_id" defaultValue={editingProduct?.category_id || ''}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="low_stock_threshold">Low Stock Alert</Label>
-                    <Input
-                      id="low_stock_threshold"
-                      name="low_stock_threshold"
-                      type="number"
-                      min="0"
-                      defaultValue={editingProduct?.low_stock_threshold || 10}
-                    />
+                    <Label>Icon</Label>
+                    <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto p-1 border rounded-md">
+                      {PRODUCT_ICONS.map((iconName) => {
+                        const IconComponent = icons[iconName as keyof typeof icons];
+                        return IconComponent ? (
+                          <button
+                            key={iconName}
+                            type="button"
+                            onClick={() => setSelectedIcon(iconName)}
+                            className={`p-2 rounded-md flex items-center justify-center transition-colors ${
+                              selectedIcon === iconName
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted hover:bg-muted/80'
+                            }`}
+                          >
+                            <IconComponent className="h-5 w-5" />
+                          </button>
+                        ) : null;
+                      })}
+                    </div>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category_id">Category</Label>
-                  <Select name="category_id" defaultValue={editingProduct?.category_id || ''}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Icon</Label>
-                  <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto p-1 border rounded-md">
-                    {PRODUCT_ICONS.map((iconName) => {
-                      const IconComponent = icons[iconName as keyof typeof icons];
-                      return IconComponent ? (
-                        <button
-                          key={iconName}
-                          type="button"
-                          onClick={() => setSelectedIcon(iconName)}
-                          className={`p-2 rounded-md flex items-center justify-center transition-colors ${
-                            selectedIcon === iconName
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted hover:bg-muted/80'
-                          }`}
-                        >
-                          <IconComponent className="h-5 w-5" />
-                        </button>
-                      ) : null;
-                    })}
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={saveMutation.isPending}>
+                      {saveMutation.isPending ? 'Saving...' : 'Save'}
+                    </Button>
                   </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={saveMutation.isPending}>
-                    {saveMutation.isPending ? 'Saving...' : 'Save'}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
+        </div>
       </div>
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Button 
+                variant={hasActiveFilters ? "default" : "outline"} 
+                size="icon"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
             </div>
+            
+            {showFilters && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-muted/50 rounded-lg">
+                <div className="space-y-1">
+                  <Label className="text-xs">Category</Label>
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="none">No Category</SelectItem>
+                      {categories.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-1">
+                  <Label className="text-xs">Stock Status</Label>
+                  <Select value={stockFilter} onValueChange={setStockFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Stock</SelectItem>
+                      <SelectItem value="in-stock">In Stock</SelectItem>
+                      <SelectItem value="low">Low Stock</SelectItem>
+                      <SelectItem value="out">Out of Stock</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-1">
+                  <Label className="text-xs">Status</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {hasActiveFilters && (
+                  <div className="col-span-2 md:col-span-3">
+                    <Button variant="ghost" size="sm" onClick={clearFilters}>
+                      <X className="mr-1 h-3 w-3" />
+                      Clear Filters
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>

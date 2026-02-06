@@ -1,8 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   DollarSign,
   ShoppingCart,
@@ -10,8 +19,11 @@ import {
   AlertTriangle,
   TrendingUp,
   Users,
+  Download,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { toast } from 'sonner';
+import { exportToExcel } from '@/lib/exportToExcel';
 
 function StatCard({
   title,
@@ -51,7 +63,19 @@ function StatCard({
 export default function Dashboard() {
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const startOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  
+  // Month selector for expense report
+  const [selectedMonth, setSelectedMonth] = useState(() => format(today, 'yyyy-MM'));
+  
+  // Generate last 12 months for dropdown
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const date = subMonths(today, i);
+    return {
+      value: format(date, 'yyyy-MM'),
+      label: format(date, 'MMMM yyyy'),
+    };
+  });
 
   // Fetch today's sales
   const { data: todaySales, isLoading: loadingTodaySales } = useQuery({
@@ -76,7 +100,7 @@ export default function Dashboard() {
         .from('bills')
         .select('total_amount')
         .eq('status', 'completed')
-        .gte('completed_at', startOfMonth.toISOString());
+        .gte('completed_at', startOfThisMonth.toISOString());
 
       if (error) throw error;
       return data?.reduce((sum, bill) => sum + Number(bill.total_amount), 0) || 0;
@@ -161,7 +185,103 @@ export default function Dashboard() {
     },
   });
 
+  // Fetch monthly expense report data
+  const { data: monthlyExpenseData, isLoading: loadingExpense } = useQuery({
+    queryKey: ['monthlyExpense', selectedMonth],
+    queryFn: async () => {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const monthStart = startOfMonth(new Date(year, month - 1));
+      const monthEnd = endOfMonth(new Date(year, month - 1));
+
+      const { data, error } = await supabase
+        .from('bills')
+        .select(`
+          id,
+          bill_number,
+          total_amount,
+          subtotal,
+          discount_amount,
+          tax_amount,
+          status,
+          created_at,
+          completed_at,
+          customers (name)
+        `)
+        .eq('status', 'completed')
+        .gte('completed_at', monthStart.toISOString())
+        .lte('completed_at', monthEnd.toISOString())
+        .order('completed_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Fetch cost data for profit calculation
+  const { data: monthlyCostData } = useQuery({
+    queryKey: ['monthlyCost', selectedMonth],
+    queryFn: async () => {
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const monthStart = startOfMonth(new Date(year, month - 1));
+      const monthEnd = endOfMonth(new Date(year, month - 1));
+
+      // Get all bill items with cost for completed bills in this month
+      const { data: bills, error: billsError } = await supabase
+        .from('bills')
+        .select('id')
+        .eq('status', 'completed')
+        .gte('completed_at', monthStart.toISOString())
+        .lte('completed_at', monthEnd.toISOString());
+
+      if (billsError) throw billsError;
+
+      if (!bills || bills.length === 0) return 0;
+
+      const billIds = bills.map(b => b.id);
+      const { data: items, error } = await supabase
+        .from('bill_items')
+        .select('cost_price, quantity')
+        .in('bill_id', billIds);
+
+      if (error) throw error;
+      return items?.reduce((sum, item) => sum + (Number(item.cost_price) * item.quantity), 0) || 0;
+    },
+  });
+
   const currencySymbol = settings?.currency_symbol || '$';
+
+  const monthlyTotals = {
+    revenue: monthlyExpenseData?.reduce((sum, b) => sum + Number(b.total_amount), 0) || 0,
+    subtotal: monthlyExpenseData?.reduce((sum, b) => sum + Number(b.subtotal), 0) || 0,
+    discounts: monthlyExpenseData?.reduce((sum, b) => sum + Number(b.discount_amount), 0) || 0,
+    tax: monthlyExpenseData?.reduce((sum, b) => sum + Number(b.tax_amount), 0) || 0,
+    cost: monthlyCostData || 0,
+    profit: (monthlyExpenseData?.reduce((sum, b) => sum + Number(b.total_amount), 0) || 0) - (monthlyCostData || 0),
+    orderCount: monthlyExpenseData?.length || 0,
+  };
+
+  const handleExportMonthlyReport = () => {
+    if (!monthlyExpenseData || monthlyExpenseData.length === 0) {
+      toast.error('No data to export for this month');
+      return;
+    }
+
+    // Export detailed bill data
+    exportToExcel(
+      monthlyExpenseData,
+      [
+        { key: 'bill_number', header: 'Bill #' },
+        { key: 'completed_at', header: 'Date', format: (v) => format(new Date(v as string), 'dd/MM/yyyy HH:mm') },
+        { key: 'customers', header: 'Customer', format: (v) => (v as { name: string } | null)?.name || 'Walk-in' },
+        { key: 'subtotal', header: 'Subtotal', format: (v) => Number(v).toFixed(2) },
+        { key: 'discount_amount', header: 'Discount', format: (v) => Number(v).toFixed(2) },
+        { key: 'tax_amount', header: 'Tax', format: (v) => Number(v).toFixed(2) },
+        { key: 'total_amount', header: 'Total', format: (v) => Number(v).toFixed(2) },
+      ],
+      `monthly-report-${selectedMonth}`
+    );
+    toast.success('Monthly report exported');
+  };
 
   return (
     <div className="space-y-6">
@@ -203,6 +323,85 @@ export default function Dashboard() {
           isLoading={loadingCustomers}
         />
       </div>
+
+      {/* Monthly Expense Report */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Monthly Report
+              </CardTitle>
+              <CardDescription>Revenue, costs, and profit summary</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-48">
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {monthOptions.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="outline" onClick={handleExportMonthlyReport}>
+                <Download className="mr-2 h-4 w-4" />
+                Export Excel
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingExpense ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map(i => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {currencySymbol}{monthlyTotals.revenue.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground">{monthlyTotals.orderCount} orders</p>
+              </div>
+              <div className="p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground">Total Cost</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {currencySymbol}{monthlyTotals.cost.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground">Product costs</p>
+              </div>
+              <div className="p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground">Discounts Given</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {currencySymbol}{monthlyTotals.discounts.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground">Total discounts</p>
+              </div>
+              <div className="p-4 rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground">Net Profit</p>
+                <p className={`text-2xl font-bold ${monthlyTotals.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {currencySymbol}{monthlyTotals.profit.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {monthlyTotals.revenue > 0 
+                    ? `${((monthlyTotals.profit / monthlyTotals.revenue) * 100).toFixed(1)}% margin`
+                    : 'No sales'}
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Low Stock Alerts */}
