@@ -32,6 +32,7 @@ import {
   ChevronRight,
   Sparkles,
   Package,
+  icons,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -459,37 +460,48 @@ export default function Billing() {
               No products found
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-              {filteredProducts.map((product) => (
-                <button
-                  key={product.id}
-                  onClick={() => addToCart(product)}
-                  className="relative flex flex-col items-center rounded-lg border border-border bg-card p-2 text-center transition-all hover:border-primary hover:shadow-md group"
-                >
-                  {/* Stock Badge */}
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      'absolute -top-1 -right-1 text-[10px] px-1.5 py-0',
-                      product.stock_quantity <= product.low_stock_threshold
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-green-100 text-green-700'
-                    )}
+            <div className="flex flex-wrap gap-2">
+              {filteredProducts.map((product) => {
+                const iconName = product.icon || 'Package';
+                const LucideIcon = icons[iconName as keyof typeof icons];
+                const IconComponent = LucideIcon || Package;
+                
+                return (
+                  <button
+                    key={product.id}
+                    onClick={() => addToCart(product)}
+                    className="relative flex flex-col items-center justify-center rounded-xl border border-border bg-card p-3 text-center transition-all hover:border-primary hover:shadow-lg group min-w-[100px] max-w-[120px]"
                   >
-                    {product.stock_quantity <= product.low_stock_threshold ? `${product.stock_quantity}` : `${product.stock_quantity}+`}
-                  </Badge>
+                    {/* Stock Badge */}
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        'absolute -top-1.5 -right-1.5 text-[10px] px-1.5 py-0.5',
+                        product.stock_quantity <= product.low_stock_threshold
+                          ? 'bg-destructive/10 text-destructive'
+                          : 'bg-accent text-accent-foreground'
+                      )}
+                    >
+                      {product.stock_quantity}
+                    </Badge>
 
-                  {/* Product Name */}
-                  <span className="text-xs font-medium line-clamp-2 mt-1 min-h-[2rem]">
-                    {product.name}
-                  </span>
+                    {/* Icon */}
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted mb-1">
+                      <IconComponent className="h-6 w-6 text-muted-foreground" />
+                    </div>
 
-                  {/* Price */}
-                  <span className="text-sm font-bold text-primary mt-1">
-                    {currencySymbol}{Number(product.selling_price).toFixed(0)}
-                  </span>
-                </button>
-              ))}
+                    {/* Product Name */}
+                    <span className="text-sm font-medium line-clamp-2 min-h-[2.5rem] leading-tight">
+                      {product.name}
+                    </span>
+
+                    {/* Price */}
+                    <span className="text-base font-bold text-primary">
+                      {currencySymbol}{Number(product.selling_price).toFixed(0)}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </ScrollArea>
