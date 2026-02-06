@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { RandomSeeder } from '@/components/RandomSeeder';
 
 const themeOptions: { name: string; value: ThemeName; description: string }[] = [
   { name: 'Mint Pro', value: 'mint-pro', description: 'Fresh green tones for a modern look' },
@@ -469,6 +470,7 @@ export default function Settings() {
 
         {/* Categories */}
         <TabsContent value="categories">
+          {isAdmin && <RandomSeeder />}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
@@ -634,8 +636,8 @@ export default function Settings() {
                                 ur.role === 'admin'
                                   ? 'default'
                                   : ur.role === 'staff'
-                                  ? 'secondary'
-                                  : 'outline'
+                                    ? 'secondary'
+                                    : 'outline'
                               }
                             >
                               {ur.role}

@@ -30,12 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Pencil, Trash2, Package, Search, AlertTriangle, icons, Download, Filter, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { exportToExcel } from '@/lib/exportToExcel';
+import { ProductImporter } from '@/components/ProductImporter';
 
 interface Product {
   id: string;
@@ -68,7 +70,7 @@ export default function Products() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('Package');
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Filters
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<string>('all');
@@ -176,12 +178,12 @@ export default function Products() {
     return products?.filter((p) => {
       // Search filter
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       // Category filter
-      const matchesCategory = categoryFilter === 'all' || 
+      const matchesCategory = categoryFilter === 'all' ||
         (categoryFilter === 'none' && !p.category_id) ||
         p.category_id === categoryFilter;
-      
+
       // Stock filter
       let matchesStock = true;
       if (stockFilter === 'low') {
@@ -191,12 +193,12 @@ export default function Products() {
       } else if (stockFilter === 'in-stock') {
         matchesStock = p.stock_quantity > p.low_stock_threshold;
       }
-      
+
       // Status filter
-      const matchesStatus = statusFilter === 'all' || 
+      const matchesStatus = statusFilter === 'all' ||
         (statusFilter === 'active' && p.is_active) ||
         (statusFilter === 'inactive' && !p.is_active);
-      
+
       return matchesSearch && matchesCategory && matchesStock && matchesStatus;
     }) || [];
   }, [products, searchQuery, categoryFilter, stockFilter, statusFilter]);
@@ -231,6 +233,50 @@ export default function Products() {
     toast.success('Exported successfully');
   };
 
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<string>>(new Set());
+
+  const toggleSelectAll = () => {
+    if (selectedProductIds.size === filteredProducts.length && filteredProducts.length > 0) {
+      setSelectedProductIds(new Set());
+    } else {
+      setSelectedProductIds(new Set(filteredProducts.map(p => p.id)));
+    }
+  };
+
+  const toggleSelectProduct = (id: string) => {
+    const newSelected = new Set(selectedProductIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedProductIds(newSelected);
+  };
+
+  const handleBulkDelete = () => {
+    if (!confirm(`Are you sure you want to delete ${selectedProductIds.size} products?`)) return;
+
+    // We can iterate or use 'in' query if API supports list of IDs delete
+    // Supabase supports .in('id', array)
+    // Create a specialized mutation or just run it directly here
+    bulkDeleteMutation.mutate(Array.from(selectedProductIds));
+  };
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('products').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setSelectedProductIds(new Set());
+      toast.success('Products deleted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    }
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -239,12 +285,21 @@ export default function Products() {
           <p className="text-muted-foreground">Manage your product inventory</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {isAdmin && selectedProductIds.size > 0 && (
+            <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete ({selectedProductIds.size})
+            </Button>
+          )}
+
+          {isAdmin && <ProductImporter />}
+
           <Button onClick={handleExportExcel} variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Export Excel
           </Button>
-          
+
           {isAdmin && (
             <Dialog open={isDialogOpen} onOpenChange={(open) => {
               setIsDialogOpen(open);
@@ -356,11 +411,10 @@ export default function Products() {
                             key={iconName}
                             type="button"
                             onClick={() => setSelectedIcon(iconName)}
-                            className={`p-2 rounded-md flex items-center justify-center transition-colors ${
-                              selectedIcon === iconName
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted hover:bg-muted/80'
-                            }`}
+                            className={`p-2 rounded-md flex items-center justify-center transition-colors ${selectedIcon === iconName
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted hover:bg-muted/80'
+                              }`}
                           >
                             <IconComponent className="h-5 w-5" />
                           </button>
@@ -400,15 +454,15 @@ export default function Products() {
                   className="pl-10"
                 />
               </div>
-              <Button 
-                variant={hasActiveFilters ? "default" : "outline"} 
+              <Button
+                variant={hasActiveFilters ? "default" : "outline"}
                 size="icon"
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <Filter className="h-4 w-4" />
               </Button>
             </div>
-            
+
             {showFilters && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="space-y-1">
@@ -426,7 +480,7 @@ export default function Products() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-1">
                   <Label className="text-xs">Stock Status</Label>
                   <Select value={stockFilter} onValueChange={setStockFilter}>
@@ -441,7 +495,7 @@ export default function Products() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-1">
                   <Label className="text-xs">Status</Label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -455,7 +509,7 @@ export default function Products() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 {hasActiveFilters && (
                   <div className="col-span-2 md:col-span-3">
                     <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -480,6 +534,15 @@ export default function Products() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {isAdmin && (
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={filteredProducts.length > 0 && selectedProductIds.size === filteredProducts.length}
+                          onCheckedChange={toggleSelectAll}
+                          aria-label="Select all"
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Product</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead className="text-right">Price</TableHead>
@@ -490,6 +553,15 @@ export default function Products() {
                 <TableBody>
                   {filteredProducts.map((product) => (
                     <TableRow key={product.id}>
+                      {isAdmin && (
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedProductIds.has(product.id)}
+                            onCheckedChange={() => toggleSelectProduct(product.id)}
+                            aria-label="Select row"
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">

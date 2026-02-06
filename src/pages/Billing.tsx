@@ -50,7 +50,7 @@ export default function Billing() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
-  
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -60,13 +60,13 @@ export default function Billing() {
   const [isCartExpanded, setIsCartExpanded] = useState(true);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  
+
   // Long-press quantity dialog state
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
   const [quantityDialogProduct, setQuantityDialogProduct] = useState<typeof products[0] | null>(null);
   const [quantityDialogValue, setQuantityDialogValue] = useState('');
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Cart quantity edit state
   const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
   const [editingCartQuantity, setEditingCartQuantity] = useState('');
@@ -123,12 +123,12 @@ export default function Billing() {
     });
   }, [products, searchQuery, selectedCategory]);
 
-  // Cart calculations - using Math.round to avoid floating point issues
+  // Cart calculations - preserving decimals
   const cartCalculations = useMemo(() => {
-    const subtotal = cart.reduce((sum, item) => sum + Math.round(item.unitPrice) * item.quantity, 0);
-    const discountAmount = Math.round(discountValue);
+    const subtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+    const discountAmount = discountValue;
     const afterDiscount = subtotal - discountAmount;
-    const taxAmount = Math.round((afterDiscount * taxRate) / 100 * 100) / 100;
+    const taxAmount = Number(((afterDiscount * taxRate) / 100).toFixed(2));
     const total = afterDiscount + taxAmount;
 
     return { subtotal, discountAmount, taxAmount, total };
@@ -150,8 +150,8 @@ export default function Billing() {
         {
           productId: product.id,
           name: product.name,
-          unitPrice: Math.round(Number(product.selling_price)),
-          costPrice: Math.round(Number(product.cost_price)),
+          unitPrice: Number(product.selling_price),
+          costPrice: Number(product.cost_price),
           quantity: 1,
         },
       ];
@@ -203,8 +203,8 @@ export default function Billing() {
         {
           productId: product.id,
           name: product.name,
-          unitPrice: Math.round(Number(product.selling_price)),
-          costPrice: Math.round(Number(product.cost_price)),
+          unitPrice: Number(product.selling_price),
+          costPrice: Number(product.cost_price),
           quantity,
         },
       ];
@@ -294,7 +294,7 @@ export default function Billing() {
 
   // Get current preview bill number
   const [previewBillNumber, setPreviewBillNumber] = useState('');
-  
+
   React.useEffect(() => {
     generateBillNumber().then(setPreviewBillNumber);
   }, []);
@@ -377,18 +377,18 @@ export default function Billing() {
         </body>
       </html>
     `;
-    
+
     const printWindow = window.open('', '_blank', 'width=400,height=600');
     if (printWindow) {
       printWindow.document.write(printContent);
       printWindow.document.close();
       printWindow.focus();
-      
+
       // Wait for content to load before printing, then close after print dialog
       printWindow.onload = () => {
         printWindow.print();
       };
-      
+
       // Also try to print after a short delay as fallback for browsers that don't fire onload
       setTimeout(() => {
         try {
@@ -397,7 +397,7 @@ export default function Billing() {
           // Already printed or window closed
         }
       }, 500);
-      
+
       // Close window after print dialog is dismissed
       printWindow.onafterprint = () => {
         printWindow.close();
@@ -410,7 +410,7 @@ export default function Billing() {
     mutationFn: async (shouldPrint: boolean) => {
       let retryCount = 0;
       const maxRetries = 3;
-      
+
       while (retryCount < maxRetries) {
         const billNumber = await generateBillNumber(retryCount);
 
@@ -471,7 +471,7 @@ export default function Billing() {
 
         return { bill, billNumber, shouldPrint };
       }
-      
+
       throw new Error('Failed to generate unique bill number after multiple attempts');
     },
     onSuccess: ({ billNumber, shouldPrint }) => {
@@ -567,7 +567,7 @@ export default function Billing() {
                 const iconName = product.icon || 'Package';
                 const LucideIcon = icons[iconName as keyof typeof icons];
                 const IconComponent = LucideIcon || Package;
-                
+
                 return (
                   <button
                     key={product.id}
@@ -605,7 +605,7 @@ export default function Billing() {
 
                     {/* Price */}
                     <span className="text-sm sm:text-base font-bold text-primary mt-auto">
-                      {currencySymbol}{Number(product.selling_price).toFixed(0)}
+                      {currencySymbol}{Number(product.selling_price).toFixed(2)}
                     </span>
                   </button>
                 );
@@ -673,7 +673,7 @@ export default function Billing() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{item.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {currencySymbol}{item.unitPrice.toFixed(0)} × {item.quantity} = {currencySymbol}{(item.unitPrice * item.quantity).toFixed(0)}
+                          {currencySymbol}{item.unitPrice.toFixed(2)} × {item.quantity} = {currencySymbol}{(item.unitPrice * item.quantity).toFixed(2)}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
@@ -697,7 +697,7 @@ export default function Billing() {
                             min={0}
                           />
                         ) : (
-                          <span 
+                          <span
                             className="w-8 text-center text-sm font-medium cursor-pointer hover:bg-accent rounded px-1"
                             onClick={() => handleCartQuantityClick(item.productId, item.quantity)}
                             onDoubleClick={() => handleCartQuantityClick(item.productId, item.quantity)}
@@ -815,7 +815,7 @@ export default function Billing() {
       {/* Mobile Cart Button */}
       <Sheet>
         <SheetTrigger asChild>
-          <Button 
+          <Button
             className="md:hidden fixed bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg"
             size="icon"
           >
@@ -879,7 +879,7 @@ export default function Billing() {
                             min={0}
                           />
                         ) : (
-                          <span 
+                          <span
                             className="w-10 text-center font-medium cursor-pointer hover:bg-accent rounded px-1 py-1"
                             onClick={() => handleCartQuantityClick(item.productId, item.quantity)}
                             title="Tap to edit quantity"

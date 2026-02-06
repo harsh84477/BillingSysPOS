@@ -141,7 +141,7 @@ export default function AppLayout() {
     <TooltipProvider delayDuration={0}>
       <div className="flex min-h-screen bg-background">
         {/* Desktop Sidebar */}
-        <aside 
+        <aside
           className={cn(
             "hidden flex-shrink-0 border-r border-border bg-card lg:block transition-all duration-300",
             sidebarCollapsed ? "w-16" : "w-64"
@@ -163,9 +163,9 @@ export default function AppLayout() {
                 )}
               </Button>
             </div>
-            
+
             <Sidebar className="flex-1 pt-4" collapsed={sidebarCollapsed} />
-            
+
             <div className="border-t border-border p-2">
               {sidebarCollapsed ? (
                 <Tooltip>
