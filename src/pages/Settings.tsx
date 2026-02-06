@@ -173,37 +173,39 @@ export default function Settings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Manage your business configuration</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Manage your business configuration</p>
       </div>
 
       <Tabs defaultValue="business" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
-          <TabsTrigger value="business" className="gap-2">
-            <Building2 className="h-4 w-4 hidden sm:inline" />
-            Business
-          </TabsTrigger>
-          <TabsTrigger value="appearance" className="gap-2">
-            <Palette className="h-4 w-4 hidden sm:inline" />
-            Theme
-          </TabsTrigger>
-          <TabsTrigger value="billing" className="gap-2">
-            <Receipt className="h-4 w-4 hidden sm:inline" />
-            Billing
-          </TabsTrigger>
-          <TabsTrigger value="categories" className="gap-2">
-            <FolderOpen className="h-4 w-4 hidden sm:inline" />
-            Categories
-          </TabsTrigger>
-          {isAdmin && (
-            <TabsTrigger value="users" className="gap-2">
-              <Users className="h-4 w-4 hidden sm:inline" />
-              Users
+        <div className="overflow-x-auto -mx-2 px-2 pb-2">
+          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-5 gap-1">
+            <TabsTrigger value="business" className="gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+              <Building2 className="h-4 w-4" />
+              <span className="hidden xs:inline sm:inline">Business</span>
             </TabsTrigger>
-          )}
-        </TabsList>
+            <TabsTrigger value="appearance" className="gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+              <Palette className="h-4 w-4" />
+              <span className="hidden xs:inline sm:inline">Theme</span>
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+              <Receipt className="h-4 w-4" />
+              <span className="hidden xs:inline sm:inline">Billing</span>
+            </TabsTrigger>
+            <TabsTrigger value="categories" className="gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+              <FolderOpen className="h-4 w-4" />
+              <span className="hidden xs:inline sm:inline">Categories</span>
+            </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger value="users" className="gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
+                <Users className="h-4 w-4" />
+                <span className="hidden xs:inline sm:inline">Users</span>
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </div>
 
         {/* Business Info */}
         <TabsContent value="business">
@@ -311,47 +313,50 @@ export default function Settings() {
 
         {/* Billing Rules */}
         <TabsContent value="billing">
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Receipt className="h-5 w-5" />
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
                   Billing Rules
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <form onSubmit={handleBillingSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="bill_prefix">Bill Number Prefix</Label>
+                    <Label htmlFor="bill_prefix" className="text-sm">Bill Number Prefix</Label>
                     <Input
                       id="bill_prefix"
                       name="bill_prefix"
                       defaultValue={settings?.bill_prefix}
                       disabled={!isAdmin}
+                      className="h-9 sm:h-10"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="currency">Currency Code</Label>
+                      <Label htmlFor="currency" className="text-sm">Currency Code</Label>
                       <Input
                         id="currency"
                         name="currency"
                         defaultValue={settings?.currency}
                         disabled={!isAdmin}
+                        className="h-9 sm:h-10"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="currency_symbol">Symbol</Label>
+                      <Label htmlFor="currency_symbol" className="text-sm">Symbol</Label>
                       <Input
                         id="currency_symbol"
                         name="currency_symbol"
                         defaultValue={settings?.currency_symbol}
                         disabled={!isAdmin}
+                        className="h-9 sm:h-10"
                       />
                     </div>
                   </div>
                   {isAdmin && (
-                    <Button type="submit" disabled={updateSettings.isPending}>
+                    <Button type="submit" disabled={updateSettings.isPending} className="w-full sm:w-auto">
                       Save Changes
                     </Button>
                   )}
@@ -360,26 +365,27 @@ export default function Settings() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5" />
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Calculator className="h-4 w-4 sm:h-5 sm:w-5" />
                   Tax Configuration
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleTaxSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="tax_name">Tax Name</Label>
+                      <Label htmlFor="tax_name" className="text-sm">Tax Name</Label>
                       <Input
                         id="tax_name"
                         name="tax_name"
                         defaultValue={settings?.tax_name}
                         disabled={!isAdmin}
+                        className="h-9 sm:h-10"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="tax_rate">Tax Rate (%)</Label>
+                      <Label htmlFor="tax_rate" className="text-sm">Tax Rate (%)</Label>
                       <Input
                         id="tax_rate"
                         name="tax_rate"
@@ -388,6 +394,7 @@ export default function Settings() {
                         min="0"
                         defaultValue={settings?.tax_rate}
                         disabled={!isAdmin}
+                        className="h-9 sm:h-10"
                       />
                     </div>
                   </div>
@@ -398,10 +405,10 @@ export default function Settings() {
                       defaultChecked={settings?.tax_inclusive}
                       disabled={!isAdmin}
                     />
-                    <Label htmlFor="tax_inclusive">Tax included in price</Label>
+                    <Label htmlFor="tax_inclusive" className="text-sm">Tax included in price</Label>
                   </div>
                   {isAdmin && (
-                    <Button type="submit" disabled={updateSettings.isPending}>
+                    <Button type="submit" disabled={updateSettings.isPending} className="w-full sm:w-auto">
                       Save Changes
                     </Button>
                   )}
@@ -411,21 +418,21 @@ export default function Settings() {
 
             {/* Billing Display Options */}
             <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Receipt className="h-5 w-5" />
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
                   Billing Display Options
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Control which fields are visible in the billing screen
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Show GST in Billing</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Display GST percentage input field in the billing screen
+                <div className="flex items-start sm:items-center justify-between gap-3">
+                  <div className="space-y-0.5 flex-1">
+                    <Label className="text-sm">Show GST in Billing</Label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Display GST percentage input field
                     </p>
                   </div>
                   <Switch
@@ -438,11 +445,11 @@ export default function Settings() {
                     disabled={!isAdmin}
                   />
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Show Discount in Billing</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Display discount input field in the billing screen
+                <div className="flex items-start sm:items-center justify-between gap-3">
+                  <div className="space-y-0.5 flex-1">
+                    <Label className="text-sm">Show Discount in Billing</Label>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      Display discount input field
                     </p>
                   </div>
                   <Switch

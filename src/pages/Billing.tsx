@@ -562,7 +562,7 @@ export default function Billing() {
               No products found
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+            <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))' }}>
               {filteredProducts.map((product) => {
                 const iconName = product.icon || 'Package';
                 const LucideIcon = icons[iconName as keyof typeof icons];
@@ -578,7 +578,7 @@ export default function Billing() {
                     onTouchStart={() => handleProductTouchStart(product)}
                     onTouchEnd={handleProductTouchEnd}
                     onContextMenu={(e) => e.preventDefault()}
-                    className="relative flex flex-col items-center justify-center rounded-xl border border-border bg-card p-3 text-center transition-all hover:border-primary hover:shadow-lg group min-w-[100px] max-w-[120px] select-none"
+                    className="relative flex flex-col items-center justify-center rounded-xl border border-border bg-card p-2 sm:p-3 text-center transition-all hover:border-primary hover:shadow-lg group select-none aspect-square"
                   >
                     {/* Stock Badge */}
                     <Badge
@@ -594,17 +594,17 @@ export default function Billing() {
                     </Badge>
 
                     {/* Icon */}
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted mb-1">
-                      <IconComponent className="h-6 w-6 text-muted-foreground" />
+                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-muted mb-1">
+                      <IconComponent className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
                     </div>
 
                     {/* Product Name */}
-                    <span className="text-sm font-medium line-clamp-2 min-h-[2.5rem] leading-tight">
+                    <span className="text-xs sm:text-sm font-medium line-clamp-2 leading-tight">
                       {product.name}
                     </span>
 
                     {/* Price */}
-                    <span className="text-base font-bold text-primary">
+                    <span className="text-sm sm:text-base font-bold text-primary mt-auto">
                       {currencySymbol}{Number(product.selling_price).toFixed(0)}
                     </span>
                   </button>
