@@ -9,12 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -39,10 +33,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, FileText, Calendar, Eye, Trash2, Download, Filter, X, TrendingUp, Receipt, Clock } from 'lucide-react';
+import { Search, FileText, Calendar, Eye, Trash2, Download, Filter, X, TrendingUp, Receipt, Clock, Printer } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { exportToExcel } from '@/lib/exportToExcel';
+import { BillDetailsDialog } from '@/components/bills/BillDetailsDialog';
+import { printBillReceipt } from '@/components/bills/BillReceiptPrint';
 
 type DatePreset = 'today' | 'yesterday' | 'last7days' | 'last30days' | 'thisMonth' | 'lastMonth' | 'custom';
 
@@ -157,19 +153,24 @@ export default function BillsHistory() {
     return Array.from(new Map(customers.map(c => [c.id, c])).values());
   }, [bills]);
 
-  const { data: billItems = [] } = useQuery({
-    queryKey: ['billItems', selectedBill?.id],
-    queryFn: async () => {
-      if (!selectedBill) return [];
-      const { data, error } = await supabase
-        .from('bill_items')
-        .select('*')
-        .eq('bill_id', selectedBill.id);
-      if (error) throw error;
-      return data as BillItem[];
-    },
-    enabled: !!selectedBill,
-  });
+  // Fetch bill items for printing
+  const fetchBillItems = async (billId: string) => {
+    const { data, error } = await supabase
+      .from('bill_items')
+      .select('*')
+      .eq('bill_id', billId);
+    if (error) throw error;
+    return data as BillItem[];
+  };
+
+  const handlePrintBill = async (bill: Bill) => {
+    try {
+      const items = await fetchBillItems(bill.id);
+      printBillReceipt(bill, items, settings);
+    } catch (error) {
+      toast({ title: 'Error loading bill items', variant: 'destructive' });
+    }
+  };
 
   const deleteBillMutation = useMutation({
     mutationFn: async (billId: string) => {
@@ -505,14 +506,24 @@ export default function BillsHistory() {
                             variant="ghost"
                             size="icon"
                             onClick={() => setSelectedBill(bill)}
+                            title="View Bill"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => handlePrintBill(bill)}
+                            title="Print Bill"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => setBillToDelete(bill)}
                             className="text-destructive hover:text-destructive"
+                            title="Delete Bill"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -528,74 +539,11 @@ export default function BillsHistory() {
       </Card>
 
       {/* Bill Details Dialog */}
-      <Dialog open={!!selectedBill} onOpenChange={() => setSelectedBill(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Bill #{selectedBill?.bill_number}</DialogTitle>
-          </DialogHeader>
-          {selectedBill && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Date:</span>
-                  <p className="font-medium">
-                    {format(new Date(selectedBill.created_at), 'dd/MM/yyyy HH:mm')}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Customer:</span>
-                  <p className="font-medium">{selectedBill.customers?.name || 'Walk-in'}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Status:</span>
-                  <Badge className={getStatusColor(selectedBill.status)} variant="secondary">
-                    {selectedBill.status}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <h4 className="mb-2 font-medium">Items</h4>
-                <div className="space-y-2">
-                  {billItems.map((item) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <span>
-                        {item.product_name} × {item.quantity}
-                      </span>
-                      <span>{currencySymbol}{Number(item.total_price).toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-1 border-t pt-4 text-sm">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>{currencySymbol}{Number(selectedBill.subtotal).toFixed(2)}</span>
-                </div>
-                {selectedBill.discount_amount > 0 && (
-                  <div className="flex justify-between text-destructive">
-                    <span>Discount</span>
-                    <span>-{currencySymbol}{Number(selectedBill.discount_amount).toFixed(2)}</span>
-                  </div>
-                )}
-                {selectedBill.tax_amount > 0 && (
-                  <div className="flex justify-between">
-                    <span>Tax</span>
-                    <span>{currencySymbol}{Number(selectedBill.tax_amount).toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total</span>
-                  <span className="text-primary">
-                    {currencySymbol}{Number(selectedBill.total_amount).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <BillDetailsDialog 
+        bill={selectedBill} 
+        open={!!selectedBill} 
+        onOpenChange={() => setSelectedBill(null)} 
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!billToDelete} onOpenChange={() => setBillToDelete(null)}>

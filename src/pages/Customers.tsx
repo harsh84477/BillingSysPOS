@@ -33,10 +33,12 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2, Users, Search, Phone, Mail, Download, Filter, X, ShoppingBag, Calendar } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Search, Phone, Mail, Download, Filter, X, ShoppingBag, Calendar, Eye, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, parseISO, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { exportToExcel } from '@/lib/exportToExcel';
+import { BillDetailsDialog } from '@/components/bills/BillDetailsDialog';
+import { printBillReceipt } from '@/components/bills/BillReceiptPrint';
 
 interface Customer {
   id: string;
@@ -52,8 +54,13 @@ interface CustomerBill {
   id: string;
   bill_number: string;
   total_amount: number;
+  subtotal: number;
+  discount_amount: number;
+  tax_amount: number;
   status: string;
   created_at: string;
+  customer_id: string | null;
+  customers?: { name: string } | null;
 }
 
 export default function Customers() {
@@ -68,6 +75,7 @@ export default function Customers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCustomerOrders, setSelectedCustomerOrders] = useState<Customer | null>(null);
+  const [viewingBill, setViewingBill] = useState<CustomerBill | null>(null);
   
   // Filters
   const [hasEmailFilter, setHasEmailFilter] = useState<string>('all');
@@ -95,11 +103,15 @@ export default function Customers() {
       if (!selectedCustomerOrders) return [];
       const { data, error } = await supabase
         .from('bills')
-        .select('id, bill_number, total_amount, status, created_at')
+        .select('id, bill_number, total_amount, subtotal, discount_amount, tax_amount, status, created_at, customer_id')
         .eq('customer_id', selectedCustomerOrders.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as CustomerBill[];
+      // Add customer name to each bill
+      return data.map(bill => ({
+        ...bill,
+        customers: { name: selectedCustomerOrders.name }
+      })) as CustomerBill[];
     },
     enabled: !!selectedCustomerOrders,
   });
@@ -238,6 +250,24 @@ export default function Customers() {
 
   const totalSpent = customerOrders.reduce((sum, order) => sum + Number(order.total_amount), 0);
 
+  // Fetch bill items for printing
+  const fetchBillItems = async (billId: string) => {
+    const { data, error } = await supabase
+      .from('bill_items')
+      .select('*')
+      .eq('bill_id', billId);
+    if (error) throw error;
+    return data;
+  };
+
+  const handlePrintBill = async (bill: CustomerBill) => {
+    try {
+      const items = await fetchBillItems(bill.id);
+      printBillReceipt(bill as any, items, settings);
+    } catch (error) {
+      toast.error('Error loading bill items');
+    }
+  };
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -573,6 +603,7 @@ export default function Customers() {
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="w-[80px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -597,6 +628,26 @@ export default function Customers() {
                       <TableCell className="text-right font-semibold">
                         {currencySymbol}{Number(order.total_amount).toFixed(2)}
                       </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setViewingBill(order)}
+                            title="View Bill"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handlePrintBill(order)}
+                            title="Print Bill"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -610,6 +661,13 @@ export default function Customers() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Bill Details Dialog */}
+      <BillDetailsDialog 
+        bill={viewingBill as any} 
+        open={!!viewingBill} 
+        onOpenChange={() => setViewingBill(null)} 
+      />
     </div>
   );
 }
