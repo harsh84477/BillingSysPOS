@@ -460,7 +460,7 @@ export default function Billing() {
               No products found
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
               {filteredProducts.map((product) => {
                 const iconName = product.icon || 'Package';
                 const LucideIcon = icons[iconName as keyof typeof icons];
