@@ -39,10 +39,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, FileText, Calendar, Eye, Trash2, Download, Filter, X } from 'lucide-react';
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { Search, FileText, Calendar, Eye, Trash2, Download, Filter, X, TrendingUp, Receipt, Clock } from 'lucide-react';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { exportToExcel } from '@/lib/exportToExcel';
+
+type DatePreset = 'today' | 'yesterday' | 'last7days' | 'last30days' | 'thisMonth' | 'lastMonth' | 'custom';
+
+const DATE_PRESETS: { value: DatePreset; label: string }[] = [
+  { value: 'today', label: 'Today' },
+  { value: 'yesterday', label: 'Yesterday' },
+  { value: 'last7days', label: 'Last 7 Days' },
+  { value: 'last30days', label: 'Last 30 Days' },
+  { value: 'thisMonth', label: 'This Month' },
+  { value: 'lastMonth', label: 'Last Month' },
+  { value: 'custom', label: 'Custom Range' },
+];
 
 interface Bill {
   id: string;
@@ -76,8 +88,51 @@ export default function BillsHistory() {
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [customerFilter, setCustomerFilter] = useState<string>('all');
+  const [datePreset, setDatePreset] = useState<DatePreset>('today');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+
+  // Apply date preset on mount
+  React.useEffect(() => {
+    applyDatePreset('today');
+  }, []);
+
+  const applyDatePreset = (preset: DatePreset) => {
+    setDatePreset(preset);
+    const today = new Date();
+    
+    switch (preset) {
+      case 'today':
+        setDateFrom(format(today, 'yyyy-MM-dd'));
+        setDateTo(format(today, 'yyyy-MM-dd'));
+        break;
+      case 'yesterday':
+        const yesterday = subDays(today, 1);
+        setDateFrom(format(yesterday, 'yyyy-MM-dd'));
+        setDateTo(format(yesterday, 'yyyy-MM-dd'));
+        break;
+      case 'last7days':
+        setDateFrom(format(subDays(today, 6), 'yyyy-MM-dd'));
+        setDateTo(format(today, 'yyyy-MM-dd'));
+        break;
+      case 'last30days':
+        setDateFrom(format(subDays(today, 29), 'yyyy-MM-dd'));
+        setDateTo(format(today, 'yyyy-MM-dd'));
+        break;
+      case 'thisMonth':
+        setDateFrom(format(startOfMonth(today), 'yyyy-MM-dd'));
+        setDateTo(format(endOfMonth(today), 'yyyy-MM-dd'));
+        break;
+      case 'lastMonth':
+        const lastMonth = subMonths(today, 1);
+        setDateFrom(format(startOfMonth(lastMonth), 'yyyy-MM-dd'));
+        setDateTo(format(endOfMonth(lastMonth), 'yyyy-MM-dd'));
+        break;
+      case 'custom':
+        // Keep existing values for custom
+        break;
+    }
+  };
   
   const queryClient = useQueryClient();
   const currencySymbol = settings?.currency_symbol || '₹';
@@ -179,11 +234,25 @@ export default function BillsHistory() {
   const clearFilters = () => {
     setStatusFilter('all');
     setCustomerFilter('all');
-    setDateFrom('');
-    setDateTo('');
+    setDatePreset('today');
+    applyDatePreset('today');
   };
 
-  const hasActiveFilters = statusFilter !== 'all' || customerFilter !== 'all' || dateFrom || dateTo;
+  const hasActiveFilters = statusFilter !== 'all' || customerFilter !== 'all';
+
+  // Summary stats
+  const summaryStats = useMemo(() => {
+    const completed = filteredBills.filter(b => b.status === 'completed');
+    const totalRevenue = completed.reduce((sum, b) => sum + Number(b.total_amount), 0);
+    const totalDiscount = completed.reduce((sum, b) => sum + Number(b.discount_amount), 0);
+    return {
+      totalBills: filteredBills.length,
+      completedBills: completed.length,
+      totalRevenue,
+      totalDiscount,
+      avgBillValue: completed.length > 0 ? totalRevenue / completed.length : 0,
+    };
+  }, [filteredBills]);
 
   const handleExportExcel = () => {
     if (filteredBills.length === 0) {
@@ -234,9 +303,72 @@ export default function BillsHistory() {
         </Button>
       </div>
 
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Receipt className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Total Bills</p>
+              <p className="text-lg font-bold">{summaryStats.totalBills}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-green-500/10">
+              <TrendingUp className="h-4 w-4 text-green-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Total Revenue</p>
+              <p className="text-lg font-bold">{currencySymbol}{summaryStats.totalRevenue.toFixed(2)}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-orange-500/10">
+              <Clock className="h-4 w-4 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Avg Bill Value</p>
+              <p className="text-lg font-bold">{currencySymbol}{summaryStats.avgBillValue.toFixed(2)}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-red-500/10">
+              <X className="h-4 w-4 text-red-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Total Discount</p>
+              <p className="text-lg font-bold">{currencySymbol}{summaryStats.totalDiscount.toFixed(2)}</p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col gap-4">
+            {/* Quick Date Presets */}
+            <div className="flex flex-wrap gap-2">
+              {DATE_PRESETS.map((preset) => (
+                <Button
+                  key={preset.value}
+                  variant={datePreset === preset.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => applyDatePreset(preset.value)}
+                  className="text-xs"
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
+
             <div className="flex items-center gap-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -294,7 +426,10 @@ export default function BillsHistory() {
                   <Input 
                     type="date" 
                     value={dateFrom} 
-                    onChange={(e) => setDateFrom(e.target.value)}
+                    onChange={(e) => {
+                      setDateFrom(e.target.value);
+                      setDatePreset('custom');
+                    }}
                   />
                 </div>
                 
@@ -303,7 +438,10 @@ export default function BillsHistory() {
                   <Input 
                     type="date" 
                     value={dateTo} 
-                    onChange={(e) => setDateTo(e.target.value)}
+                    onChange={(e) => {
+                      setDateTo(e.target.value);
+                      setDatePreset('custom');
+                    }}
                   />
                 </div>
                 
