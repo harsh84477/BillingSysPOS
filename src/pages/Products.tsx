@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Trash2, Package, Search, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Search, AlertTriangle, icons } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Product {
@@ -44,9 +44,16 @@ interface Product {
   stock_quantity: number;
   low_stock_threshold: number;
   category_id: string | null;
+  icon: string | null;
   is_active: boolean;
   categories?: { name: string; color: string | null } | null;
 }
+
+const PRODUCT_ICONS = [
+  'Package', 'Cigarette', 'Flame', 'Droplet', 'Coffee', 'Cookie', 'Candy',
+  'Apple', 'Sandwich', 'Pizza', 'IceCream', 'Beer', 'Wine', 'Milk',
+  'ShoppingBag', 'Gift', 'Box', 'Boxes', 'Archive', 'PackageCheck',
+];
 
 export default function Products() {
   const { isAdmin } = useAuth();
@@ -57,6 +64,7 @@ export default function Products() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState('Package');
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -83,6 +91,12 @@ export default function Products() {
       return data as Product[];
     },
   });
+
+  const renderIcon = (iconName: string | null) => {
+    const name = iconName || 'Package';
+    const LucideIcon = icons[name as keyof typeof icons];
+    return LucideIcon ? <LucideIcon className="h-5 w-5 text-muted-foreground" /> : <Package className="h-5 w-5 text-muted-foreground" />;
+  };
 
   // Create/Update product
   const saveMutation = useMutation({
@@ -135,7 +149,19 @@ export default function Products() {
       stock_quantity: Number(formData.get('stock_quantity')),
       low_stock_threshold: Number(formData.get('low_stock_threshold')),
       category_id: formData.get('category_id') as string || null,
+      icon: selectedIcon,
     });
+  };
+
+  const openDialog = (product?: Product) => {
+    if (product) {
+      setEditingProduct(product);
+      setSelectedIcon(product.icon || 'Package');
+    } else {
+      setEditingProduct(null);
+      setSelectedIcon('Package');
+    }
+    setIsDialogOpen(true);
   };
 
   const filteredProducts = products?.filter((p) =>
@@ -153,10 +179,13 @@ export default function Products() {
         {isAdmin && (
           <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
-            if (!open) setEditingProduct(null);
+            if (!open) {
+              setEditingProduct(null);
+              setSelectedIcon('Package');
+            }
           }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button onClick={() => openDialog()}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Product
               </Button>
@@ -248,6 +277,28 @@ export default function Products() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Icon</Label>
+                  <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto p-1 border rounded-md">
+                    {PRODUCT_ICONS.map((iconName) => {
+                      const IconComponent = icons[iconName as keyof typeof icons];
+                      return IconComponent ? (
+                        <button
+                          key={iconName}
+                          type="button"
+                          onClick={() => setSelectedIcon(iconName)}
+                          className={`p-2 rounded-md flex items-center justify-center transition-colors ${
+                            selectedIcon === iconName
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted hover:bg-muted/80'
+                          }`}
+                        >
+                          <IconComponent className="h-5 w-5" />
+                        </button>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
                 <div className="flex justify-end gap-2">
                   <Button
                     type="button"
@@ -305,7 +356,7 @@ export default function Products() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
-                            <Package className="h-5 w-5 text-muted-foreground" />
+                            {renderIcon(product.icon)}
                           </div>
                           <div>
                             <p className="font-medium">{product.name}</p>
@@ -357,10 +408,7 @@ export default function Products() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => {
-                                setEditingProduct(product);
-                                setIsDialogOpen(true);
-                              }}
+                              onClick={() => openDialog(product)}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
