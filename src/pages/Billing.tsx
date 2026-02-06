@@ -460,7 +460,7 @@ export default function Billing() {
               No products found
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {filteredProducts.map((product) => {
                 const iconName = product.icon || 'Package';
                 const LucideIcon = icons[iconName as keyof typeof icons];
