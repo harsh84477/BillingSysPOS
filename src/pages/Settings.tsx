@@ -101,6 +101,21 @@ export default function Settings() {
     enabled: isAdmin,
   });
 
+  // Fetch join code directly (fallback if businessInfo is null)
+  const { data: myBusiness } = useQuery({
+    queryKey: ['myBusinessJoinCode'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('businesses')
+        .select('join_code, business_name')
+        .eq('owner_id', user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isAdmin && !!user,
+  });
+
   // Mutation for assigning bill prefix
   const assignPrefixMutation = useMutation({
     mutationFn: async ({ targetUserId, prefix }: { targetUserId: string; prefix: string }) => {
@@ -715,54 +730,62 @@ export default function Settings() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Invite Section */}
-                {businessInfo && (
-                  <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <KeyRound className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-semibold">Invite Team Members</span>
+                {(() => {
+                  const joinCode = myBusiness?.join_code || businessInfo?.join_code;
+                  if (!joinCode) return (
+                    <div className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+                      Loading business join code...
                     </div>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  );
+                  return (
+                    <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 space-y-3">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">Join Code:</span>
-                        <span className="text-2xl font-mono font-bold tracking-[0.2em] text-primary">
-                          {businessInfo.join_code}
-                        </span>
+                        <KeyRound className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-semibold">Invite Team Members</span>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5"
-                          onClick={async () => {
-                            await navigator.clipboard.writeText(businessInfo.join_code);
-                            setCopied(true);
-                            toast.success('Join code copied!');
-                            setTimeout(() => setCopied(false), 2000);
-                          }}
-                        >
-                          {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
-                          {copied ? 'Copied' : 'Copy Code'}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5"
-                          onClick={async () => {
-                            const inviteText = `Join my POS business!\n\nJoin Code: ${businessInfo.join_code}\n\nSign up at: ${window.location.origin}`;
-                            await navigator.clipboard.writeText(inviteText);
-                            toast.success('Invitation message copied!');
-                          }}
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                          Copy Invite
-                        </Button>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Join Code:</span>
+                          <span className="text-2xl font-mono font-bold tracking-[0.2em] text-primary">
+                            {joinCode}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={async () => {
+                              await navigator.clipboard.writeText(joinCode);
+                              setCopied(true);
+                              toast.success('Join code copied!');
+                              setTimeout(() => setCopied(false), 2000);
+                            }}
+                          >
+                            {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                            {copied ? 'Copied' : 'Copy Code'}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={async () => {
+                              const inviteText = `Join my POS business!\n\nJoin Code: ${joinCode}\n\nSign up at: ${window.location.origin}`;
+                              await navigator.clipboard.writeText(inviteText);
+                              toast.success('Invitation message copied!');
+                            }}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            Copy Invite
+                          </Button>
+                        </div>
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Share this code with your managers and cashiers. Max 8 members per business.
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Share this code with your managers and cashiers. Max 8 members per business.
-                    </p>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Team Table */}
                 {userRoles.length > 0 ? (
