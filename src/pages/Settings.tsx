@@ -101,19 +101,28 @@ export default function Settings() {
     enabled: isAdmin,
   });
 
-  // Fetch join code directly (fallback if businessInfo is null)
-  const { data: myBusiness } = useQuery({
+  // Fetch join code directly (works even if businessInfo from AuthContext is null)
+  const { data: myBusiness, isLoading: joinCodeLoading, error: joinCodeError } = useQuery({
     queryKey: ['myBusinessJoinCode'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('businesses')
-        .select('join_code, business_name')
-        .eq('owner_id', user!.id)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      try {
+        const { data, error } = await supabase
+          .from('businesses')
+          .select('join_code, business_name')
+          .eq('owner_id', user!.id)
+          .maybeSingle();
+        if (error) {
+          console.error('Join code query error:', error);
+          return null;
+        }
+        return data;
+      } catch (e) {
+        console.error('Join code fetch failed:', e);
+        return null;
+      }
     },
     enabled: isAdmin && !!user,
+    retry: false,
   });
 
   // Mutation for assigning bill prefix
@@ -732,9 +741,17 @@ export default function Settings() {
                 {/* Invite Section */}
                 {(() => {
                   const joinCode = myBusiness?.join_code || businessInfo?.join_code;
-                  if (!joinCode) return (
+                  if (joinCodeLoading) return (
                     <div className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 p-4 text-center text-sm text-muted-foreground">
                       Loading business join code...
+                    </div>
+                  );
+                  if (!joinCode) return (
+                    <div className="rounded-xl border border-dashed border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+                      <p className="text-sm font-medium text-amber-700">⚠️ No Business Join Code Found</p>
+                      <p className="text-xs text-muted-foreground">
+                        You need to run the multi-tenancy database migration first. Go to your Supabase SQL Editor and run the migration file: <code className="bg-muted px-1 rounded">20260213155500_business_multi_tenancy.sql</code> followed by <code className="bg-muted px-1 rounded">20260214010000_bill_prefix_system.sql</code>
+                      </p>
                     </div>
                   );
                   return (
