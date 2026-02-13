@@ -490,6 +490,7 @@ export type Database = {
           business_id: string | null
           created_at: string
           id: string
+          last_bill_date: string | null
           next_bill_number: number
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
@@ -499,6 +500,7 @@ export type Database = {
           business_id?: string | null
           created_at?: string
           id?: string
+          last_bill_date?: string | null
           next_bill_number?: number
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
@@ -508,6 +510,7 @@ export type Database = {
           business_id?: string | null
           created_at?: string
           id?: string
+          last_bill_date?: string | null
           next_bill_number?: number
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string

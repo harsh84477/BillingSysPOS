@@ -713,7 +713,58 @@ export default function Settings() {
                   Manage user roles and assign bill prefixes. Each team member gets a unique letter prefix for their bills.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
+                {/* Invite Section */}
+                {businessInfo && (
+                  <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <KeyRound className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold">Invite Team Members</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Join Code:</span>
+                        <span className="text-2xl font-mono font-bold tracking-[0.2em] text-primary">
+                          {businessInfo.join_code}
+                        </span>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={async () => {
+                            await navigator.clipboard.writeText(businessInfo.join_code);
+                            setCopied(true);
+                            toast.success('Join code copied!');
+                            setTimeout(() => setCopied(false), 2000);
+                          }}
+                        >
+                          {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                          {copied ? 'Copied' : 'Copy Code'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={async () => {
+                            const inviteText = `Join my POS business!\n\nJoin Code: ${businessInfo.join_code}\n\nSign up at: ${window.location.origin}`;
+                            await navigator.clipboard.writeText(inviteText);
+                            toast.success('Invitation message copied!');
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          Copy Invite
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Share this code with your managers and cashiers. Max 8 members per business.
+                    </p>
+                  </div>
+                )}
+
+                {/* Team Table */}
                 {userRoles.length > 0 ? (
                   <Table>
                     <TableHeader>
@@ -777,15 +828,21 @@ export default function Settings() {
                               />
                               {ur.bill_prefix && (
                                 <span className="text-xs text-muted-foreground">
-                                  Bills: {ur.bill_prefix}-XXXX
+                                  Bills: {ur.bill_prefix}MMDDXXXX
                                 </span>
                               )}
                             </div>
                           </TableCell>
                           <TableCell className="text-right font-mono">
-                            {ur.bill_prefix
-                              ? `${ur.bill_prefix}-${String(ur.next_bill_number || 1).padStart(4, '0')}`
-                              : '—'}
+                            {(() => {
+                              if (!ur.bill_prefix) return '—';
+                              const today = new Date();
+                              const mm = String(today.getMonth() + 1).padStart(2, '0');
+                              const dd = String(today.getDate()).padStart(2, '0');
+                              const todayStr = today.toISOString().split('T')[0];
+                              const seq = (ur.last_bill_date === todayStr) ? (ur.next_bill_number || 1) : 1;
+                              return `${ur.bill_prefix}${mm}${dd}${String(seq).padStart(4, '0')}`;
+                            })()}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -801,7 +858,8 @@ export default function Settings() {
                   <p className="text-sm font-medium">💡 How Bill Prefixes Work</p>
                   <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
                     <li>Each team member gets a unique single letter (A, B, C, etc.)</li>
-                    <li>Their bills are numbered: <code className="bg-muted px-1 rounded">A-0001</code>, <code className="bg-muted px-1 rounded">A-0002</code>, etc.</li>
+                    <li>Format: <code className="bg-muted px-1 rounded">A02140001</code> = Prefix + Month + Day + Sequence</li>
+                    <li>The sequence resets daily — each day starts from 0001</li>
                     <li>This ensures no bill number conflicts when multiple users bill at the same time</li>
                     <li>Click the prefix field and type a new letter to change it</li>
                   </ul>

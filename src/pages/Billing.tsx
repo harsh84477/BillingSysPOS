@@ -294,13 +294,19 @@ export default function Billing() {
       // Show a preview based on user's prefix and next number
       supabase
         .from('user_roles')
-        .select('bill_prefix, next_bill_number')
+        .select('bill_prefix, next_bill_number, last_bill_date')
         .eq('user_id', user.id)
         .maybeSingle()
         .then(({ data }) => {
           if (data?.bill_prefix) {
-            const padded = String(data.next_bill_number).padStart(4, '0');
-            setPreviewBillNumber(`${data.bill_prefix}-${padded}`);
+            const today = new Date();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            // Check if sequence should reset (new day)
+            const todayStr = today.toISOString().split('T')[0];
+            const seq = (data.last_bill_date === todayStr) ? data.next_bill_number : 1;
+            const padded = String(seq).padStart(4, '0');
+            setPreviewBillNumber(`${data.bill_prefix}${mm}${dd}${padded}`);
           } else {
             setPreviewBillNumber('No prefix');
           }
@@ -490,8 +496,11 @@ export default function Billing() {
           .maybeSingle()
           .then(({ data }) => {
             if (data?.bill_prefix) {
+              const today = new Date();
+              const mm = String(today.getMonth() + 1).padStart(2, '0');
+              const dd = String(today.getDate()).padStart(2, '0');
               const padded = String(data.next_bill_number).padStart(4, '0');
-              setPreviewBillNumber(`${data.bill_prefix}-${padded}`);
+              setPreviewBillNumber(`${data.bill_prefix}${mm}${dd}${padded}`);
             }
           });
       }
