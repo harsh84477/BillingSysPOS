@@ -44,10 +44,21 @@ export function useUpdateBusinessSettings() {
 
   return useMutation({
     mutationFn: async (updates: Partial<BusinessSettings>) => {
+      // First get the current settings row to find its ID
+      const { data: current, error: fetchError } = await supabase
+        .from('business_settings')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+      if (!current) throw new Error('No settings found. Please set up your business first.');
+
+      // Update by specific ID so .single() always works
       const { data, error } = await supabase
         .from('business_settings')
         .update(updates)
-        .not('id', 'is', null)
+        .eq('id', current.id)
         .select()
         .single();
 
