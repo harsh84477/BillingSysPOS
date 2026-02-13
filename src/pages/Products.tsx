@@ -285,7 +285,7 @@ export default function Products() {
           <p className="text-muted-foreground">Manage your product inventory</p>
         </div>
 
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           {isAdmin && selectedProductIds.size > 0 && (
             <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
               <Trash2 className="mr-2 h-4 w-4" />
@@ -544,7 +544,7 @@ export default function Products() {
                       </TableHead>
                     )}
                     <TableHead>Product</TableHead>
-                    <TableHead>Category</TableHead>
+                    <TableHead className="hidden sm:table-cell">Category</TableHead>
                     <TableHead className="text-right">Price</TableHead>
                     <TableHead className="text-right">Stock</TableHead>
                     {isAdmin && <TableHead className="w-24">Actions</TableHead>}
@@ -577,7 +577,7 @@ export default function Products() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         {product.categories ? (
                           <Badge
                             variant="secondary"

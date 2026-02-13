@@ -559,6 +559,41 @@ export default function Billing() {
 
       {/* Center Panel - Products */}
       <div className="flex flex-1 flex-col">
+        {/* Mobile Category Bar - horizontal scroll */}
+        <div className="lg:hidden border-b border-border bg-card">
+          <div className="flex overflow-x-auto gap-1 p-2 scrollbar-hide">
+            <button
+              onClick={() => setSelectedCategory('all')}
+              className={cn(
+                'flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                selectedCategory === 'all'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted hover:bg-accent'
+              )}
+            >
+              All
+            </button>
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={cn(
+                  'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all',
+                  selectedCategory === category.id
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted hover:bg-accent'
+                )}
+              >
+                <span
+                  className="h-2 w-2 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: category.color || '#3B82F6' }}
+                />
+                {category.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Search Bar */}
         <div className="p-3 border-b border-border bg-card">
           <div className="relative">
@@ -640,14 +675,7 @@ export default function Billing() {
           isCartExpanded ? 'w-80 lg:w-96' : 'w-12'
         )}
       >
-        {/* Collapse/Expand Button */}
-        <button
-          onClick={() => setIsCartExpanded(!isCartExpanded)}
-          className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-full z-10 bg-primary text-primary-foreground rounded-l-md p-1 shadow-md hover:bg-primary/90"
-          style={{ marginRight: isCartExpanded ? '24rem' : '3rem' }}
-        >
-          {isCartExpanded ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </button>
+        {/* Collapse/Expand Button - removed, was causing positioning bugs */}
 
         {isCartExpanded ? (
           <>

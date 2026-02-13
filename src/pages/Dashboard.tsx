@@ -64,10 +64,10 @@ export default function Dashboard() {
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const startOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  
+
   // Month selector for expense report
   const [selectedMonth, setSelectedMonth] = useState(() => format(today, 'yyyy-MM'));
-  
+
   // Generate last 12 months for dropdown
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
     const date = subMonths(today, i);
@@ -327,7 +327,7 @@ export default function Dashboard() {
       {/* Monthly Expense Report */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5" />
@@ -335,8 +335,8 @@ export default function Dashboard() {
               </CardTitle>
               <CardDescription>Revenue, costs, and profit summary</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-48">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="w-full sm:w-48">
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                   <SelectTrigger>
                     <SelectValue />
@@ -393,7 +393,7 @@ export default function Dashboard() {
                   {currencySymbol}{monthlyTotals.profit.toFixed(2)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {monthlyTotals.revenue > 0 
+                  {monthlyTotals.revenue > 0
                     ? `${((monthlyTotals.profit / monthlyTotals.revenue) * 100).toFixed(1)}% margin`
                     : 'No sales'}
                 </p>
@@ -479,13 +479,12 @@ export default function Dashboard() {
                         {currencySymbol}{Number(bill.total_amount).toFixed(2)}
                       </p>
                       <span
-                        className={`text-xs capitalize ${
-                          bill.status === 'completed'
+                        className={`text-xs capitalize ${bill.status === 'completed'
                             ? 'text-green-600'
                             : bill.status === 'draft'
-                            ? 'text-yellow-600'
-                            : 'text-red-600'
-                        }`}
+                              ? 'text-yellow-600'
+                              : 'text-red-600'
+                          }`}
                       >
                         {bill.status}
                       </span>

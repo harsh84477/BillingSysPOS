@@ -80,7 +80,7 @@ export default function BillsHistory() {
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [customerFilter, setCustomerFilter] = useState<string>('all');
@@ -96,7 +96,7 @@ export default function BillsHistory() {
   const applyDatePreset = (preset: DatePreset) => {
     setDatePreset(preset);
     const today = new Date();
-    
+
     switch (preset) {
       case 'today':
         setDateFrom(format(today, 'yyyy-MM-dd'));
@@ -129,7 +129,7 @@ export default function BillsHistory() {
         break;
     }
   };
-  
+
   const queryClient = useQueryClient();
   const currencySymbol = settings?.currency_symbol || '₹';
 
@@ -207,18 +207,18 @@ export default function BillsHistory() {
   const filteredBills = useMemo(() => {
     return bills.filter((bill) => {
       // Search filter
-      const matchesSearch = 
+      const matchesSearch =
         bill.bill_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
         bill.customers?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       // Status filter
       const matchesStatus = statusFilter === 'all' || bill.status === statusFilter;
-      
+
       // Customer filter
-      const matchesCustomer = customerFilter === 'all' || 
+      const matchesCustomer = customerFilter === 'all' ||
         (customerFilter === 'walk-in' && !bill.customer_id) ||
         bill.customer_id === customerFilter;
-      
+
       // Date range filter
       let matchesDate = true;
       if (dateFrom || dateTo) {
@@ -227,7 +227,7 @@ export default function BillsHistory() {
         const to = dateTo ? endOfDay(parseISO(dateTo)) : new Date();
         matchesDate = isWithinInterval(billDate, { start: from, end: to });
       }
-      
+
       return matchesSearch && matchesStatus && matchesCustomer && matchesDate;
     });
   }, [bills, searchQuery, statusFilter, customerFilter, dateFrom, dateTo]);
@@ -293,7 +293,7 @@ export default function BillsHistory() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Bills History</h1>
           <p className="text-muted-foreground">View all your past bills and invoices</p>
@@ -380,15 +380,15 @@ export default function BillsHistory() {
                   className="pl-10"
                 />
               </div>
-              <Button 
-                variant={hasActiveFilters ? "default" : "outline"} 
+              <Button
+                variant={hasActiveFilters ? "default" : "outline"}
                 size="icon"
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <Filter className="h-4 w-4" />
               </Button>
             </div>
-            
+
             {showFilters && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="space-y-1">
@@ -405,7 +405,7 @@ export default function BillsHistory() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-1">
                   <Label className="text-xs">Customer</Label>
                   <Select value={customerFilter} onValueChange={setCustomerFilter}>
@@ -421,31 +421,31 @@ export default function BillsHistory() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-1">
                   <Label className="text-xs">From Date</Label>
-                  <Input 
-                    type="date" 
-                    value={dateFrom} 
+                  <Input
+                    type="date"
+                    value={dateFrom}
                     onChange={(e) => {
                       setDateFrom(e.target.value);
                       setDatePreset('custom');
                     }}
                   />
                 </div>
-                
+
                 <div className="space-y-1">
                   <Label className="text-xs">To Date</Label>
-                  <Input 
-                    type="date" 
-                    value={dateTo} 
+                  <Input
+                    type="date"
+                    value={dateTo}
                     onChange={(e) => {
                       setDateTo(e.target.value);
                       setDatePreset('custom');
                     }}
                   />
                 </div>
-                
+
                 {hasActiveFilters && (
                   <div className="col-span-2 md:col-span-4">
                     <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -474,8 +474,8 @@ export default function BillsHistory() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Bill #</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Customer</TableHead>
+                    <TableHead className="hidden sm:table-cell">Date</TableHead>
+                    <TableHead className="hidden md:table-cell">Customer</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead className="w-[80px]"></TableHead>
@@ -485,13 +485,13 @@ export default function BillsHistory() {
                   {filteredBills.map((bill) => (
                     <TableRow key={bill.id}>
                       <TableCell className="font-medium">#{bill.bill_number}</TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Calendar className="h-3 w-3" />
                           {format(new Date(bill.created_at), 'dd/MM/yyyy HH:mm')}
                         </div>
                       </TableCell>
-                      <TableCell>{bill.customers?.name || 'Walk-in'}</TableCell>
+                      <TableCell className="hidden md:table-cell">{bill.customers?.name || 'Walk-in'}</TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(bill.status)} variant="secondary">
                           {bill.status}
@@ -539,10 +539,10 @@ export default function BillsHistory() {
       </Card>
 
       {/* Bill Details Dialog */}
-      <BillDetailsDialog 
-        bill={selectedBill} 
-        open={!!selectedBill} 
-        onOpenChange={() => setSelectedBill(null)} 
+      <BillDetailsDialog
+        bill={selectedBill}
+        open={!!selectedBill}
+        onOpenChange={() => setSelectedBill(null)}
       />
 
       {/* Delete Confirmation Dialog */}
