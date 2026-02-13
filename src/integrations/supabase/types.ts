@@ -486,23 +486,29 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          bill_prefix: string | null
           business_id: string | null
           created_at: string
           id: string
+          next_bill_number: number
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          bill_prefix?: string | null
           business_id?: string | null
           created_at?: string
           id?: string
+          next_bill_number?: number
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          bill_prefix?: string | null
           business_id?: string | null
           created_at?: string
           id?: string
+          next_bill_number?: number
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -555,6 +561,20 @@ export type Database = {
       generate_join_code: {
         Args: Record<string, never>
         Returns: string
+      }
+      get_next_bill_number: {
+        Args: {
+          _user_id: string
+        }
+        Returns: Json
+      }
+      assign_bill_prefix: {
+        Args: {
+          _admin_user_id: string
+          _target_user_id: string
+          _prefix: string
+        }
+        Returns: Json
       }
     }
     Enums: {

@@ -101,6 +101,28 @@ export default function Settings() {
     enabled: isAdmin,
   });
 
+  // Mutation for assigning bill prefix
+  const assignPrefixMutation = useMutation({
+    mutationFn: async ({ targetUserId, prefix }: { targetUserId: string; prefix: string }) => {
+      const { data, error } = await supabase.rpc('assign_bill_prefix', {
+        _admin_user_id: user!.id,
+        _target_user_id: targetUserId,
+        _prefix: prefix,
+      });
+      if (error) throw error;
+      const result = data as any;
+      if (!result.success) throw new Error(result.error);
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allUserRoles'] });
+      toast.success('Bill prefix assigned!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
   // Category mutations
   const saveCategoryMutation = useMutation({
     mutationFn: async (category: { name: string; color: string; icon: string }) => {
@@ -681,14 +703,14 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Users - Admin Only */}
+        {/* Users & Team - Admin Only */}
         {isAdmin && (
           <TabsContent value="users">
             <Card>
               <CardHeader>
-                <CardTitle>User Roles</CardTitle>
+                <CardTitle>Team Management</CardTitle>
                 <CardDescription>
-                  Manage user access and permissions
+                  Manage user roles and assign bill prefixes. Each team member gets a unique letter prefix for their bills.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -698,13 +720,20 @@ export default function Settings() {
                       <TableRow>
                         <TableHead>User</TableHead>
                         <TableHead>Role</TableHead>
+                        <TableHead>Bill Prefix</TableHead>
+                        <TableHead className="text-right">Next Bill #</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {userRoles.map((ur: any) => (
                         <TableRow key={ur.id}>
                           <TableCell>
-                            {ur.profiles?.display_name || 'Unknown User'}
+                            <div className="font-medium">
+                              {ur.profiles?.display_name || 'Unknown User'}
+                            </div>
+                            {ur.user_id === user?.id && (
+                              <span className="text-xs text-muted-foreground">(You)</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -719,15 +748,64 @@ export default function Settings() {
                               {ur.role}
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                className="w-16 h-8 text-center font-mono font-bold uppercase"
+                                maxLength={1}
+                                defaultValue={ur.bill_prefix || ''}
+                                placeholder="—"
+                                onBlur={(e) => {
+                                  const newPrefix = e.target.value.trim().toUpperCase();
+                                  if (newPrefix && newPrefix !== (ur.bill_prefix || '')) {
+                                    if (/^[A-Z]$/.test(newPrefix)) {
+                                      assignPrefixMutation.mutate({
+                                        targetUserId: ur.user_id,
+                                        prefix: newPrefix,
+                                      });
+                                    } else {
+                                      toast.error('Prefix must be a single letter (A-Z)');
+                                      e.target.value = ur.bill_prefix || '';
+                                    }
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    (e.target as HTMLInputElement).blur();
+                                  }
+                                }}
+                              />
+                              {ur.bill_prefix && (
+                                <span className="text-xs text-muted-foreground">
+                                  Bills: {ur.bill_prefix}-XXXX
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {ur.bill_prefix
+                              ? `${ur.bill_prefix}-${String(ur.next_bill_number || 1).padStart(4, '0')}`
+                              : '—'}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 ) : (
                   <p className="text-muted-foreground">
-                    No users with assigned roles. Use the database to assign roles.
+                    No team members yet. Share your join code from the Business tab.
                   </p>
                 )}
+
+                <div className="mt-4 rounded-lg bg-muted/50 p-4 space-y-2">
+                  <p className="text-sm font-medium">💡 How Bill Prefixes Work</p>
+                  <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Each team member gets a unique single letter (A, B, C, etc.)</li>
+                    <li>Their bills are numbered: <code className="bg-muted px-1 rounded">A-0001</code>, <code className="bg-muted px-1 rounded">A-0002</code>, etc.</li>
+                    <li>This ensures no bill number conflicts when multiple users bill at the same time</li>
+                    <li>Click the prefix field and type a new letter to change it</li>
+                  </ul>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

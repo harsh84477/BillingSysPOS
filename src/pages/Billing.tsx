@@ -267,37 +267,46 @@ export default function Billing() {
     setCart((prev) => prev.filter((item) => item.productId !== productId));
   };
 
-  // Generate date-based bill number (MMDDXXXX format) with collision handling
-  const generateBillNumber = async (retryCount = 0): Promise<string> => {
-    const today = new Date();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const datePrefix = `${month}${day}`;
+  // Generate bill number atomically using the per-user prefix system
+  // Each user has their own prefix (A, B, C...) and counter, so no collisions
+  const generateBillNumber = async (): Promise<string> => {
+    if (!user) throw new Error('Not authenticated');
 
-    // Get the highest bill number for today
-    const { data: latestBill } = await supabase
-      .from('bills')
-      .select('bill_number')
-      .like('bill_number', `${datePrefix}%`)
-      .order('bill_number', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const { data, error } = await supabase.rpc('get_next_bill_number', {
+      _user_id: user.id,
+    });
 
-    let sequence = 1;
-    if (latestBill?.bill_number) {
-      const lastSequence = parseInt(latestBill.bill_number.slice(-4), 10);
-      sequence = lastSequence + 1 + retryCount;
+    if (error) throw new Error(error.message);
+
+    const result = data as any;
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to generate bill number');
     }
 
-    return `${datePrefix}${String(sequence).padStart(4, '0')}`;
+    return result.bill_number;
   };
 
   // Get current preview bill number
   const [previewBillNumber, setPreviewBillNumber] = useState('');
 
   React.useEffect(() => {
-    generateBillNumber().then(setPreviewBillNumber);
-  }, []);
+    if (user) {
+      // Show a preview based on user's prefix and next number
+      supabase
+        .from('user_roles')
+        .select('bill_prefix, next_bill_number')
+        .eq('user_id', user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.bill_prefix) {
+            const padded = String(data.next_bill_number).padStart(4, '0');
+            setPreviewBillNumber(`${data.bill_prefix}-${padded}`);
+          } else {
+            setPreviewBillNumber('No prefix');
+          }
+        });
+    }
+  }, [user]);
 
   // Print bill function
   const printBill = (billNumber: string) => {
@@ -405,74 +414,61 @@ export default function Billing() {
     }
   };
 
-  // Create bill mutation with retry logic for duplicate key handling
+  // Create bill mutation - no retry needed since bill numbers are per-user and atomic
   const createBillMutation = useMutation({
     mutationFn: async (shouldPrint: boolean) => {
-      let retryCount = 0;
-      const maxRetries = 3;
+      // Get the next bill number atomically (guaranteed unique)
+      const billNumber = await generateBillNumber();
 
-      while (retryCount < maxRetries) {
-        const billNumber = await generateBillNumber(retryCount);
+      const { data: bill, error: billError } = await supabase
+        .from('bills')
+        .insert({
+          bill_number: billNumber,
+          customer_id: selectedCustomerId,
+          created_by: user?.id,
+          status: 'completed' as const,
+          subtotal: cartCalculations.subtotal,
+          discount_type: 'flat',
+          discount_value: discountValue,
+          discount_amount: cartCalculations.discountAmount,
+          tax_amount: cartCalculations.taxAmount,
+          total_amount: cartCalculations.total,
+          completed_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
-        const { data: bill, error: billError } = await supabase
-          .from('bills')
-          .insert({
-            bill_number: billNumber,
-            customer_id: selectedCustomerId,
-            created_by: user?.id,
-            status: 'completed' as const,
-            subtotal: cartCalculations.subtotal,
-            discount_type: 'flat',
-            discount_value: discountValue,
-            discount_amount: cartCalculations.discountAmount,
-            tax_amount: cartCalculations.taxAmount,
-            total_amount: cartCalculations.total,
-            completed_at: new Date().toISOString(),
-          })
-          .select()
-          .single();
+      if (billError) throw billError;
 
-        if (billError) {
-          // Check if it's a duplicate key error
-          if (billError.code === '23505' && retryCount < maxRetries - 1) {
-            retryCount++;
-            continue;
-          }
-          throw billError;
+      const billItems = cart.map((item) => ({
+        bill_id: bill.id,
+        product_id: item.productId,
+        product_name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        cost_price: item.costPrice,
+        total_price: item.unitPrice * item.quantity,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('bill_items')
+        .insert(billItems);
+
+      if (itemsError) throw itemsError;
+
+      // Update stock quantities
+      for (const item of cart) {
+        const product = products.find((p) => p.id === item.productId);
+        if (product) {
+          const newQuantity = product.stock_quantity - item.quantity;
+          await supabase
+            .from('products')
+            .update({ stock_quantity: newQuantity })
+            .eq('id', item.productId);
         }
-
-        const billItems = cart.map((item) => ({
-          bill_id: bill.id,
-          product_id: item.productId,
-          product_name: item.name,
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          cost_price: item.costPrice,
-          total_price: item.unitPrice * item.quantity,
-        }));
-
-        const { error: itemsError } = await supabase
-          .from('bill_items')
-          .insert(billItems);
-
-        if (itemsError) throw itemsError;
-
-        // Update stock quantities
-        for (const item of cart) {
-          const product = products.find((p) => p.id === item.productId);
-          if (product) {
-            const newQuantity = product.stock_quantity - item.quantity;
-            await supabase
-              .from('products')
-              .update({ stock_quantity: newQuantity })
-              .eq('id', item.productId);
-          }
-        }
-
-        return { bill, billNumber, shouldPrint };
       }
 
-      throw new Error('Failed to generate unique bill number after multiple attempts');
+      return { bill, billNumber, shouldPrint };
     },
     onSuccess: ({ billNumber, shouldPrint }) => {
       if (shouldPrint) {
@@ -485,7 +481,20 @@ export default function Billing() {
       setSelectedCustomerId(null);
       setDiscountValue(0);
       setGstPercent(0);
-      generateBillNumber().then(setPreviewBillNumber);
+      // Refresh preview bill number
+      if (user) {
+        supabase
+          .from('user_roles')
+          .select('bill_prefix, next_bill_number')
+          .eq('user_id', user.id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.bill_prefix) {
+              const padded = String(data.next_bill_number).padStart(4, '0');
+              setPreviewBillNumber(`${data.bill_prefix}-${padded}`);
+            }
+          });
+      }
       toast.success(shouldPrint ? 'Bill saved & printed!' : 'Bill saved successfully!');
     },
     onError: (error: Error) => {
