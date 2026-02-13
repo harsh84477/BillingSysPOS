@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, loading, userRole, needsBusinessSetup } = useAuth();
+  const { user, loading, userRole, needsBusinessSetup, businessInfo } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -24,8 +24,11 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // Redirect to business setup if owner hasn't set up their business yet
-  if (needsBusinessSetup && location.pathname !== '/business-setup') {
+  // Only redirect to business-setup if:
+  // 1. needsBusinessSetup is explicitly true (user selected "owner" role but has no business)
+  // 2. businessInfo is null (no business found)
+  // 3. We're not already on the business-setup page
+  if (needsBusinessSetup && !businessInfo && location.pathname !== '/business-setup') {
     return <Navigate to="/business-setup" replace />;
   }
 

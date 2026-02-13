@@ -82,8 +82,9 @@ export default function BusinessSetup() {
                 // If business already exists, just go to dashboard
                 if (result.error?.includes('already own')) {
                     toast.info('Business already exists! Redirecting...');
-                    await refreshBusinessInfo();
-                    navigate('/dashboard', { replace: true });
+                    localStorage.removeItem('pos_pending_role');
+                    localStorage.removeItem('pos_pending_join_code');
+                    window.location.href = '/dashboard';
                     return;
                 }
                 toast.error(result.error || 'Failed to create business');
@@ -113,8 +114,11 @@ export default function BusinessSetup() {
     };
 
     const handleContinue = async () => {
-        await refreshBusinessInfo();
-        navigate('/dashboard');
+        // Clear any pending role data
+        localStorage.removeItem('pos_pending_role');
+        localStorage.removeItem('pos_pending_join_code');
+        // Hard redirect to force full state re-initialization
+        window.location.href = '/dashboard';
     };
 
     if (step === 'success') {
