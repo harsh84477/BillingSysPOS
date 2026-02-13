@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast as sonnerToast } from 'sonner';
 import { useTheme, ThemeName, themes } from '@/contexts/ThemeContext';
 import { useBusinessSettings, useUpdateBusinessSettings } from '@/hooks/useBusinessSettings';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,11 @@ import {
   Pencil,
   Trash2,
   FolderOpen,
+  Copy,
+  Check,
+  RefreshCw,
+  KeyRound,
+  Trash,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -58,7 +64,9 @@ const themeOptions: { name: string; value: ThemeName; description: string }[] = 
 ];
 
 export default function Settings() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, isManager, user, businessInfo, refreshBusinessInfo } = useAuth();
+  const [copied, setCopied] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const { theme, setTheme } = useTheme();
   const { data: settings, isLoading } = useBusinessSettings();
   const updateSettings = useUpdateBusinessSettings();
@@ -269,6 +277,74 @@ export default function Settings() {
               </form>
             </CardContent>
           </Card>
+
+          {/* Join Code Card - Admin Only */}
+          {isAdmin && businessInfo && (
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <KeyRound className="h-5 w-5" />
+                  Team Join Code
+                </CardTitle>
+                <CardDescription>
+                  Share this code with your managers and cashiers to let them join your business
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 p-6 text-center space-y-2">
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="text-4xl font-mono font-bold tracking-[0.3em] text-primary">
+                      {businessInfo.join_code}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(businessInfo.join_code);
+                        setCopied(true);
+                        toast.success('Code copied!');
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                    >
+                      {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Max 8 members per business
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled={regenerating}
+                  onClick={async () => {
+                    if (!confirm('Regenerating the code will make the old code invalid. Continue?')) return;
+                    setRegenerating(true);
+                    try {
+                      const { data, error } = await supabase.rpc('regenerate_join_code', {
+                        _user_id: user!.id,
+                      });
+                      if (error) throw error;
+                      const result = data as any;
+                      if (result.success) {
+                        toast.success('Join code regenerated!');
+                        await refreshBusinessInfo();
+                      } else {
+                        toast.error(result.error);
+                      }
+                    } catch (err: any) {
+                      toast.error(err.message);
+                    } finally {
+                      setRegenerating(false);
+                    }
+                  }}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
+                  Regenerate Code
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Theme */}
@@ -635,7 +711,7 @@ export default function Settings() {
                               variant={
                                 ur.role === 'admin'
                                   ? 'default'
-                                  : ur.role === 'staff'
+                                  : ur.role === 'manager'
                                     ? 'secondary'
                                     : 'outline'
                               }

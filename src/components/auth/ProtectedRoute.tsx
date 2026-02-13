@@ -5,11 +5,11 @@ import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ('admin' | 'staff' | 'viewer')[];
+  allowedRoles?: ('admin' | 'manager' | 'cashier')[];
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, loading, userRole } = useAuth();
+  const { user, loading, userRole, needsBusinessSetup } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -22,6 +22,11 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 
   if (!user) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  // Redirect to business setup if owner hasn't set up their business yet
+  if (needsBusinessSetup && location.pathname !== '/business-setup') {
+    return <Navigate to="/business-setup" replace />;
   }
 
   // If roles are specified, check if user has permission

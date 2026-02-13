@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AppLayout from "@/components/layout/AppLayout";
 import Auth from "./pages/Auth";
+import BusinessSetup from "./pages/BusinessSetup";
 import Dashboard from "./pages/Dashboard";
 import Billing from "./pages/Billing";
 import BillsHistory from "./pages/BillsHistory";
@@ -29,6 +30,14 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route
+                path="/business-setup"
+                element={
+                  <ProtectedRoute>
+                    <BusinessSetup />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 element={
                   <ProtectedRoute>
