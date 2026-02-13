@@ -70,28 +70,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchBusinessInfo = async (userId: string): Promise<void> => {
     try {
-      // First check if user owns a business
-      const { data: ownedBusiness, error: ownErr } = await supabase
-        .from('businesses')
-        .select('id, business_name, join_code, mobile_number, owner_id')
-        .eq('owner_id', userId)
-        .maybeSingle();
-
-      if (!ownErr && ownedBusiness) {
-        setBusinessInfo(ownedBusiness);
-        setBusinessId(ownedBusiness.id);
-        setNeedsBusinessSetup(false);
-        return;
-      }
-
-      // Check if user is member of a business via user_roles
+      // First check user_roles - this is the most reliable check
       const { data: roleData } = await supabase
         .from('user_roles')
-        .select('business_id')
+        .select('business_id, role')
         .eq('user_id', userId)
         .maybeSingle();
 
       if (roleData?.business_id) {
+        // User has a role with a business - fetch business info
         const { data: biz } = await supabase
           .from('businesses')
           .select('id, business_name, join_code, mobile_number, owner_id')
@@ -102,8 +89,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setBusinessInfo(biz);
           setBusinessId(biz.id);
           setNeedsBusinessSetup(false);
+          // Clean up pending data
+          localStorage.removeItem('pos_pending_role');
+          localStorage.removeItem('pos_pending_join_code');
           return;
         }
+      }
+
+      // Also check if user owns a business directly (in case user_roles is missing)
+      const { data: ownedBusiness } = await supabase
+        .from('businesses')
+        .select('id, business_name, join_code, mobile_number, owner_id')
+        .eq('owner_id', userId)
+        .maybeSingle();
+
+      if (ownedBusiness) {
+        setBusinessInfo(ownedBusiness);
+        setBusinessId(ownedBusiness.id);
+        setNeedsBusinessSetup(false);
+        localStorage.removeItem('pos_pending_role');
+        localStorage.removeItem('pos_pending_join_code');
+        return;
       }
 
       // User has no business — check the pending role
@@ -117,6 +123,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const dbRole = pendingRole === 'manager' ? 'manager' : 'cashier';
           await joinBusinessInternal(pendingCode, dbRole as AppRole, userId);
         }
+      } else {
+        // No pending role, no business - they need to pick a role
+        setNeedsBusinessSetup(false);
       }
     } catch (error) {
       console.error('Error fetching business info:', error);

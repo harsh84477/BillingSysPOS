@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,12 +10,36 @@ import { toast } from 'sonner';
 import { Loader2, Building2, Phone, Copy, Check, PartyPopper } from 'lucide-react';
 
 export default function BusinessSetup() {
-    const { user, refreshBusinessInfo } = useAuth();
+    const { user, refreshBusinessInfo, businessInfo } = useAuth();
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
     const [step, setStep] = useState<'form' | 'success'>('form');
     const [joinCode, setJoinCode] = useState('');
     const [copied, setCopied] = useState(false);
+
+    // If business already exists, redirect to dashboard
+    useEffect(() => {
+        if (businessInfo) {
+            navigate('/dashboard', { replace: true });
+            return;
+        }
+        // Also check directly from DB on mount
+        if (user) {
+            supabase
+                .from('businesses')
+                .select('id, join_code')
+                .eq('owner_id', user.id)
+                .maybeSingle()
+                .then(({ data }) => {
+                    if (data) {
+                        // Business exists, refresh context and redirect
+                        refreshBusinessInfo().then(() => {
+                            navigate('/dashboard', { replace: true });
+                        });
+                    }
+                });
+        }
+    }, [user, businessInfo]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -55,6 +79,13 @@ export default function BusinessSetup() {
             const result = data as any;
 
             if (!result.success) {
+                // If business already exists, just go to dashboard
+                if (result.error?.includes('already own')) {
+                    toast.info('Business already exists! Redirecting...');
+                    await refreshBusinessInfo();
+                    navigate('/dashboard', { replace: true });
+                    return;
+                }
                 toast.error(result.error || 'Failed to create business');
                 setIsLoading(false);
                 return;
