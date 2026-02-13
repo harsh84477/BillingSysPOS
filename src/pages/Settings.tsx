@@ -747,11 +747,21 @@ export default function Settings() {
                     </div>
                   );
                   if (!joinCode) return (
-                    <div className="rounded-xl border border-dashed border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
-                      <p className="text-sm font-medium text-amber-700">⚠️ No Business Join Code Found</p>
-                      <p className="text-xs text-muted-foreground">
-                        You need to run the multi-tenancy database migration first. Go to your Supabase SQL Editor and run the migration file: <code className="bg-muted px-1 rounded">20260213155500_business_multi_tenancy.sql</code> followed by <code className="bg-muted px-1 rounded">20260214010000_bill_prefix_system.sql</code>
+                    <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <KeyRound className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-semibold">Set Up Your Business</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Create your business to get a join code that you can share with your team members.
                       </p>
+                      <Button
+                        onClick={() => window.location.href = '/business-setup'}
+                        className="gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create Business & Get Join Code
+                      </Button>
                     </div>
                   );
                   return (
