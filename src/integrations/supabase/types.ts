@@ -448,38 +448,38 @@ export type Database = {
       }
       profiles: {
         Row: {
-          business_id: string | null
-          created_at: string
-          display_name: string | null
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
           id: string
-          mobile_number: string | null
-          updated_at: string
-          user_id: string
+          is_blocked: boolean | null
+          updated_at: string | null
         }
         Insert: {
-          business_id?: string | null
-          created_at?: string
-          display_name?: string | null
-          id?: string
-          mobile_number?: string | null
-          updated_at?: string
-          user_id: string
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          is_blocked?: boolean | null
+          updated_at?: string | null
         }
         Update: {
-          business_id?: string | null
-          created_at?: string
-          display_name?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
           id?: string
-          mobile_number?: string | null
-          updated_at?: string
-          user_id?: string
+          is_blocked?: boolean | null
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "profiles_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
+            foreignKeyName: "profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -538,6 +538,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       get_user_business_id: { Args: { _user_id: string }; Returns: string | null }
       create_business: {
         Args: {
@@ -583,7 +584,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "manager" | "cashier"
+      app_role: "super_admin" | "admin" | "manager" | "cashier"
       bill_status: "draft" | "completed" | "cancelled"
     }
     CompositeTypes: {

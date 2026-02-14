@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-type AppRole = 'admin' | 'manager' | 'cashier';
+type AppRole = 'super_admin' | 'admin' | 'manager' | 'cashier';
 
 interface BusinessInfo {
   id: string;
@@ -27,6 +27,7 @@ interface AuthContextType {
   joinBusiness: (joinCode: string, role: AppRole) => Promise<{ error: string | null }>;
   refreshBusinessInfo: () => Promise<void>;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isManager: boolean;
   isCashier: boolean;
   isStaff: boolean; // backwards compat: true for manager (replaces old staff role)
@@ -180,22 +181,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const setupUserState = useCallback(async (currentSession: Session | null) => {
-    setSession(currentSession);
-    setUser(currentSession?.user ?? null);
+  // Check if profile is blocked
+  const checkBlockedStatus = useCallback(async (userId: string) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_blocked')
+      .eq('id', userId)
+      .maybeSingle();
 
-    if (currentSession?.user) {
-      const role = await fetchUserRole(currentSession.user.id);
-      setUserRole(role);
-      await fetchBusinessInfo(currentSession.user.id);
-    } else {
+    if (profile?.is_blocked) {
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      setUserRole(null);
+      return true;
+    }
+    return false;
+  }, []);
+
+  const setupUserState = useCallback(async (session: Session | null) => {
+    if (!session?.user) {
+      setUser(null);
+      setSession(null);
       setUserRole(null);
       setBusinessId(null);
       setBusinessInfo(null);
       setNeedsBusinessSetup(false);
+      setLoading(false);
+      return;
     }
+
+    const userId = session.user.id;
+
+    // Check if blocked first
+    const blocked = await checkBlockedStatus(userId);
+    if (blocked) {
+      setLoading(false);
+      return;
+    }
+
+    setSession(session);
+    setUser(session.user);
+    await fetchBusinessInfo(userId);
+    const role = await fetchUserRole(userId);
+    setUserRole(role);
     setLoading(false);
-  }, []);
+  }, [checkBlockedStatus]);
 
   useEffect(() => {
     // Set up auth state listener
@@ -297,7 +328,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     joinBusiness,
     refreshBusinessInfo,
-    isAdmin: userRole === 'admin',
+    isAdmin: userRole === 'admin' || userRole === 'super_admin',
+    isSuperAdmin: userRole === 'super_admin',
     isManager: userRole === 'manager',
     isCashier: userRole === 'cashier',
     isStaff: userRole === 'manager', // backwards compat

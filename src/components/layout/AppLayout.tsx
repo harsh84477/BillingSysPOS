@@ -39,6 +39,7 @@ import {
   FolderOpen,
   PanelLeftClose,
   PanelLeft,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -102,6 +103,7 @@ function NavItem({ item, isActive, collapsed }: { item: typeof navigation[0]; is
 
 function Sidebar({ className, collapsed }: { className?: string; collapsed: boolean }) {
   const location = useLocation();
+  const { isSuperAdmin } = useAuth();
 
   return (
     <div className={cn('flex flex-col gap-4', className)}>
@@ -121,6 +123,14 @@ function Sidebar({ className, collapsed }: { className?: string; collapsed: bool
             collapsed={collapsed}
           />
         ))}
+
+        {isSuperAdmin && (
+          <NavItem
+            item={{ name: 'System Admin', href: '/super-admin', icon: ShieldCheck }}
+            isActive={location.pathname === '/super-admin'}
+            collapsed={collapsed}
+          />
+        )}
       </nav>
     </div>
   );

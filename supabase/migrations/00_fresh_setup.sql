@@ -9,12 +9,22 @@
 -- ===========================
 DROP TYPE IF EXISTS public.bill_status CASCADE;
 DROP TYPE IF EXISTS public.app_role CASCADE;
-CREATE TYPE public.app_role AS ENUM ('admin', 'manager', 'cashier');
+CREATE TYPE public.app_role AS ENUM ('super_admin', 'admin', 'manager', 'cashier');
 CREATE TYPE public.bill_status AS ENUM ('draft', 'completed', 'cancelled');
 
 -- ===========================
--- 2. TABLES
+-- 2. TABLES (Clean start)
 -- ===========================
+DROP TABLE IF EXISTS public.bill_items CASCADE;
+DROP TABLE IF EXISTS public.bills CASCADE;
+DROP TABLE IF EXISTS public.inventory_logs CASCADE;
+DROP TABLE IF EXISTS public.products CASCADE;
+DROP TABLE IF EXISTS public.categories CASCADE;
+DROP TABLE IF EXISTS public.customers CASCADE;
+DROP TABLE IF EXISTS public.business_settings CASCADE;
+DROP TABLE IF EXISTS public.user_roles CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TABLE IF EXISTS public.businesses CASCADE;
 
 -- Businesses (multi-tenancy root)
 CREATE TABLE public.businesses (
@@ -37,6 +47,7 @@ CREATE TABLE public.profiles (
   email TEXT,
   full_name TEXT,
   avatar_url TEXT,
+  is_blocked BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -160,8 +171,28 @@ CREATE TABLE public.inventory_logs (
 );
 
 -- ===========================
--- 3. HELPER FUNCTIONS
+-- 3. HELPER FUNCTIONS & OPERATIONS (Clean start)
 -- ===========================
+
+-- Drop existing functions to allow signature changes
+DROP FUNCTION IF EXISTS public.update_updated_at_column() CASCADE;
+DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+DROP FUNCTION IF EXISTS public.generate_join_code() CASCADE;
+DROP FUNCTION IF EXISTS public.get_user_business_id(UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.get_user_business_id() CASCADE; -- Old signature
+DROP FUNCTION IF EXISTS public.is_admin_or_manager(UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.is_admin_or_manager() CASCADE; -- Old signature
+DROP FUNCTION IF EXISTS public.has_role(public.app_role, UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.has_role(public.app_role) CASCADE; -- Old signature
+DROP FUNCTION IF EXISTS public.create_business(TEXT, TEXT, TEXT, TEXT, UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.create_business(TEXT, TEXT, UUID) CASCADE; -- Mid signature
+DROP FUNCTION IF EXISTS public.create_business(TEXT) CASCADE; -- Old signature
+DROP FUNCTION IF EXISTS public.join_business(TEXT, UUID, public.app_role) CASCADE;
+DROP FUNCTION IF EXISTS public.join_business(TEXT) CASCADE; -- Old signature
+DROP FUNCTION IF EXISTS public.regenerate_join_code(UUID) CASCADE;
+DROP FUNCTION IF EXISTS public.assign_bill_prefix(UUID, UUID, TEXT) CASCADE;
+DROP FUNCTION IF EXISTS public.assign_bill_prefix(UUID, TEXT) CASCADE; -- Old signature
+DROP FUNCTION IF EXISTS public.get_next_bill_number(UUID) CASCADE;
 
 -- Auto-update updated_at timestamp
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
@@ -203,10 +234,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
+-- Check if user is a super admin
+CREATE OR REPLACE FUNCTION public.is_super_admin(_user_id UUID)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_roles 
+    WHERE user_id = _user_id AND role = 'super_admin'
+  );
+$$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
+
 -- Get user's business ID
 CREATE OR REPLACE FUNCTION public.get_user_business_id(_user_id UUID)
 RETURNS UUID AS $$
-  SELECT business_id FROM public.user_roles WHERE user_id = _user_id LIMIT 1;
+  SELECT business_id FROM public.user_roles WHERE user_id = _user_id AND role != 'super_admin' LIMIT 1;
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
 
 -- Check if user is admin or manager
@@ -215,7 +255,7 @@ RETURNS BOOLEAN AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.user_roles
     WHERE user_id = _user_id
-    AND role IN ('admin', 'manager')
+    AND role IN ('super_admin', 'admin', 'manager')
   );
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
 
@@ -478,29 +518,42 @@ ALTER TABLE public.inventory_logs ENABLE ROW LEVEL SECURITY;
 -- BUSINESSES
 CREATE POLICY "Users can view their business"
   ON public.businesses FOR SELECT
-  USING (id IN (SELECT business_id FROM public.user_roles WHERE user_id = auth.uid()));
+  USING (
+    public.is_super_admin(auth.uid())
+    OR id IN (SELECT business_id FROM public.user_roles WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "Super admins can manage businesses"
+  ON public.businesses FOR ALL
+  USING (public.is_super_admin(auth.uid()));
 
 -- PROFILES
 CREATE POLICY "Users can view all profiles"
   ON public.profiles FOR SELECT
-  USING (true);
+  USING (NOT is_blocked OR public.is_super_admin(auth.uid()));
 
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
-  USING (id = auth.uid());
+  USING (id = auth.uid() AND NOT is_blocked);
+
+CREATE POLICY "Super admins can manage profiles"
+  ON public.profiles FOR ALL
+  USING (public.is_super_admin(auth.uid()));
 
 -- USER ROLES
 CREATE POLICY "Users can view roles in their business"
   ON public.user_roles FOR SELECT
   USING (
-    business_id IN (SELECT business_id FROM public.user_roles ur WHERE ur.user_id = auth.uid())
+    public.is_super_admin(auth.uid())
+    OR business_id IN (SELECT business_id FROM public.user_roles ur WHERE ur.user_id = auth.uid())
     OR user_id = auth.uid()
   );
 
 CREATE POLICY "Admins can manage roles"
   ON public.user_roles FOR ALL
   USING (
-    EXISTS (
+    public.is_super_admin(auth.uid())
+    OR EXISTS (
       SELECT 1 FROM public.user_roles ur
       WHERE ur.user_id = auth.uid()
       AND ur.business_id = public.user_roles.business_id
@@ -512,14 +565,16 @@ CREATE POLICY "Admins can manage roles"
 CREATE POLICY "Users can view their business settings"
   ON public.business_settings FOR SELECT
   USING (
-    business_id IS NULL
+    public.is_super_admin(auth.uid())
+    OR business_id IS NULL
     OR business_id IN (SELECT business_id FROM public.user_roles WHERE user_id = auth.uid())
   );
 
 CREATE POLICY "Admins can update business settings"
   ON public.business_settings FOR UPDATE
   USING (
-    business_id IN (
+    public.is_super_admin(auth.uid())
+    OR business_id IN (
       SELECT business_id FROM public.user_roles
       WHERE user_id = auth.uid() AND role IN ('admin', 'manager')
     )
@@ -528,7 +583,8 @@ CREATE POLICY "Admins can update business settings"
 CREATE POLICY "Admins can insert business settings"
   ON public.business_settings FOR INSERT
   WITH CHECK (
-    business_id IN (
+    public.is_super_admin(auth.uid())
+    OR business_id IN (
       SELECT business_id FROM public.user_roles
       WHERE user_id = auth.uid() AND role = 'admin'
     )
@@ -538,14 +594,16 @@ CREATE POLICY "Admins can insert business settings"
 CREATE POLICY "Users can view categories in their business"
   ON public.categories FOR SELECT
   USING (
-    business_id IS NULL
+    public.is_super_admin(auth.uid())
+    OR business_id IS NULL
     OR business_id IN (SELECT business_id FROM public.user_roles WHERE user_id = auth.uid())
   );
 
 CREATE POLICY "Admins can manage categories"
   ON public.categories FOR ALL
   USING (
-    business_id IN (
+    public.is_super_admin(auth.uid())
+    OR business_id IN (
       SELECT business_id FROM public.user_roles
       WHERE user_id = auth.uid() AND role IN ('admin', 'manager')
     )
@@ -555,14 +613,16 @@ CREATE POLICY "Admins can manage categories"
 CREATE POLICY "Users can view products in their business"
   ON public.products FOR SELECT
   USING (
-    business_id IS NULL
+    public.is_super_admin(auth.uid())
+    OR business_id IS NULL
     OR business_id IN (SELECT business_id FROM public.user_roles WHERE user_id = auth.uid())
   );
 
 CREATE POLICY "Admins can manage products"
   ON public.products FOR ALL
   USING (
-    business_id IS NULL
+    public.is_super_admin(auth.uid())
+    OR business_id IS NULL
     OR business_id IN (
       SELECT business_id FROM public.user_roles
       WHERE user_id = auth.uid() AND role IN ('admin', 'manager')
@@ -573,14 +633,16 @@ CREATE POLICY "Admins can manage products"
 CREATE POLICY "Users can view customers in their business"
   ON public.customers FOR SELECT
   USING (
-    business_id IS NULL
+    public.is_super_admin(auth.uid())
+    OR business_id IS NULL
     OR business_id IN (SELECT business_id FROM public.user_roles WHERE user_id = auth.uid())
   );
 
 CREATE POLICY "Staff can manage customers"
   ON public.customers FOR ALL
   USING (
-    business_id IS NULL
+    public.is_super_admin(auth.uid())
+    OR business_id IS NULL
     OR business_id IN (
       SELECT business_id FROM public.user_roles
       WHERE user_id = auth.uid()
@@ -591,21 +653,27 @@ CREATE POLICY "Staff can manage customers"
 CREATE POLICY "Users can view bills in their business"
   ON public.bills FOR SELECT
   USING (
-    business_id IS NULL
+    public.is_super_admin(auth.uid())
+    OR business_id IS NULL
     OR business_id IN (SELECT business_id FROM public.user_roles WHERE user_id = auth.uid())
   );
 
 CREATE POLICY "Users can create bills"
   ON public.bills FOR INSERT
   WITH CHECK (
-    business_id IS NULL
-    OR business_id IN (SELECT business_id FROM public.user_roles WHERE user_id = auth.uid())
+    NOT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_blocked)
+    AND (
+      public.is_super_admin(auth.uid())
+      OR business_id IS NULL
+      OR business_id IN (SELECT business_id FROM public.user_roles WHERE user_id = auth.uid())
+    )
   );
 
 CREATE POLICY "Admins can manage bills"
   ON public.bills FOR UPDATE
   USING (
-    business_id IS NULL
+    public.is_super_admin(auth.uid())
+    OR business_id IS NULL
     OR business_id IN (
       SELECT business_id FROM public.user_roles
       WHERE user_id = auth.uid()
@@ -615,7 +683,8 @@ CREATE POLICY "Admins can manage bills"
 CREATE POLICY "Admins can delete bills"
   ON public.bills FOR DELETE
   USING (
-    business_id IS NULL
+    public.is_super_admin(auth.uid())
+    OR business_id IS NULL
     OR business_id IN (
       SELECT business_id FROM public.user_roles
       WHERE user_id = auth.uid() AND role IN ('admin', 'manager')
