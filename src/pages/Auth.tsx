@@ -71,16 +71,22 @@ export default function Auth() {
   const [selectedRole, setSelectedRole] = useState<SelectedRole>(null);
   const [joinCode, setJoinCode] = useState('');
   const [joinCodeVerified, setJoinCodeVerified] = useState(false);
-  const { signIn, signUp, signInWithGoogle, user, userRole, needsRoleSelection, signOut } = useAuth();
+  const { signIn, signUp, signInWithGoogle, user, userRole, needsRoleSelection, signOut, refreshBusinessInfo } = useAuth();
   const navigate = useNavigate();
 
-  const handleRoleSelect = (role: SelectedRole) => {
+  const handleRoleSelect = async (role: SelectedRole) => {
     setSelectedRole(role);
     setJoinCode('');
     setJoinCodeVerified(false);
     // Store selected role in localStorage for post-OAuth flow
     if (role) {
       localStorage.setItem('pos_pending_role', role);
+    }
+
+    // If user is already logged in (e.g. they were redirected here because they needed a role),
+    // we should immediately refresh the auth state so they get redirected to the right place.
+    if (user && role) {
+      await refreshBusinessInfo();
     }
   };
 

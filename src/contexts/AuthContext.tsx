@@ -71,17 +71,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const fetchBusinessInfo = async (userId: string): Promise<void> => {
+  const fetchBusinessInfo = useCallback(async (currentUserId: string): Promise<void> => {
     try {
-      // First check user_roles - this is the most reliable check
+      // 1. Check if user already has a role with a business
       const { data: roleData } = await supabase
         .from('user_roles')
         .select('business_id, role')
-        .eq('user_id', userId)
+        .eq('user_id', currentUserId)
         .maybeSingle();
 
       if (roleData?.business_id) {
-        // User has a role with a business - fetch business info
         const { data: biz } = await supabase
           .from('businesses')
           .select('id, business_name, join_code, mobile_number, owner_id')
@@ -92,19 +91,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setBusinessInfo(biz);
           setBusinessId(biz.id);
           setNeedsBusinessSetup(false);
+          setNeedsRoleSelection(false);
           // Clean up pending data
           localStorage.removeItem('pos_pending_role');
           localStorage.removeItem('pos_pending_join_code');
-          setNeedsRoleSelection(false);
           return;
         }
       }
 
-      // Also check if user owns a business directly (in case user_roles is missing)
+      // 2. Also check if user owns a business directly (in case user_roles is missing)
       const { data: ownedBusiness } = await supabase
         .from('businesses')
         .select('id, business_name, join_code, mobile_number, owner_id')
-        .eq('owner_id', userId)
+        .eq('owner_id', currentUserId)
         .maybeSingle();
 
       if (ownedBusiness) {
@@ -117,28 +116,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // User has no business — check the pending role
+      // 3. If no business exists, check for pending role selection
       const pendingRole = localStorage.getItem('pos_pending_role');
       if (pendingRole === 'owner') {
         setNeedsBusinessSetup(true);
         setNeedsRoleSelection(false);
       } else if (pendingRole === 'manager' || pendingRole === 'cashier') {
         setNeedsRoleSelection(false);
-        // Try to join with pending code
         const pendingCode = localStorage.getItem('pos_pending_join_code');
         if (pendingCode) {
           const dbRole = pendingRole === 'manager' ? 'manager' : 'cashier';
-          await joinBusinessInternal(pendingCode, dbRole as AppRole, userId);
+          await joinBusinessInternal(pendingCode, dbRole as AppRole, currentUserId);
         }
       } else {
-        // No pending role, no business - they need to pick a role
+        // No pending role, no business - user needs to pick a role
         setNeedsBusinessSetup(false);
         setNeedsRoleSelection(true);
       }
     } catch (error) {
       console.error('Error fetching business info:', error);
     }
-  };
+  }, []);
 
   const joinBusinessInternal = async (
     joinCode: string,
