@@ -293,7 +293,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Today's Sales"
           value={`${currencySymbol}${todaySales?.toFixed(2) || '0.00'}`}
@@ -480,10 +480,10 @@ export default function Dashboard() {
                       </p>
                       <span
                         className={`text-xs capitalize ${bill.status === 'completed'
-                            ? 'text-green-600'
-                            : bill.status === 'draft'
-                              ? 'text-yellow-600'
-                              : 'text-red-600'
+                          ? 'text-green-600'
+                          : bill.status === 'draft'
+                            ? 'text-yellow-600'
+                            : 'text-red-600'
                           }`}
                       >
                         {bill.status}
