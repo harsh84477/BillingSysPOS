@@ -7,6 +7,8 @@
 -- ===========================
 -- 1. CUSTOM TYPES
 -- ===========================
+DROP TYPE IF EXISTS public.bill_status CASCADE;
+DROP TYPE IF EXISTS public.app_role CASCADE;
 CREATE TYPE public.app_role AS ENUM ('admin', 'manager', 'cashier');
 CREATE TYPE public.bill_status AS ENUM ('draft', 'completed', 'cancelled');
 
@@ -18,8 +20,13 @@ CREATE TYPE public.bill_status AS ENUM ('draft', 'completed', 'cancelled');
 CREATE TABLE public.businesses (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
+  business_name TEXT,
+  owner_name TEXT,
+  business_email TEXT,
+  mobile_number TEXT,
+  owner_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   join_code TEXT UNIQUE,
-  created_by UUID REFERENCES auth.users(id),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -111,7 +118,7 @@ CREATE TABLE public.bills (
   business_id UUID REFERENCES public.businesses(id) ON DELETE CASCADE,
   bill_number TEXT NOT NULL,
   customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
-  created_by UUID REFERENCES auth.users(id),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   status public.bill_status DEFAULT 'draft',
   subtotal NUMERIC DEFAULT 0,
   discount_type TEXT DEFAULT 'flat',
@@ -148,7 +155,7 @@ CREATE TABLE public.inventory_logs (
   new_quantity INTEGER,
   reference_id UUID,
   notes TEXT,
-  created_by UUID REFERENCES auth.users(id),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -197,27 +204,27 @@ END;
 $$ LANGUAGE plpgsql SET search_path = public;
 
 -- Get user's business ID
-CREATE OR REPLACE FUNCTION public.get_user_business_id()
+CREATE OR REPLACE FUNCTION public.get_user_business_id(_user_id UUID)
 RETURNS UUID AS $$
-  SELECT business_id FROM public.user_roles WHERE user_id = auth.uid() LIMIT 1;
+  SELECT business_id FROM public.user_roles WHERE user_id = _user_id LIMIT 1;
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
 
 -- Check if user is admin or manager
-CREATE OR REPLACE FUNCTION public.is_admin_or_manager()
+CREATE OR REPLACE FUNCTION public.is_admin_or_manager(_user_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid()
+    WHERE user_id = _user_id
     AND role IN ('admin', 'manager')
   );
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
 
 -- Check if user has specific role
-CREATE OR REPLACE FUNCTION public.has_role(_role public.app_role)
+CREATE OR REPLACE FUNCTION public.has_role(_role public.app_role, _user_id UUID)
 RETURNS BOOLEAN AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid()
+    WHERE user_id = _user_id
     AND role = _role
   );
 $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
@@ -227,27 +234,33 @@ $$ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public;
 -- ===========================
 
 -- Create a new business (called during onboarding)
-CREATE OR REPLACE FUNCTION public.create_business(_name TEXT)
+CREATE OR REPLACE FUNCTION public.create_business(
+  _business_name TEXT,
+  _owner_name TEXT,
+  _email TEXT,
+  _mobile_number TEXT,
+  _user_id UUID
+)
 RETURNS JSON AS $$
 DECLARE
   _business_id UUID;
   _join_code TEXT;
 BEGIN
-  IF EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = auth.uid()) THEN
-    RETURN json_build_object('success', false, 'error', 'You already belong to a business');
+  IF EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = _user_id) THEN
+    RETURN json_build_object('success', false, 'error', 'You already own a business');
   END IF;
 
   _join_code := public.generate_join_code();
 
-  INSERT INTO public.businesses (name, join_code, created_by)
-  VALUES (_name, _join_code, auth.uid())
+  INSERT INTO public.businesses (name, business_name, owner_name, business_email, mobile_number, owner_id, join_code, created_by)
+  VALUES (_business_name, _business_name, _owner_name, _email, _mobile_number, _user_id, _join_code, _user_id)
   RETURNING id INTO _business_id;
 
   INSERT INTO public.user_roles (user_id, business_id, role, bill_prefix)
-  VALUES (auth.uid(), _business_id, 'admin', 'A');
+  VALUES (_user_id, _business_id, 'admin', 'A');
 
-  INSERT INTO public.business_settings (business_id, business_name)
-  VALUES (_business_id, _name);
+  INSERT INTO public.business_settings (business_id, business_name, phone, email)
+  VALUES (_business_id, _business_name, _mobile_number, _email);
 
   RETURN json_build_object(
     'success', true,
@@ -258,20 +271,24 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Join an existing business via code
-CREATE OR REPLACE FUNCTION public.join_business(_code TEXT)
+CREATE OR REPLACE FUNCTION public.join_business(
+  _join_code TEXT,
+  _user_id UUID,
+  _role public.app_role DEFAULT 'cashier'
+)
 RETURNS JSON AS $$
 DECLARE
   _business_id UUID;
   _next_prefix TEXT;
   _prefix_count INTEGER;
 BEGIN
-  IF EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = auth.uid()) THEN
+  IF EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = _user_id) THEN
     RETURN json_build_object('success', false, 'error', 'You already belong to a business');
   END IF;
 
   SELECT id INTO _business_id
   FROM public.businesses
-  WHERE join_code = upper(_code);
+  WHERE join_code = upper(_join_code);
 
   IF _business_id IS NULL THEN
     RETURN json_build_object('success', false, 'error', 'Invalid join code');
@@ -285,7 +302,7 @@ BEGIN
   _next_prefix := chr(65 + _prefix_count); -- A=65, B=66, etc.
 
   INSERT INTO public.user_roles (user_id, business_id, role, bill_prefix)
-  VALUES (auth.uid(), _business_id, 'cashier', _next_prefix);
+  VALUES (_user_id, _business_id, _role, _next_prefix);
 
   RETURN json_build_object(
     'success', true,
@@ -294,18 +311,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
--- Regenerate join code for a business
-CREATE OR REPLACE FUNCTION public.regenerate_join_code(_business_id UUID)
+-- Regenerate join code for a business (admin only)
+CREATE OR REPLACE FUNCTION public.regenerate_join_code(_user_id UUID)
 RETURNS JSON AS $$
 DECLARE
   _new_code TEXT;
+  _business_id UUID;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = auth.uid()
-    AND business_id = _business_id
-    AND role = 'admin'
-  ) THEN
+  -- Get the user's business where they are admin
+  SELECT business_id INTO _business_id
+  FROM public.user_roles
+  WHERE user_id = _user_id
+  AND role = 'admin';
+
+  IF _business_id IS NULL THEN
     RETURN json_build_object('success', false, 'error', 'Only admins can regenerate join codes');
   END IF;
 
@@ -325,7 +344,8 @@ $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Assign bill prefix to a user (called by admin)
 CREATE OR REPLACE FUNCTION public.assign_bill_prefix(
-  _user_id UUID,
+  _admin_user_id UUID,
+  _target_user_id UUID,
   _prefix TEXT
 )
 RETURNS JSON AS $$
@@ -334,7 +354,7 @@ DECLARE
 BEGIN
   SELECT business_id INTO _business_id
   FROM public.user_roles
-  WHERE user_id = auth.uid()
+  WHERE user_id = _admin_user_id
   AND role = 'admin';
 
   IF _business_id IS NULL THEN
@@ -346,14 +366,14 @@ BEGIN
     SELECT 1 FROM public.user_roles
     WHERE business_id = _business_id
     AND bill_prefix = upper(_prefix)
-    AND user_id != _user_id
+    AND user_id != _target_user_id
   ) THEN
     RETURN json_build_object('success', false, 'error', 'Prefix already in use');
   END IF;
 
   UPDATE public.user_roles
   SET bill_prefix = upper(_prefix)
-  WHERE user_id = _user_id
+  WHERE user_id = _target_user_id
   AND business_id = _business_id;
 
   RETURN json_build_object('success', true);

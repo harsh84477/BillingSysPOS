@@ -49,10 +49,24 @@ export default function BusinessSetup() {
 
         const formData = new FormData(e.currentTarget);
         const businessName = formData.get('businessName') as string;
+        const ownerName = formData.get('ownerName') as string;
+        const email = formData.get('email') as string;
         const mobileNumber = formData.get('mobileNumber') as string;
 
         if (!businessName.trim()) {
             toast.error('Please enter a business name');
+            setIsLoading(false);
+            return;
+        }
+
+        if (!ownerName.trim()) {
+            toast.error("Please enter owner's name");
+            setIsLoading(false);
+            return;
+        }
+
+        if (!email.trim() || !email.includes('@')) {
+            toast.error('Please enter a valid business email');
             setIsLoading(false);
             return;
         }
@@ -66,6 +80,8 @@ export default function BusinessSetup() {
         try {
             const { data, error } = await supabase.rpc('create_business', {
                 _business_name: businessName.trim(),
+                _owner_name: ownerName.trim(),
+                _email: email.trim(),
                 _mobile_number: mobileNumber.trim(),
                 _user_id: user.id,
             });
@@ -204,6 +220,27 @@ export default function BusinessSetup() {
                                 required
                                 disabled={isLoading}
                                 autoFocus
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="ownerName">Owner Name</Label>
+                            <Input
+                                id="ownerName"
+                                name="ownerName"
+                                placeholder="Your full name"
+                                required
+                                disabled={isLoading}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Business Email</Label>
+                            <Input
+                                id="email"
+                                name="email"
+                                type="email"
+                                placeholder="you@example.com"
+                                required
+                                disabled={isLoading}
                             />
                         </div>
                         <div className="space-y-2">

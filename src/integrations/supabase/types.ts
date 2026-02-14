@@ -542,6 +542,8 @@ export type Database = {
       create_business: {
         Args: {
           _business_name: string
+          _owner_name: string
+          _email: string
           _mobile_number: string
           _user_id: string
         }
