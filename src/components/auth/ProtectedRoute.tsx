@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, loading, userRole, needsBusinessSetup, businessInfo } = useAuth();
+  const { user, loading, userRole, needsBusinessSetup, needsRoleSelection, businessInfo } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -22,6 +22,11 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 
   if (!user) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  // Only redirect to role selection if they are authenticated but have no role pick yet
+  if (needsRoleSelection && location.pathname !== '/auth') {
+    return <Navigate to="/auth" replace />;
   }
 
   // Only redirect to business-setup if:

@@ -24,9 +24,14 @@ export default defineConfig(({ mode }) => ({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
-          ui: ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('lucide-react')) return 'vendor-lucide';
+            if (id.includes('date-fns')) return 'vendor-date';
+            if (id.includes('@supabase')) return 'vendor-supabase';
+            if (id.includes('@radix-ui')) return 'vendor-ui';
+            return 'vendor';
+          }
         },
       },
     },

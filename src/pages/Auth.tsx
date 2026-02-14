@@ -71,7 +71,7 @@ export default function Auth() {
   const [selectedRole, setSelectedRole] = useState<SelectedRole>(null);
   const [joinCode, setJoinCode] = useState('');
   const [joinCodeVerified, setJoinCodeVerified] = useState(false);
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle, user, userRole, needsRoleSelection, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleRoleSelect = (role: SelectedRole) => {
@@ -152,6 +152,9 @@ export default function Auth() {
       localStorage.removeItem('pos_pending_join_code');
     }
   };
+
+  // If user is already logged in but has no role, we want to show role cards.
+  // We can just rely on the !selectedRole check below.
 
   // Step 1: Role Selection
   if (!selectedRole) {

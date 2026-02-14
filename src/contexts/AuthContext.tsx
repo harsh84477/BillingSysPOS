@@ -20,6 +20,7 @@ interface AuthContextType {
   businessId: string | null;
   businessInfo: BusinessInfo | null;
   needsBusinessSetup: boolean;
+  needsRoleSelection: boolean;
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<void>;
@@ -44,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
   const [needsBusinessSetup, setNeedsBusinessSetup] = useState(false);
+  const [needsRoleSelection, setNeedsRoleSelection] = useState(false);
 
   const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
     try {
@@ -93,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Clean up pending data
           localStorage.removeItem('pos_pending_role');
           localStorage.removeItem('pos_pending_join_code');
+          setNeedsRoleSelection(false);
           return;
         }
       }
@@ -108,6 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setBusinessInfo(ownedBusiness);
         setBusinessId(ownedBusiness.id);
         setNeedsBusinessSetup(false);
+        setNeedsRoleSelection(false);
         localStorage.removeItem('pos_pending_role');
         localStorage.removeItem('pos_pending_join_code');
         return;
@@ -117,7 +121,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const pendingRole = localStorage.getItem('pos_pending_role');
       if (pendingRole === 'owner') {
         setNeedsBusinessSetup(true);
+        setNeedsRoleSelection(false);
       } else if (pendingRole === 'manager' || pendingRole === 'cashier') {
+        setNeedsRoleSelection(false);
         // Try to join with pending code
         const pendingCode = localStorage.getItem('pos_pending_join_code');
         if (pendingCode) {
@@ -127,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         // No pending role, no business - they need to pick a role
         setNeedsBusinessSetup(false);
+        setNeedsRoleSelection(true);
       }
     } catch (error) {
       console.error('Error fetching business info:', error);
@@ -163,6 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setBusinessId(result.business_id);
       setUserRole(role);
       setNeedsBusinessSetup(false);
+      setNeedsRoleSelection(false);
 
       // Fetch full business info
       const { data: biz } = await supabase
@@ -207,6 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setBusinessId(null);
       setBusinessInfo(null);
       setNeedsBusinessSetup(false);
+      setNeedsRoleSelection(false);
       setLoading(false);
       return;
     }
@@ -226,7 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const role = await fetchUserRole(userId);
     setUserRole(role);
     setLoading(false);
-  }, [checkBlockedStatus]);
+  }, [checkBlockedStatus, fetchBusinessInfo]);
 
   useEffect(() => {
     // Set up auth state listener
@@ -299,6 +308,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setBusinessId(null);
     setBusinessInfo(null);
     setNeedsBusinessSetup(false);
+    setNeedsRoleSelection(false);
   };
 
   const joinBusiness = async (joinCode: string, role: AppRole): Promise<{ error: string | null }> => {
@@ -322,6 +332,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     businessId,
     businessInfo,
     needsBusinessSetup,
+    needsRoleSelection,
     signUp,
     signIn,
     signInWithGoogle,
