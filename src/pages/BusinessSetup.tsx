@@ -130,11 +130,20 @@ export default function BusinessSetup() {
     };
 
     const handleContinue = async () => {
-        // Clear any pending role data
-        localStorage.removeItem('pos_pending_role');
-        localStorage.removeItem('pos_pending_join_code');
-        // Hard redirect to force full state re-initialization
-        window.location.href = '/dashboard';
+        setIsLoading(true);
+        try {
+            await refreshBusinessInfo();
+            // Clear any pending role data
+            localStorage.removeItem('pos_pending_role');
+            localStorage.removeItem('pos_pending_join_code');
+            navigate('/dashboard', { replace: true });
+        } catch (err) {
+            console.error('Error refreshing business info:', err);
+            // Fallback to hard redirect if something goes wrong
+            window.location.href = '/dashboard';
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     if (step === 'success') {

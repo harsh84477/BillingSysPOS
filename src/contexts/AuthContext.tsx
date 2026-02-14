@@ -49,22 +49,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
     try {
-      const { data, error } = await supabase
+      const { data: roles, error } = await supabase
         .from('user_roles')
         .select('role, business_id')
         .eq('user_id', userId)
-        .maybeSingle();
+        .limit(1);
 
       if (error) {
         console.error('Error fetching user role:', error);
         return null;
       }
 
-      if (data?.business_id) {
-        setBusinessId(data.business_id);
+      if (roles && roles.length > 0) {
+        const data = roles[0];
+        if (data.business_id) {
+          setBusinessId(data.business_id);
+        }
+        return data.role as AppRole;
       }
 
-      return data?.role as AppRole | null;
+      return null;
     } catch (error) {
       console.error('Error fetching user role:', error);
       return null;
@@ -73,42 +77,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchBusinessInfo = useCallback(async (currentUserId: string): Promise<void> => {
     try {
-      // 1. Check if user already has a role with a business
-      const { data: roleData } = await supabase
+      // 1. Check if user has a role with a business
+      const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
         .select('business_id, role')
         .eq('user_id', currentUserId)
-        .maybeSingle();
+        .limit(1);
 
-      if (roleData?.business_id) {
-        const { data: biz } = await supabase
+      if (rolesError) console.error('Roles error:', rolesError);
+
+      if (roles && roles.length > 0 && roles[0].business_id) {
+        const { data: biz, error: bizError } = await supabase
           .from('businesses')
           .select('id, business_name, join_code, mobile_number, owner_id')
-          .eq('id', roleData.business_id)
+          .eq('id', roles[0].business_id)
           .maybeSingle();
+
+        if (bizError) console.error('Biz error:', bizError);
 
         if (biz) {
           setBusinessInfo(biz);
           setBusinessId(biz.id);
           setNeedsBusinessSetup(false);
           setNeedsRoleSelection(false);
-          // Clean up pending data
           localStorage.removeItem('pos_pending_role');
           localStorage.removeItem('pos_pending_join_code');
           return;
         }
       }
 
-      // 2. Also check if user owns a business directly (in case user_roles is missing)
-      const { data: ownedBusiness } = await supabase
+      // 2. Also check if user owns a business directly
+      const { data: ownedBusinesses, error: ownError } = await supabase
         .from('businesses')
         .select('id, business_name, join_code, mobile_number, owner_id')
         .eq('owner_id', currentUserId)
-        .maybeSingle();
+        .limit(1);
 
-      if (ownedBusiness) {
-        setBusinessInfo(ownedBusiness);
-        setBusinessId(ownedBusiness.id);
+      if (ownError) console.error('Own error:', ownError);
+
+      if (ownedBusinesses && ownedBusinesses.length > 0) {
+        const biz = ownedBusinesses[0];
+        setBusinessInfo(biz);
+        setBusinessId(biz.id);
         setNeedsBusinessSetup(false);
         setNeedsRoleSelection(false);
         localStorage.removeItem('pos_pending_role');
@@ -129,12 +139,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await joinBusinessInternal(pendingCode, dbRole as AppRole, currentUserId);
         }
       } else {
-        // No pending role, no business - user needs to pick a role
+        // No pending role FOUND in localStorage AND no business FOUND in DB
+        // Determine if we should really show role selection
         setNeedsBusinessSetup(false);
         setNeedsRoleSelection(true);
       }
     } catch (error) {
-      console.error('Error fetching business info:', error);
+      console.error('Error in fetchBusinessInfo:', error);
     }
   }, []);
 
