@@ -1,0 +1,74 @@
+[33me846c2e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m change18/2/1
+[33m5e2ee9f[m feat: Implement AuthContext for user authentication and business state management, alongside a new BusinessSetup page.
+[33m6559c8f[m feat: Implement a comprehensive authentication system with user roles, business management, and related UI.
+[33mc3de644[m feat: Implement authentication and authorization with protected routes and context, optimize Vite chunking, and remove unused dependencies.
+[33m092bf47[m feat: introduce new UI components including Tooltip, Checkbox, and ScrollArea, and refine Vite build configuration.
+[33m50c7f4a[m fix1
+[33me718510[m chnge 14 feb 2
+[33m60cba5b[m change14 feb
+[33m620e809[m try13
+[33m4c4253e[m try12
+[33me4b15a5[m change12121212121212
+[33m8ed8b70[m change 121212
+[33m86fed77[m gaen12
+[33m236644d[m change 12/21/12/12/12
+[33m0c3deab[m change/2/14/1
+[33md866c6f[m change 12/2/55
+[33mad2ba73[m[33m ([m[1;31morigin/new-test[m[33m, [m[1;32mnew-test[m[33m)[m fix: resolve business setup to dashboard redirect loop
+[33m1ba5d4b[m chngw 13/2/2
+[33m1426084[m change 13/2/1
+[33m8e4e8e7[m feat: add AuthContext for managing user authentication and roles with Supabase.
+[33m771ed49[m chage 12/3 /77
+[33mff1598a[m change 12/2/6
+[33mdb51cf9[m chage 2222
+[33maf97797[m change12/2
+[33m809ec53[m sh3
+[33m5d47857[m sh3
+[33m48ee07e[m sh2
+[33m7c115b5[m sh1
+[33m9626086[m channge1
+[33m2dea0a0[m Add Vercel config for SPA routing
+[33m24b7e70[m first commit
+[33m7435d41[m Optimize billing grid UI mobile
+[33m3084eb4[m Changes
+[33m54ed840[m Enhanced billing item entry and editing
+[33m786cec4[m Changes
+[33m933cba4[m Add print support for bills
+[33mda83440[m Changes
+[33mb4789fe[m Improve bills history filters and exports
+[33m9b6b864[m Changes
+[33m3eb4672[m Enhance Excel export utility
+[33mc849f58[m Changes
+[33m2b347cd[m Responsive grid for items
+[33m3a5f03f[m Changes
+[33m2f6634f[m Enforced 3-column grid
+[33m6001388[m Changes
+[33m42590c0[m Enhance billing product grid
+[33m453e947[m Changes
+[33ma1aacd1[m Add product icon field
+[33m2b9e512[m Changes
+[33m7548096[m Improve bill print reliability
+[33me5d9bd8[m Changes
+[33mae34083[m Handle bill number collisions with retry logic
+[33md059a6d[m Changes
+[33m45feb54[m Add billing display toggles
+[33m3ebdb22[m Changes
+[33m782089b[m Add collapsible sidebar
+[33m0209331[m Changes
+[33me3d12aa[m Reverted to commit 77b8f2de25b5b4b631a757ec250232df677fe5c2
+[33m27667eb[m Improve cart collapse UI in Billing
+[33m87738c4[m Changes
+[33m77b8f2d[m Add delete bill history option
+[33m33b2709[m Changes
+[33m804d279[m Fix rounding in billing
+[33m13c1dd2[m Changes
+[33m249fb5e[m Billing saves as completed and prints
+[33mea45a8c[m Changes
+[33m067ddaf[m Redesigned Billing UI
+[33me047539[m Changes
+[33m66497c2[m Date-based bill numbering added
+[33ma43240d[m Changes
+[33m436799d[m Connected to Lovable Cloud
+[33m734e24e[m Changes
+[33mf8ff0ae[m Updated plan file
+[33mb331aa1[m template: new_style_vite_react_shadcn_ts_testing_2026-01-08
