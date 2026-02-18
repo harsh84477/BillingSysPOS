@@ -47,7 +47,7 @@ interface CartItem {
 }
 
 export default function Billing() {
-  const { user } = useAuth();
+  const { user, businessId } = useAuth();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
 
@@ -73,42 +73,48 @@ export default function Billing() {
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
+    queryKey: ['categories', businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('categories')
-        .select('*')
-        .order('sort_order');
+        .select('*');
+      if (businessId) query = query.eq('business_id', businessId);
+      const { data, error } = await query.order('sort_order');
       if (error) throw error;
       return data;
     },
+    enabled: !!businessId,
   });
 
   // Fetch products
   const { data: products = [] } = useQuery({
-    queryKey: ['products'],
+    queryKey: ['products', businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
         .select('*, categories(name, color)')
-        .eq('is_active', true)
-        .order('name');
+        .eq('is_active', true);
+      if (businessId) query = query.eq('business_id', businessId);
+      const { data, error } = await query.order('name');
       if (error) throw error;
       return data;
     },
+    enabled: !!businessId,
   });
 
   // Fetch customers
   const { data: customers = [] } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ['customers', businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('customers')
-        .select('*')
-        .order('name');
+        .select('*');
+      if (businessId) query = query.eq('business_id', businessId);
+      const { data, error } = await query.order('name');
       if (error) throw error;
       return data;
     },
+    enabled: !!businessId,
   });
 
   const currencySymbol = '₹';
@@ -420,6 +426,7 @@ export default function Billing() {
             bill_number: billNumber,
             customer_id: selectedCustomerId,
             created_by: user?.id,
+            business_id: businessId,
             status: 'completed' as const,
             subtotal: cartCalculations.subtotal,
             discount_type: 'flat',
@@ -449,6 +456,7 @@ export default function Billing() {
           unit_price: item.unitPrice,
           cost_price: item.costPrice,
           total_price: item.unitPrice * item.quantity,
+          business_id: businessId,
         }));
 
         const { error: itemsError } = await supabase

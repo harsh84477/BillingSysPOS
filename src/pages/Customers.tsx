@@ -64,7 +64,7 @@ interface CustomerBill {
 }
 
 export default function Customers() {
-  const { isAdmin, isStaff } = useAuth();
+  const { isAdmin, isStaff, businessId } = useAuth();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
   const currencySymbol = settings?.currency_symbol || '$';
@@ -76,7 +76,7 @@ export default function Customers() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCustomerOrders, setSelectedCustomerOrders] = useState<Customer | null>(null);
   const [viewingBill, setViewingBill] = useState<CustomerBill | null>(null);
-  
+
   // Filters
   const [hasEmailFilter, setHasEmailFilter] = useState<string>('all');
   const [hasPhoneFilter, setHasPhoneFilter] = useState<string>('all');
@@ -87,13 +87,15 @@ export default function Customers() {
   const { data: customers, isLoading } = useQuery({
     queryKey: ['customers'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('customers')
-        .select('*')
-        .order('name');
+        .select('*');
+      if (businessId) query = query.eq('business_id', businessId);
+      const { data, error } = await query.order('name');
       if (error) throw error;
       return data as Customer[];
     },
+    enabled: !!businessId,
   });
 
   // Fetch customer orders
@@ -126,7 +128,7 @@ export default function Customers() {
           .eq('id', editingCustomer.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('customers').insert([customer as { name: string }]);
+        const { error } = await supabase.from('customers').insert([{ ...customer, business_id: businessId } as { name: string }]);
         if (error) throw error;
       }
     },
@@ -171,21 +173,21 @@ export default function Customers() {
   const filteredCustomers = useMemo(() => {
     return customers?.filter((c) => {
       // Search filter
-      const matchesSearch = 
+      const matchesSearch =
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         c.phone?.includes(searchQuery);
-      
+
       // Email filter
-      const matchesEmail = hasEmailFilter === 'all' || 
+      const matchesEmail = hasEmailFilter === 'all' ||
         (hasEmailFilter === 'yes' && c.email) ||
         (hasEmailFilter === 'no' && !c.email);
-      
+
       // Phone filter
-      const matchesPhone = hasPhoneFilter === 'all' || 
+      const matchesPhone = hasPhoneFilter === 'all' ||
         (hasPhoneFilter === 'yes' && c.phone) ||
         (hasPhoneFilter === 'no' && !c.phone);
-      
+
       // Date range filter
       let matchesDate = true;
       if (dateFrom || dateTo) {
@@ -194,7 +196,7 @@ export default function Customers() {
         const to = dateTo ? endOfDay(parseISO(dateTo)) : new Date();
         matchesDate = isWithinInterval(customerDate, { start: from, end: to });
       }
-      
+
       return matchesSearch && matchesEmail && matchesPhone && matchesDate;
     }) || [];
   }, [customers, searchQuery, hasEmailFilter, hasPhoneFilter, dateFrom, dateTo]);
@@ -281,7 +283,7 @@ export default function Customers() {
             <Download className="mr-2 h-4 w-4" />
             Export Excel
           </Button>
-          
+
           {canEdit && (
             <Dialog open={isDialogOpen} onOpenChange={(open) => {
               setIsDialogOpen(open);
@@ -379,15 +381,15 @@ export default function Customers() {
                   className="pl-10"
                 />
               </div>
-              <Button 
-                variant={hasActiveFilters ? "default" : "outline"} 
+              <Button
+                variant={hasActiveFilters ? "default" : "outline"}
                 size="icon"
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <Filter className="h-4 w-4" />
               </Button>
             </div>
-            
+
             {showFilters && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="space-y-1">
@@ -403,7 +405,7 @@ export default function Customers() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-1">
                   <Label className="text-xs">Has Phone</Label>
                   <Select value={hasPhoneFilter} onValueChange={setHasPhoneFilter}>
@@ -417,25 +419,25 @@ export default function Customers() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-1">
                   <Label className="text-xs">Added From</Label>
-                  <Input 
-                    type="date" 
-                    value={dateFrom} 
+                  <Input
+                    type="date"
+                    value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
                   />
                 </div>
-                
+
                 <div className="space-y-1">
                   <Label className="text-xs">Added To</Label>
-                  <Input 
-                    type="date" 
-                    value={dateTo} 
+                  <Input
+                    type="date"
+                    value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
                   />
                 </div>
-                
+
                 {hasActiveFilters && (
                   <div className="col-span-2 md:col-span-4">
                     <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -572,7 +574,7 @@ export default function Customers() {
               </Button>
             </DialogTitle>
           </DialogHeader>
-          
+
           <div className="grid grid-cols-2 gap-4 mb-4">
             <Card>
               <CardContent className="pt-4">
@@ -587,7 +589,7 @@ export default function Customers() {
               </CardContent>
             </Card>
           </div>
-          
+
           {loadingOrders ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
@@ -619,8 +621,8 @@ export default function Customers() {
                       <TableCell>
                         <Badge variant="secondary" className={
                           order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
+                            order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
                         }>
                           {order.status}
                         </Badge>
@@ -663,10 +665,10 @@ export default function Customers() {
       </Dialog>
 
       {/* Bill Details Dialog */}
-      <BillDetailsDialog 
-        bill={viewingBill as any} 
-        open={!!viewingBill} 
-        onOpenChange={() => setViewingBill(null)} 
+      <BillDetailsDialog
+        bill={viewingBill as any}
+        open={!!viewingBill}
+        onOpenChange={() => setViewingBill(null)}
       />
     </div>
   );

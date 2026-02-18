@@ -60,7 +60,7 @@ const PRODUCT_ICONS = [
 ];
 
 export default function Products() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, businessId } = useAuth();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
   const currencySymbol = settings?.currency_symbol || '$';
@@ -80,26 +80,30 @@ export default function Products() {
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('categories')
-        .select('*')
-        .order('sort_order');
+        .select('*');
+      if (businessId) query = query.eq('business_id', businessId);
+      const { data, error } = await query.order('sort_order');
       if (error) throw error;
       return data;
     },
+    enabled: !!businessId,
   });
 
   // Fetch products
   const { data: products, isLoading } = useQuery({
     queryKey: ['products', 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
-        .select('*, categories(name, color)')
-        .order('name');
+        .select('*, categories(name, color)');
+      if (businessId) query = query.eq('business_id', businessId);
+      const { data, error } = await query.order('name');
       if (error) throw error;
       return data as Product[];
     },
+    enabled: !!businessId,
   });
 
   const renderIcon = (iconName: string | null) => {
@@ -118,7 +122,7 @@ export default function Products() {
           .eq('id', editingProduct.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('products').insert([product as { name: string }]);
+        const { error } = await supabase.from('products').insert([{ ...product, business_id: businessId } as { name: string }]);
         if (error) throw error;
       }
     },

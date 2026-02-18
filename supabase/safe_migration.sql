@@ -142,7 +142,62 @@ CREATE TABLE IF NOT EXISTS public.businesses (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Add columns if they don't exist
+-- Add base columns to business_settings if they don't exist (handle existing rows)
+-- First add columns without NOT NULL if table has data
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS business_name TEXT;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS logo_url TEXT;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS currency TEXT;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS currency_symbol TEXT;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS tax_name TEXT;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS tax_rate NUMERIC(5,2);
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS tax_inclusive BOOLEAN;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS bill_prefix TEXT;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS next_bill_number INTEGER;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS theme TEXT;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ;
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+
+-- Update NULL values to defaults for existing rows
+UPDATE public.business_settings SET business_name = 'My Business' WHERE business_name IS NULL;
+UPDATE public.business_settings SET currency = 'USD' WHERE currency IS NULL;
+UPDATE public.business_settings SET currency_symbol = '$' WHERE currency_symbol IS NULL;
+UPDATE public.business_settings SET tax_name = 'Tax' WHERE tax_name IS NULL;
+UPDATE public.business_settings SET tax_rate = 0 WHERE tax_rate IS NULL;
+UPDATE public.business_settings SET tax_inclusive = false WHERE tax_inclusive IS NULL;
+UPDATE public.business_settings SET bill_prefix = 'INV-' WHERE bill_prefix IS NULL;
+UPDATE public.business_settings SET next_bill_number = 1 WHERE next_bill_number IS NULL;
+UPDATE public.business_settings SET theme = 'mint-pro' WHERE theme IS NULL;
+UPDATE public.business_settings SET created_at = now() WHERE created_at IS NULL;
+UPDATE public.business_settings SET updated_at = now() WHERE updated_at IS NULL;
+
+-- Now add NOT NULL constraints
+ALTER TABLE public.business_settings ALTER COLUMN business_name SET NOT NULL;
+ALTER TABLE public.business_settings ALTER COLUMN business_name SET DEFAULT 'My Business';
+ALTER TABLE public.business_settings ALTER COLUMN currency SET NOT NULL;
+ALTER TABLE public.business_settings ALTER COLUMN currency SET DEFAULT 'USD';
+ALTER TABLE public.business_settings ALTER COLUMN currency_symbol SET NOT NULL;
+ALTER TABLE public.business_settings ALTER COLUMN currency_symbol SET DEFAULT '$';
+ALTER TABLE public.business_settings ALTER COLUMN tax_name SET NOT NULL;
+ALTER TABLE public.business_settings ALTER COLUMN tax_name SET DEFAULT 'Tax';
+ALTER TABLE public.business_settings ALTER COLUMN tax_rate SET NOT NULL;
+ALTER TABLE public.business_settings ALTER COLUMN tax_rate SET DEFAULT 0;
+ALTER TABLE public.business_settings ALTER COLUMN tax_inclusive SET NOT NULL;
+ALTER TABLE public.business_settings ALTER COLUMN tax_inclusive SET DEFAULT false;
+ALTER TABLE public.business_settings ALTER COLUMN bill_prefix SET NOT NULL;
+ALTER TABLE public.business_settings ALTER COLUMN bill_prefix SET DEFAULT 'INV-';
+ALTER TABLE public.business_settings ALTER COLUMN next_bill_number SET NOT NULL;
+ALTER TABLE public.business_settings ALTER COLUMN next_bill_number SET DEFAULT 1;
+ALTER TABLE public.business_settings ALTER COLUMN theme SET NOT NULL;
+ALTER TABLE public.business_settings ALTER COLUMN theme SET DEFAULT 'mint-pro';
+ALTER TABLE public.business_settings ALTER COLUMN created_at SET NOT NULL;
+ALTER TABLE public.business_settings ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE public.business_settings ALTER COLUMN updated_at SET NOT NULL;
+ALTER TABLE public.business_settings ALTER COLUMN updated_at SET DEFAULT now();
+
+-- Add multi-tenancy columns if they don't exist
 ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES public.businesses(id) ON DELETE CASCADE;
 ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES public.businesses(id) ON DELETE CASCADE;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES public.businesses(id) ON DELETE CASCADE;
@@ -155,6 +210,17 @@ ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS show_gst_in_billin
 ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS show_discount_in_billing boolean NOT NULL DEFAULT true;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS icon text DEFAULT 'Package';
 ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS business_id UUID REFERENCES public.businesses(id) ON DELETE CASCADE;
+
+-- Add unique constraints (handle if they already exist)
+DO $$ BEGIN
+  ALTER TABLE public.user_roles ADD CONSTRAINT user_roles_user_id_business_id_key UNIQUE (user_id, business_id);
+EXCEPTION
+  WHEN duplicate_table THEN NULL;
+  WHEN others THEN NULL;
+END $$;
+
+-- Drop old constraint if it exists
+ALTER TABLE public.user_roles DROP CONSTRAINT IF EXISTS user_roles_user_id_role_key;
 
 -- ============================================================
 -- PART 3: Functions (CREATE OR REPLACE)
@@ -282,8 +348,7 @@ BEGIN
   SET business_id = _business_id, mobile_number = _mobile_number
   WHERE user_id = _user_id;
 
-  INSERT INTO public.business_settings (business_name, business_id)
-  VALUES (_business_name, _business_id);
+  -- Note: business_settings are created/managed separately via the app
 
   RETURN json_build_object(
     'success', true,

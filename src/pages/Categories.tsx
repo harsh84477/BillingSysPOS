@@ -44,7 +44,7 @@ interface Category {
 }
 
 export default function Categories() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, businessId } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -55,23 +55,27 @@ export default function Categories() {
   const { data: categories = [], isLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('categories')
-        .select('*')
-        .order('sort_order');
+        .select('*');
+      if (businessId) query = query.eq('business_id', businessId);
+      const { data, error } = await query.order('sort_order');
       if (error) throw error;
       return data as Category[];
     },
+    enabled: !!businessId,
   });
 
   const { data: productCounts = {} } = useQuery({
     queryKey: ['productCountsByCategory'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
         .select('category_id');
+      if (businessId) query = query.eq('business_id', businessId);
+      const { data, error } = await query;
       if (error) throw error;
-      
+
       const counts: Record<string, number> = {};
       data.forEach((product) => {
         if (product.category_id) {
@@ -80,12 +84,13 @@ export default function Categories() {
       });
       return counts;
     },
+    enabled: !!businessId,
   });
 
   const filteredCategories = useMemo(() => {
     return categories.filter((cat) => {
       const matchesSearch = cat.name.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       const count = productCounts[cat.id] || 0;
       let matchesCount = true;
       if (productCountFilter === 'empty') {
@@ -93,7 +98,7 @@ export default function Categories() {
       } else if (productCountFilter === 'has-products') {
         matchesCount = count > 0;
       }
-      
+
       return matchesSearch && matchesCount;
     });
   }, [categories, searchQuery, productCountFilter, productCounts]);
@@ -113,7 +118,7 @@ export default function Categories() {
           .eq('id', editingCategory.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('categories').insert(category);
+        const { error } = await supabase.from('categories').insert({ ...category, business_id: businessId });
         if (error) throw error;
       }
     },
@@ -308,15 +313,15 @@ export default function Categories() {
                   className="pl-10"
                 />
               </div>
-              <Button 
-                variant={hasActiveFilters ? "default" : "outline"} 
+              <Button
+                variant={hasActiveFilters ? "default" : "outline"}
                 size="icon"
                 onClick={() => setShowFilters(!showFilters)}
               >
                 <Filter className="h-4 w-4" />
               </Button>
             </div>
-            
+
             {showFilters && (
               <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                 <div className="space-y-1 flex-1">
@@ -332,7 +337,7 @@ export default function Categories() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 {hasActiveFilters && (
                   <Button variant="ghost" size="sm" onClick={clearFilters} className="mt-5">
                     <X className="mr-1 h-3 w-3" />

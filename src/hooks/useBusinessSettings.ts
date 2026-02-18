@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 export interface BusinessSettings {
@@ -24,30 +25,35 @@ export interface BusinessSettings {
 }
 
 export function useBusinessSettings() {
+  const { businessId } = useAuth();
+
   return useQuery({
-    queryKey: ['businessSettings'],
+    queryKey: ['businessSettings', businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('business_settings')
-        .select('*')
-        .limit(1)
-        .maybeSingle();
+        .select('*');
+      if (businessId) query = query.eq('business_id', businessId);
+      const { data, error } = await query.limit(1).maybeSingle();
 
       if (error) throw error;
       return data as BusinessSettings | null;
     },
+    enabled: !!businessId,
   });
 }
 
 export function useUpdateBusinessSettings() {
   const queryClient = useQueryClient();
+  const { businessId } = useAuth();
 
   return useMutation({
     mutationFn: async (updates: Partial<BusinessSettings>) => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('business_settings')
-        .update(updates)
-        .not('id', 'is', null)
+        .update(updates);
+      if (businessId) query = query.eq('business_id', businessId);
+      const { data, error } = await query
         .select()
         .single();
 

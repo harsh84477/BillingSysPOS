@@ -64,7 +64,7 @@ const themeOptions: { name: string; value: ThemeName; description: string }[] = 
 ];
 
 export default function Settings() {
-  const { isAdmin, isManager, user, businessInfo, refreshBusinessInfo } = useAuth();
+  const { isAdmin, isManager, user, businessInfo, refreshBusinessInfo, businessId } = useAuth();
   const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const { theme, setTheme } = useTheme();
@@ -77,15 +77,17 @@ export default function Settings() {
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
+    queryKey: ['categories', businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('categories')
-        .select('*')
-        .order('sort_order');
+        .select('*');
+      if (businessId) query = query.eq('business_id', businessId);
+      const { data, error } = await query.order('sort_order');
       if (error) throw error;
       return data;
     },
+    enabled: !!businessId,
   });
 
   // Fetch user roles
@@ -111,7 +113,7 @@ export default function Settings() {
           .eq('id', editingCategory.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('categories').insert(category);
+        const { error } = await supabase.from('categories').insert({ ...category, business_id: businessId });
         if (error) throw error;
       }
     },

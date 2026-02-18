@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Upload, Loader2, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -10,6 +11,7 @@ export function ProductImporter() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isLoading, setIsLoading] = useState(false);
     const queryClient = useQueryClient();
+    const { businessId } = useAuth();
 
     const handleClick = () => {
         fileInputRef.current?.click();
@@ -73,7 +75,7 @@ export function ProductImporter() {
 
             // 2. Resolve Categories
             // First, fetch existing categories
-            const { data: existingCategories } = await supabase.from('categories').select('id, name');
+            const { data: existingCategories } = await supabase.from('categories').select('id, name').eq('business_id', businessId);
 
             existingCategories?.forEach(c => {
                 categoryMap.set(c.name.toLowerCase(), c.id);
@@ -89,8 +91,9 @@ export function ProductImporter() {
                         .from('categories')
                         .insert({
                             name: catName,
-                            color: '#64748b', // Default gray
-                            icon: 'Package'
+                            color: '#64748b',
+                            icon: 'Package',
+                            business_id: businessId
                         })
                         .select('id')
                         .single();
@@ -111,13 +114,7 @@ export function ProductImporter() {
                 stock_quantity: item.stock_quantity,
                 low_stock_threshold: item.low_stock_threshold,
                 is_active: true,
-                // We match on name for "upsert" simulation or strictly insert? 
-                // Supabase upsert requires unique constraint. 'id' is primary key, random UUID. 
-                // Unless we have ID in sheet, we can't easily update validly without duplicating names.
-                // For now, we will assume these are NEW or duplicates. 
-                // Ideally we should check if name exists, but for bulk speed we might just insert.
-                // Let's check names first? No, too slow for bulk. 
-                // Let's just Insert.
+                business_id: businessId,
             }));
 
             // 4. Batch Insert

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,6 +13,7 @@ const PRODUCT_NOUNS = ['Widget', 'Gadget', 'Device', 'Tool', 'Kit', 'Pack', 'Bun
 export function RandomSeeder() {
     const [isLoading, setIsLoading] = useState(false);
     const queryClient = useQueryClient();
+    const { businessId } = useAuth();
 
     const generateRandomColor = () => {
         return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
@@ -43,7 +45,8 @@ export function RandomSeeder() {
                     .insert({
                         name: uniqueName,
                         color: generateRandomColor(),
-                        icon: 'Package'
+                        icon: 'Package',
+                        business_id: businessId
                     })
                     .select('id')
                     .single();
@@ -77,7 +80,8 @@ export function RandomSeeder() {
                     selling_price: sellingPrice,
                     stock_quantity: stock,
                     is_active: true,
-                    low_stock_threshold: 10
+                    low_stock_threshold: 10,
+                    business_id: businessId
                 });
             }
 
