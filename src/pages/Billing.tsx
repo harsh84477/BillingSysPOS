@@ -456,7 +456,6 @@ export default function Billing() {
           unit_price: item.unitPrice,
           cost_price: item.costPrice,
           total_price: item.unitPrice * item.quantity,
-          business_id: businessId,
         }));
 
         const { error: itemsError } = await supabase
