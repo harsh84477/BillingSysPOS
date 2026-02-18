@@ -117,7 +117,7 @@ export default function Billing() {
     enabled: !!businessId,
   });
 
-  const currencySymbol = '₹';
+  const currencySymbol = settings?.currency_symbol || '₹';
   const taxRate = gstPercent || settings?.tax_rate || 0;
 
   // Filter products
@@ -351,30 +351,30 @@ export default function Billing() {
               <div class="item">
                 <span class="item-name">${item.name}</span>
                 <span class="item-qty">${item.quantity}</span>
-                <span class="item-price">₹${(item.unitPrice * item.quantity).toFixed(2)}</span>
+                <span class="item-price">${currencySymbol}${(item.unitPrice * item.quantity).toFixed(2)}</span>
               </div>
             `).join('')}
           </div>
           <div class="totals">
             <div class="total-row">
               <span>Subtotal:</span>
-              <span>₹${cartCalculations.subtotal.toFixed(2)}</span>
+              <span>${currencySymbol}${cartCalculations.subtotal.toFixed(2)}</span>
             </div>
             ${discountValue > 0 ? `
               <div class="total-row">
                 <span>Discount:</span>
-                <span>-₹${cartCalculations.discountAmount.toFixed(2)}</span>
+                <span>-${currencySymbol}${cartCalculations.discountAmount.toFixed(2)}</span>
               </div>
             ` : ''}
             ${gstPercent > 0 ? `
               <div class="total-row">
                 <span>GST (${gstPercent}%):</span>
-                <span>₹${cartCalculations.taxAmount.toFixed(2)}</span>
+                <span>${currencySymbol}${cartCalculations.taxAmount.toFixed(2)}</span>
               </div>
             ` : ''}
             <div class="total-row grand-total">
               <span>Total:</span>
-              <span>₹${cartCalculations.total.toFixed(2)}</span>
+              <span>${currencySymbol}${cartCalculations.total.toFixed(2)}</span>
             </div>
           </div>
           <div class="footer">
