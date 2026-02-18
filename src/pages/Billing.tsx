@@ -47,7 +47,7 @@ interface CartItem {
 }
 
 export default function Billing() {
-  const { user, businessId } = useAuth();
+  const { user, businessId, billPrefix, userRole } = useAuth();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
 
@@ -273,14 +273,28 @@ export default function Billing() {
     setCart((prev) => prev.filter((item) => item.productId !== productId));
   };
 
-  // Generate date-based bill number (MMDDXXXX format) with collision handling
+  // Generate date-based bill number with user prefix
   const generateBillNumber = async (retryCount = 0): Promise<string> => {
     const today = new Date();
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
-    const datePrefix = `${month}${day}`;
 
-    // Get the highest bill number for today
+    // Prefix logic: Use user's assigned prefix (e.g., 'A') or default from settings ('INV-') if no user prefix
+    // User prefix format: A-02180001
+    // Default format: INV-02180001
+
+    let prefix = settings?.bill_prefix || 'INV-';
+
+    // If user has a specific prefix assigned (e.g. 'A', 'B'), use that instead of the general setting
+    // We add a hyphen after the user prefix for readability if it's just a letter
+    if (userRole && (window as any).currentUserBillPrefix) {
+      prefix = (window as any).currentUserBillPrefix;
+      if (!prefix.endsWith('-')) prefix += '-';
+    }
+
+    const datePrefix = `${prefix}${month}${day}`;
+
+    // Get the highest bill number for today matching this prefix
     const { data: latestBill } = await supabase
       .from('bills')
       .select('bill_number')
@@ -291,8 +305,14 @@ export default function Billing() {
 
     let sequence = 1;
     if (latestBill?.bill_number) {
-      const lastSequence = parseInt(latestBill.bill_number.slice(-4), 10);
-      sequence = lastSequence + 1 + retryCount;
+      // Extract the sequence part (last 4 digits)
+      const parts = latestBill.bill_number.split(datePrefix);
+      if (parts.length > 1 && parts[1]) {
+        const lastSequence = parseInt(parts[1], 10);
+        if (!isNaN(lastSequence)) {
+          sequence = lastSequence + 1 + retryCount;
+        }
+      }
     }
 
     return `${datePrefix}${String(sequence).padStart(4, '0')}`;

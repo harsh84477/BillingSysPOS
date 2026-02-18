@@ -97,6 +97,7 @@ CREATE TABLE public.user_roles (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   business_id UUID REFERENCES public.businesses(id) ON DELETE CASCADE,
   role app_role NOT NULL,
+  bill_prefix TEXT CHECK (length(bill_prefix) <= 2),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT user_roles_user_id_business_id_key UNIQUE (user_id, business_id)
 );

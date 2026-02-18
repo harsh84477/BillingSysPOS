@@ -17,6 +17,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   userRole: AppRole | null;
+  billPrefix: string | null;
   businessId: string | null;
   businessInfo: BusinessInfo | null;
   needsBusinessSetup: boolean;
@@ -40,6 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
+  const [billPrefix, setBillPrefix] = useState<string | null>(null);
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
   const [needsBusinessSetup, setNeedsBusinessSetup] = useState(false);
@@ -48,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase
         .from('user_roles')
-        .select('role, business_id')
+        .select('role, business_id, bill_prefix')
         .eq('user_id', userId)
         .maybeSingle();
 
@@ -59,6 +61,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data?.business_id) {
         setBusinessId(data.business_id);
+      }
+
+      if (data?.bill_prefix) {
+        setBillPrefix(data.bill_prefix);
+      } else {
+        setBillPrefix(null);
       }
 
       return data?.role as AppRole | null;
@@ -265,6 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setSession(null);
     setUserRole(null);
+    setBillPrefix(null);
     setBusinessId(null);
     setBusinessInfo(null);
     setNeedsBusinessSetup(false);
@@ -288,6 +297,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     loading,
     userRole,
+    billPrefix,
     businessId,
     businessInfo,
     needsBusinessSetup,

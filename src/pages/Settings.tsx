@@ -72,6 +72,24 @@ export default function Settings() {
   const updateSettings = useUpdateBusinessSettings();
   const queryClient = useQueryClient();
 
+  // Prefix mutation
+  const updatePrefixMutation = useMutation({
+    mutationFn: async ({ roleId, prefix }: { roleId: string; prefix: string }) => {
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ bill_prefix: prefix || null })
+        .eq('id', roleId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Bill prefix updated');
+      queryClient.invalidateQueries({ queryKey: ['allUserRoles'] });
+    },
+    onError: (error) => {
+      toast.error('Failed to update prefix: ' + error.message);
+    },
+  });
+
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
 
@@ -734,6 +752,7 @@ export default function Settings() {
                       <TableRow>
                         <TableHead>User</TableHead>
                         <TableHead>Role</TableHead>
+                        <TableHead>Bill Prefix</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -760,6 +779,27 @@ export default function Settings() {
                             >
                               {ur.role === 'admin' ? '👑 Admin' : ur.role === 'manager' ? '🔧 Manager' : '💵 Cashier'}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                className="w-16 h-8 text-center uppercase"
+                                placeholder="-"
+                                maxLength={2}
+                                defaultValue={ur.bill_prefix || ''}
+                                onBlur={(e) => {
+                                  const newVal = e.target.value.toUpperCase();
+                                  if (newVal !== (ur.bill_prefix || '')) {
+                                    updatePrefixMutation.mutate({ roleId: ur.id, prefix: newVal });
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.currentTarget.blur();
+                                  }
+                                }}
+                              />
+                            </div>
                           </TableCell>
                           <TableCell className="text-right">
                             {ur.role !== 'admin' && ur.user_id !== user?.id && (
