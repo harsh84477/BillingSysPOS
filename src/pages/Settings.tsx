@@ -92,15 +92,17 @@ export default function Settings() {
 
   // Fetch user roles
   const { data: userRoles = [] } = useQuery({
-    queryKey: ['allUserRoles'],
+    queryKey: ['allUserRoles', businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('user_roles')
         .select('*, profiles:user_id(display_name, user_id)');
+      if (businessId) query = query.eq('business_id', businessId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
-    enabled: isAdmin,
+    enabled: isAdmin && !!businessId,
   });
 
   // Category mutations

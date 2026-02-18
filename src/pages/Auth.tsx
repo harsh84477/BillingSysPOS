@@ -7,10 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, ShoppingCart, Crown, UserCog, User, ArrowLeft, KeyRound } from 'lucide-react';
+import { Loader2, ShoppingCart, Crown, UserCog, User, ArrowLeft, KeyRound, LogIn } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
-type SelectedRole = 'owner' | 'manager' | 'cashier' | null;
+type SelectedRole = 'owner' | 'manager' | 'cashier' | 'existing' | null;
 
 const ROLE_CARDS = [
   {
@@ -39,6 +39,15 @@ const ROLE_CARDS = [
     gradient: 'from-emerald-500/20 to-green-500/20',
     border: 'border-emerald-500/30 hover:border-emerald-500/60',
     iconColor: 'text-emerald-500',
+  },
+  {
+    role: 'existing' as const,
+    title: 'Existing Account',
+    description: 'Already have an account? Sign in to access your business.',
+    icon: LogIn,
+    gradient: 'from-purple-500/20 to-violet-500/20',
+    border: 'border-purple-500/30 hover:border-purple-500/60',
+    iconColor: 'text-purple-500',
   },
 ];
 
@@ -78,9 +87,12 @@ export default function Auth() {
     setSelectedRole(role);
     setJoinCode('');
     setJoinCodeVerified(false);
-    // Store selected role in localStorage for post-OAuth flow
-    if (role) {
+    // Store selected role in localStorage for post-OAuth flow (not for existing accounts)
+    if (role && role !== 'existing') {
       localStorage.setItem('pos_pending_role', role);
+    } else {
+      localStorage.removeItem('pos_pending_role');
+      localStorage.removeItem('pos_pending_join_code');
     }
   };
 
@@ -170,7 +182,7 @@ export default function Auth() {
           </div>
 
           {/* Role Cards */}
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {ROLE_CARDS.map(({ role, title, description, icon: Icon, gradient, border, iconColor }) => (
               <button
                 key={role}
@@ -248,9 +260,11 @@ export default function Auth() {
   // Step 3: Auth Form (same for all roles, just with different context)
   const roleLabel = selectedRole === 'owner'
     ? 'Business Owner'
-    : selectedRole === 'manager'
-      ? 'Manager'
-      : 'Cashier';
+    : selectedRole === 'existing'
+      ? 'Your Account'
+      : selectedRole === 'manager'
+        ? 'Manager'
+        : 'Cashier';
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -272,7 +286,9 @@ export default function Auth() {
           <CardDescription>
             {selectedRole === 'owner'
               ? 'Sign in to manage your business'
-              : `Sign in to join as ${roleLabel}`}
+              : selectedRole === 'existing'
+                ? 'Sign in to access your existing account'
+                : `Sign in to join as ${roleLabel}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
