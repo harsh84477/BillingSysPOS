@@ -90,17 +90,34 @@ export default function Settings() {
     enabled: !!businessId,
   });
 
-  // Fetch user roles
+  // Fetch user roles with profiles
   const { data: userRoles = [] } = useQuery({
     queryKey: ['allUserRoles', businessId],
     queryFn: async () => {
-      let query = supabase
+      // Fetch roles for this business
+      const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
-        .select('*, profiles:user_id(display_name, user_id)');
-      if (businessId) query = query.eq('business_id', businessId);
-      const { data, error } = await query;
-      if (error) throw error;
-      return data;
+        .select('id, user_id, role, business_id, created_at')
+        .eq('business_id', businessId!);
+
+      if (rolesError) {
+        console.error('Error fetching user roles:', rolesError);
+        throw rolesError;
+      }
+      if (!roles || roles.length === 0) return [];
+
+      // Fetch profiles for those users
+      const userIds = roles.map(r => r.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, display_name')
+        .in('user_id', userIds);
+
+      // Merge roles with profile names
+      return roles.map(role => ({
+        ...role,
+        profiles: profiles?.find(p => p.user_id === role.user_id) || null,
+      }));
     },
     enabled: isAdmin && !!businessId,
   });
