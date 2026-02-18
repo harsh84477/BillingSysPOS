@@ -688,11 +688,26 @@ export default function Settings() {
         {/* Users - Admin Only */}
         {isAdmin && (
           <TabsContent value="users">
+            {/* Role Count Summary */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              {[
+                { label: 'Total Users', count: userRoles.length, color: 'bg-primary/10 text-primary' },
+                { label: 'Admins', count: userRoles.filter((ur: any) => ur.role === 'admin').length, color: 'bg-amber-500/10 text-amber-600' },
+                { label: 'Managers', count: userRoles.filter((ur: any) => ur.role === 'manager').length, color: 'bg-blue-500/10 text-blue-600' },
+                { label: 'Cashiers', count: userRoles.filter((ur: any) => ur.role === 'cashier').length, color: 'bg-emerald-500/10 text-emerald-600' },
+              ].map(({ label, count, color }) => (
+                <Card key={label} className="p-4">
+                  <div className="text-sm text-muted-foreground">{label}</div>
+                  <div className={`text-2xl font-bold mt-1 ${color.split(' ')[1]}`}>{count}</div>
+                </Card>
+              ))}
+            </div>
+
             <Card>
               <CardHeader>
-                <CardTitle>User Roles</CardTitle>
+                <CardTitle>Team Members</CardTitle>
                 <CardDescription>
-                  Manage user access and permissions
+                  Manage user access and permissions for your business
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -702,13 +717,19 @@ export default function Settings() {
                       <TableRow>
                         <TableHead>User</TableHead>
                         <TableHead>Role</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {userRoles.map((ur: any) => (
                         <TableRow key={ur.id}>
-                          <TableCell>
-                            {ur.profiles?.display_name || 'Unknown User'}
+                          <TableCell className="font-medium">
+                            <div>
+                              {ur.profiles?.display_name || 'Unknown User'}
+                              {ur.user_id === user?.id && (
+                                <span className="ml-2 text-xs text-muted-foreground">(You)</span>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -720,17 +741,49 @@ export default function Settings() {
                                     : 'outline'
                               }
                             >
-                              {ur.role}
+                              {ur.role === 'admin' ? '👑 Admin' : ur.role === 'manager' ? '🔧 Manager' : '💵 Cashier'}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {ur.role !== 'admin' && ur.user_id !== user?.id && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={async () => {
+                                  if (!confirm(`Remove ${ur.profiles?.display_name || 'this user'} from the business?`)) return;
+                                  const { error } = await supabase
+                                    .from('user_roles')
+                                    .delete()
+                                    .eq('id', ur.id);
+                                  if (error) {
+                                    toast.error('Failed to remove user: ' + error.message);
+                                  } else {
+                                    toast.success('User removed from business');
+                                    queryClient.invalidateQueries({ queryKey: ['allUserRoles'] });
+                                  }
+                                }}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 ) : (
-                  <p className="text-muted-foreground">
-                    No users with assigned roles. Use the database to assign roles.
-                  </p>
+                  <div className="text-center py-8">
+                    <Users className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
+                    <p className="text-muted-foreground">
+                      No team members yet. Share your business code to invite people.
+                    </p>
+                    {businessInfo?.join_code && (
+                      <p className="mt-2 text-sm font-mono bg-muted px-3 py-1 rounded inline-block">
+                        {businessInfo.join_code}
+                      </p>
+                    )}
+                  </div>
                 )}
               </CardContent>
             </Card>
