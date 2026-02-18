@@ -49,26 +49,26 @@ export function useUpdateBusinessSettings() {
 
   return useMutation({
     mutationFn: async (updates: Partial<BusinessSettings>) => {
-      // Try update first
-      let query = supabase
+      // Update settings for this business
+      const { data, error } = await supabase
         .from('business_settings')
-        .update(updates);
-      if (businessId) query = query.eq('business_id', businessId);
-      const { data, error } = await query
+        .update({ ...updates, business_id: businessId })
+        .eq('business_id', businessId)
         .select()
         .maybeSingle();
 
       if (error) throw error;
 
-      // If no row was updated, insert a new one
+      // If no row matched (legacy row with NULL business_id), claim it
       if (!data && businessId) {
-        const { data: inserted, error: insertError } = await supabase
+        const { data: claimed, error: claimError } = await supabase
           .from('business_settings')
-          .insert({ ...updates, business_id: businessId })
+          .update({ ...updates, business_id: businessId })
+          .is('business_id', null)
           .select()
-          .single();
-        if (insertError) throw insertError;
-        return inserted;
+          .maybeSingle();
+        if (claimError) throw claimError;
+        return claimed;
       }
 
       return data;
