@@ -477,10 +477,52 @@ export default function Settings() {
                   </div>
                   {isAdmin && (
                     <Button type="submit" disabled={updateSettings.isPending} className="w-full sm:w-auto">
-                      Save Changes
-                    </Button>
+                      <Button type="submit" disabled={updateSettings.isPending} className="w-full sm:w-auto">
+                        Save Changes
+                      </Button>
                   )}
-                </form>
+                    </form>
+              </CardContent>
+            </Card>
+
+            {/* Personal Settings Card */}
+            <Card>
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <span className="text-xl">👤</span>
+                  My Personal Settings
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Settings specific to your account
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="my_bill_prefix" className="text-sm">My Bill Prefix (Your Initials)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="my_bill_prefix"
+                      defaultValue={userRoles.find((r: any) => r.user_id === user?.id)?.bill_prefix || ''}
+                      maxLength={2}
+                      className="w-20 uppercase text-center font-mono font-bold"
+                      placeholder="-"
+                      onBlur={async (e) => {
+                        const val = e.target.value.toUpperCase();
+                        try {
+                          const { error } = await supabase.rpc('update_my_bill_prefix', { _prefix: val });
+                          if (error) throw error;
+                          toast.success('Your prefix updated!');
+                          queryClient.invalidateQueries({ queryKey: ['allUserRoles'] });
+                        } catch (err: any) {
+                          toast.error('Failed to update: ' + err.message);
+                        }
+                      }}
+                    />
+                    <div className="text-xs text-muted-foreground self-center">
+                           (e.g., 'JD' -> Bills will start with JD-...)
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
