@@ -439,12 +439,28 @@ export default function Billing() {
 
       while (retryCount < maxRetries) {
         const billNumber = await generateBillNumber(retryCount);
+        let finalCustomerId = selectedCustomerId;
+
+        // Auto-create customer if name provided but not selected from list
+        if (!finalCustomerId && customerName.trim()) {
+          const { data: newCustomer, error: customerError } = await supabase
+            .from('customers')
+            .insert({
+              name: customerName.trim(),
+              business_id: businessId,
+            })
+            .select()
+            .single();
+
+          if (customerError) throw customerError;
+          finalCustomerId = newCustomer.id;
+        }
 
         const { data: bill, error: billError } = await supabase
           .from('bills')
           .insert({
             bill_number: billNumber,
-            customer_id: selectedCustomerId,
+            customer_id: finalCustomerId,
             created_by: user?.id,
             business_id: businessId,
             status: 'completed' as const,
@@ -672,14 +688,24 @@ export default function Billing() {
             </div>
 
             {/* Customer Name Input */}
-            <div className="px-4 py-2 border-b border-border">
+            <div className="px-4 py-2 border-b border-border flex gap-2">
               <Input
-                placeholder="Customer name"
-                value={customerName || selectedCustomer?.name || ''}
-                onChange={(e) => setCustomerName(e.target.value)}
-                onClick={() => setIsCustomerDialogOpen(true)}
-                className="bg-background"
+                placeholder="Customer name (or select ->)"
+                value={customerName || (selectedCustomerId ? customers.find(c => c.id === selectedCustomerId)?.name : '') || ''}
+                onChange={(e) => {
+                  setCustomerName(e.target.value);
+                  if (selectedCustomerId) setSelectedCustomerId(null); // Clear selected if typing
+                }}
+                className="bg-background flex-1"
               />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsCustomerDialogOpen(true)}
+                title="Select Customer"
+              >
+                <Users className="h-4 w-4" />
+              </Button>
             </div>
 
             {/* Cart Items */}
