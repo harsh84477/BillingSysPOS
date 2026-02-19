@@ -81,9 +81,13 @@ export default function Settings() {
         .eq('id', roleId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: async (_, variables) => {
       toast.success('Bill prefix updated');
       queryClient.invalidateQueries({ queryKey: ['allUserRoles'] });
+      // If admin updated their own role, refresh context
+      if (userRoles.find((r: any) => r.id === variables.roleId)?.user_id === user?.id) {
+        await refreshBusinessInfo();
+      }
     },
     onError: (error) => {
       toast.error('Failed to update prefix: ' + error.message);
@@ -477,11 +481,10 @@ export default function Settings() {
                   </div>
                   {isAdmin && (
                     <Button type="submit" disabled={updateSettings.isPending} className="w-full sm:w-auto">
-                      <Button type="submit" disabled={updateSettings.isPending} className="w-full sm:w-auto">
-                        Save Changes
-                      </Button>
+                      Save Changes
+                    </Button>
                   )}
-                    </form>
+                </form>
               </CardContent>
             </Card>
 
@@ -512,6 +515,7 @@ export default function Settings() {
                           const { error } = await supabase.rpc('update_my_bill_prefix', { _prefix: val });
                           if (error) throw error;
                           toast.success('Your prefix updated!');
+                          await refreshBusinessInfo();
                           queryClient.invalidateQueries({ queryKey: ['allUserRoles'] });
                         } catch (err: any) {
                           toast.error('Failed to update: ' + err.message);
@@ -519,7 +523,7 @@ export default function Settings() {
                       }}
                     />
                     <div className="text-xs text-muted-foreground self-center">
-                           (e.g., 'JD' -> Bills will start with JD-...)
+                      (e.g., 'JD' -&gt; Bills will start with JD-...)
                     </div>
                   </div>
                 </div>

@@ -287,8 +287,8 @@ export default function Billing() {
 
     // If user has a specific prefix assigned (e.g. 'A', 'B'), use that instead of the general setting
     // We add a hyphen after the user prefix for readability if it's just a letter
-    if (userRole && (window as any).currentUserBillPrefix) {
-      prefix = (window as any).currentUserBillPrefix;
+    if (billPrefix) {
+      prefix = billPrefix;
       if (!prefix.endsWith('-')) prefix += '-';
     }
 

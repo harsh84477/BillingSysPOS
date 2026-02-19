@@ -486,6 +486,7 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          bill_prefix: string | null
           business_id: string | null
           created_at: string
           id: string
@@ -493,6 +494,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bill_prefix?: string | null
           business_id?: string | null
           created_at?: string
           id?: string
@@ -500,6 +502,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bill_prefix?: string | null
           business_id?: string | null
           created_at?: string
           id?: string
@@ -549,6 +552,12 @@ export type Database = {
       regenerate_join_code: {
         Args: {
           _user_id: string
+        }
+        Returns: Json
+      }
+      update_my_bill_prefix: {
+        Args: {
+          _prefix: string
         }
         Returns: Json
       }
