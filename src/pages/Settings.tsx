@@ -115,7 +115,7 @@ export default function Settings() {
       // Fetch roles for this business
       const { data: roles, error: rolesError } = await supabase
         .from('user_roles')
-        .select('id, user_id, role, business_id, created_at')
+        .select('id, user_id, role, business_id, bill_prefix, created_at')
         .eq('business_id', businessId!);
 
       if (rolesError) {
@@ -124,17 +124,21 @@ export default function Settings() {
       }
       if (!roles || roles.length === 0) return [];
 
+      const rolesAny = roles as any[];
+
       // Fetch profiles for those users
-      const userIds = roles.map(r => r.user_id);
+      const userIds = rolesAny.map(r => r.user_id);
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, display_name')
         .in('user_id', userIds);
 
+      const profilesAny = profiles as any[];
+
       // Merge roles with profile names
-      return roles.map(role => ({
+      return rolesAny.map(role => ({
         ...role,
-        profiles: profiles?.find(p => p.user_id === role.user_id) || null,
+        profiles: profilesAny?.find(p => p.user_id === role.user_id) || null,
       }));
     },
     enabled: isAdmin && !!businessId,

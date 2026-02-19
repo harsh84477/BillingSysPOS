@@ -87,6 +87,7 @@ CREATE TABLE public.profiles (
   display_name TEXT,
   business_id UUID REFERENCES public.businesses(id) ON DELETE SET NULL,
   mobile_number TEXT,
+  theme TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

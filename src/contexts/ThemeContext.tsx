@@ -114,16 +114,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeName>('mint-pro');
 
   const applyTheme = (themeName: ThemeName) => {
-    const colors = themes[themeName];
+    const validTheme = themes[themeName] ? themeName : 'mint-pro';
+    const colors = themes[validTheme];
     const root = document.documentElement;
 
     Object.entries(colors).forEach(([key, value]) => {
+      // Convert camelCase to kebab-case for CSS variables
+      // e.g. primaryForeground -> --primary-foreground
       const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
       root.style.setProperty(`--${cssKey}`, value);
     });
 
     // Handle dark theme class
-    if (themeName === 'dark-pro') {
+    if (validTheme === 'dark-pro') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
@@ -134,33 +137,46 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setThemeState(themeName);
     applyTheme(themeName);
 
-    // Save to database
+    // Save to profile if user is logged in
     try {
-      await supabase
-        .from('business_settings')
-        .update({ theme: themeName })
-        .not('id', 'is', null);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({ theme: themeName } as any)
+          .eq('user_id', user.id);
+      }
     } catch (error) {
       console.error('Error saving theme:', error);
     }
   };
 
   useEffect(() => {
-    // Load theme from database
+    // Load theme from profile
     const loadTheme = async () => {
       try {
-        const { data } = await supabase
-          .from('business_settings')
-          .select('theme')
-          .limit(1)
-          .maybeSingle();
+        const { data: { user } } = await supabase.auth.getUser();
 
-        if (data?.theme && themes[data.theme as ThemeName]) {
-          setThemeState(data.theme as ThemeName);
-          applyTheme(data.theme as ThemeName);
-        } else {
-          applyTheme('mint-pro');
+        if (user) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('theme')
+            .eq('user_id', user.id)
+            .maybeSingle();
+
+          if (data) {
+            const themeData = data as any;
+            if (themeData.theme) {
+              setThemeState(themeData.theme as ThemeName);
+              applyTheme(themeData.theme as ThemeName);
+              return; // Found user theme, done.
+            }
+          }
         }
+
+        // Fallback or default if no user/theme
+        applyTheme('mint-pro');
+
       } catch (error) {
         console.error('Error loading theme:', error);
         applyTheme('mint-pro');
