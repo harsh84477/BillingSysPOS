@@ -33,11 +33,62 @@ import {
   ChevronRight,
   Sparkles,
   Package,
-  icons,
+  Apple,
+  Beef,
+  Beer,
+  Bike,
+  Book,
+  Cake,
+  Car,
+  Coffee,
+  Cookie,
+  Cpu,
+  Fish,
+  Flame,
+  Flower,
+  Gift,
+  Grape,
+  Ham,
+  Headphones,
+  Home,
+  IceCream,
+  Lamp,
+  Laptop,
+  Leaf,
+  Milk,
+  Monitor,
+  Music,
+  Phone,
+  Pizza,
+  Salad,
+  Sandwich,
+  Scissors,
+  Shirt,
+  ShoppingBag,
+  Smartphone,
+  Smile,
+  Star,
+  Sun,
+  Tablet,
+  Tag,
+  Tv,
+  Watch,
+  Wine,
+  Wrench,
   Users,
+  type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+
+// Safe icon map — avoids the broken `icons` bulk export from lucide-react
+const ICON_MAP: Record<string, LucideIcon> = {
+  Package, Apple, Beef, Beer, Bike, Book, Cake, Car, Coffee, Cookie, Cpu,
+  Fish, Flame, Flower, Gift, Grape, Ham, Headphones, Home, IceCream, Lamp,
+  Laptop, Leaf, Milk, Monitor, Music, Phone, Pizza, Salad, Sandwich,
+  Scissors, Shirt, ShoppingBag, ShoppingCart, Smartphone, Smile, Star, Sun,
+  Tablet, Tag, Tv, Watch, Wine, Wrench,
+};
 
 interface CartItem {
   productId: string;
@@ -64,7 +115,16 @@ export default function Billing() {
 
   // Long-press quantity dialog state
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
-  const [quantityDialogProduct, setQuantityDialogProduct] = useState<typeof products[0] | null>(null);
+  const [quantityDialogProduct, setQuantityDialogProduct] = useState<{
+    id: string;
+    name: string;
+    selling_price: number | string;
+    cost_price: number | string;
+    icon?: string | null;
+    stock_quantity: number;
+    low_stock_threshold: number;
+    [key: string]: unknown;
+  } | null>(null);
   const [quantityDialogValue, setQuantityDialogValue] = useState('');
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -544,7 +604,7 @@ export default function Billing() {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] gap-0">
+    <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] sm:h-[calc(100vh-7rem)] gap-0 -m-3 sm:-m-4 lg:-m-6">
       {/* Left Panel - Categories */}
       <div className="hidden lg:flex w-52 flex-shrink-0 flex-col border-r border-border bg-card">
         <ScrollArea className="flex-1 p-2">
@@ -588,16 +648,51 @@ export default function Billing() {
 
       {/* Center Panel - Products */}
       <div className="flex flex-1 flex-col">
-        {/* Search Bar */}
-        <div className="p-3 border-b border-border bg-card">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-background"
-            />
+        {/* Search Bar + Mobile Category Scroll */}
+        <div className="border-b border-border bg-card">
+          <div className="p-2.5">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-background h-9"
+              />
+            </div>
+          </div>
+          {/* Mobile horizontal category scroll */}
+          <div className="lg:hidden flex gap-1.5 overflow-x-auto px-2.5 pb-2.5 scrollbar-hide">
+            <button
+              onClick={() => setSelectedCategory('all')}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap shrink-0',
+                selectedCategory === 'all'
+                  ? 'bg-primary text-primary-foreground shadow-md'
+                  : 'bg-accent hover:bg-accent/80'
+              )}
+            >
+              <Sparkles className="h-3 w-3" />
+              All
+            </button>
+            {categories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedCategory(category.id)}
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all whitespace-nowrap shrink-0',
+                  selectedCategory === category.id
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'bg-accent hover:bg-accent/80'
+                )}
+              >
+                <span
+                  className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: category.color || '#3B82F6' }}
+                />
+                {category.name}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -612,8 +707,7 @@ export default function Billing() {
             <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))' }}>
               {filteredProducts.map((product) => {
                 const iconName = product.icon || 'Package';
-                const LucideIcon = icons[iconName as keyof typeof icons];
-                const IconComponent = LucideIcon || Package;
+                const IconComponent = ICON_MAP[iconName] || Package;
 
                 return (
                   <button
@@ -665,15 +759,14 @@ export default function Billing() {
       {/* Right Panel - Cart (Collapsible) */}
       <div
         className={cn(
-          'hidden md:flex flex-col border-l border-border bg-card transition-all duration-300',
+          'relative hidden md:flex flex-col border-l border-border bg-card transition-all duration-300',
           isCartExpanded ? 'w-80 lg:w-96' : 'w-12'
         )}
       >
         {/* Collapse/Expand Button */}
         <button
           onClick={() => setIsCartExpanded(!isCartExpanded)}
-          className="absolute right-0 top-1/2 -translate-y-1/2 -translate-x-full z-10 bg-primary text-primary-foreground rounded-l-md p-1 shadow-md hover:bg-primary/90"
-          style={{ marginRight: isCartExpanded ? '24rem' : '3rem' }}
+          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-10 bg-primary text-primary-foreground rounded-l-md p-1 shadow-md hover:bg-primary/90"
         >
           {isCartExpanded ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </button>
@@ -873,7 +966,7 @@ export default function Billing() {
       <Sheet>
         <SheetTrigger asChild>
           <Button
-            className="md:hidden fixed bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg"
+            className="md:hidden fixed bottom-20 sm:bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg"
             size="icon"
           >
             <ShoppingCart className="h-6 w-6" />

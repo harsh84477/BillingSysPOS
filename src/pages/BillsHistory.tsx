@@ -297,77 +297,78 @@ export default function BillsHistory() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold">Bills History</h1>
-          <p className="text-muted-foreground">View all your past bills and invoices</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Bills History</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">View all your past bills and invoices</p>
         </div>
-        <Button onClick={handleExportExcel} variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          Export Excel
+        <Button onClick={handleExportExcel} variant="outline" size="sm" className="shrink-0">
+          <Download className="mr-1.5 h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Export Excel</span>
+          <span className="sm:hidden">Export</span>
         </Button>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Receipt className="h-4 w-4 text-primary" />
+      {/* Summary Stats - 2 cols on mobile */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 shrink-0">
+              <Receipt className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Total Bills</p>
-              <p className="text-lg font-bold">{summaryStats.totalBills}</p>
+              <p className="text-base sm:text-lg font-bold">{summaryStats.totalBills}</p>
             </div>
           </div>
         </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-500/10">
-              <TrendingUp className="h-4 w-4 text-green-600" />
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/10 shrink-0">
+              <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" />
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Revenue</p>
-              <p className="text-lg font-bold">{currencySymbol}{summaryStats.totalRevenue.toFixed(2)}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-orange-500/10">
-              <Clock className="h-4 w-4 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Avg Bill Value</p>
-              <p className="text-lg font-bold">{currencySymbol}{summaryStats.avgBillValue.toFixed(2)}</p>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Revenue</p>
+              <p className="text-base sm:text-lg font-bold truncate">{currencySymbol}{summaryStats.totalRevenue.toFixed(2)}</p>
             </div>
           </div>
         </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-red-500/10">
-              <X className="h-4 w-4 text-red-600" />
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-orange-500/10 shrink-0">
+              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-600" />
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Total Discount</p>
-              <p className="text-lg font-bold">{currencySymbol}{summaryStats.totalDiscount.toFixed(2)}</p>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Avg Bill</p>
+              <p className="text-base sm:text-lg font-bold truncate">{currencySymbol}{summaryStats.avgBillValue.toFixed(2)}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-red-500/10 shrink-0">
+              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">Discounts</p>
+              <p className="text-base sm:text-lg font-bold truncate">{currencySymbol}{summaryStats.totalDiscount.toFixed(2)}</p>
             </div>
           </div>
         </Card>
       </div>
 
       <Card>
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-4">
-            {/* Quick Date Presets */}
-            <div className="flex flex-wrap gap-2">
+        <CardHeader className="pb-2 sm:pb-3">
+          <div className="flex flex-col gap-3">
+            {/* Quick Date Presets - horizontally scrollable on mobile */}
+            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
               {DATE_PRESETS.map((preset) => (
                 <Button
                   key={preset.value}
                   variant={datePreset === preset.value ? "default" : "outline"}
                   size="sm"
                   onClick={() => applyDatePreset(preset.value)}
-                  className="text-xs"
+                  className="text-xs shrink-0 h-8 px-2.5"
                 >
                   {preset.label}
                 </Button>
@@ -473,70 +474,94 @@ export default function BillsHistory() {
               No bills found
             </div>
           ) : (
-            <ScrollArea className="h-[calc(100vh-24rem)]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Bill #</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="w-[80px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBills.map((bill) => (
-                    <TableRow key={bill.id}>
-                      <TableCell className="font-medium">#{bill.bill_number}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-3 w-3" />
-                          {format(new Date(bill.created_at), 'dd/MM/yyyy HH:mm')}
-                        </div>
-                      </TableCell>
-                      <TableCell>{bill.customers?.name || 'Walk-in'}</TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(bill.status)} variant="secondary">
+            <ScrollArea className="h-[calc(100vh-26rem)] sm:h-[calc(100vh-24rem)]">
+              {/* Mobile Card View */}
+              <div className="sm:hidden space-y-2">
+                {filteredBills.map((bill) => (
+                  <div
+                    key={bill.id}
+                    className="flex items-center justify-between rounded-lg border border-border p-3 bg-background"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-sm">#{bill.bill_number}</p>
+                        <Badge className={`${getStatusColor(bill.status)} text-[10px] px-1.5 py-0`} variant="secondary">
                           {bill.status}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {currencySymbol}{Number(bill.total_amount).toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setSelectedBill(bill)}
-                            title="View Bill"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handlePrintBill(bill)}
-                            title="Print Bill"
-                          >
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setBillToDelete(bill)}
-                            className="text-destructive hover:text-destructive"
-                            title="Delete Bill"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{bill.customers?.name || 'Walk-in'}</p>
+                      <p className="text-xs text-muted-foreground">{format(new Date(bill.created_at), 'dd/MM/yy HH:mm')}</p>
+                    </div>
+                    <div className="flex items-center gap-1 ml-2 shrink-0">
+                      <p className="font-bold text-sm mr-1">{currencySymbol}{Number(bill.total_amount).toFixed(2)}</p>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedBill(bill)}>
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePrintBill(bill)}>
+                        <Printer className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setBillToDelete(bill)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop / Tablet Table View */}
+              <div className="hidden sm:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Bill #</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBills.map((bill) => (
+                      <TableRow key={bill.id}>
+                        <TableCell className="font-medium">#{bill.bill_number}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(bill.created_at), 'dd/MM/yyyy HH:mm')}
+                          </div>
+                        </TableCell>
+                        <TableCell>{bill.customers?.name || 'Walk-in'}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(bill.status)} variant="secondary">
+                            {bill.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {currencySymbol}{Number(bill.total_amount).toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => setSelectedBill(bill)} title="View Bill">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handlePrintBill(bill)} title="Print Bill">
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost" size="icon"
+                              onClick={() => setBillToDelete(bill)}
+                              className="text-destructive hover:text-destructive"
+                              title="Delete Bill"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </ScrollArea>
           )}
         </CardContent>

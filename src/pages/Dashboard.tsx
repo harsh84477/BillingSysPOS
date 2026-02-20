@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,13 +61,19 @@ function StatCard({
 }
 
 export default function Dashboard() {
-  const today = new Date();
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const startOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  
+  const today = useMemo(() => new Date(), []);
+  const startOfToday = useMemo(
+    () => new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+    [today]
+  );
+  const startOfThisMonth = useMemo(
+    () => new Date(today.getFullYear(), today.getMonth(), 1),
+    [today]
+  );
+
   // Month selector for expense report
   const [selectedMonth, setSelectedMonth] = useState(() => format(today, 'yyyy-MM'));
-  
+
   // Generate last 12 months for dropdown
   const monthOptions = Array.from({ length: 12 }, (_, i) => {
     const date = subMonths(today, i);
@@ -284,16 +290,16 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm text-muted-foreground">
           Welcome back! Here's what's happening with your business.
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Stats Grid - 2 cols on mobile, 4 on desktop */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Today's Sales"
           value={`${currencySymbol}${todaySales?.toFixed(2) || '0.00'}`}
@@ -326,19 +332,19 @@ export default function Dashboard() {
 
       {/* Monthly Expense Report */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
                 Monthly Report
               </CardTitle>
-              <CardDescription>Revenue, costs, and profit summary</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">Revenue, costs, and profit summary</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-48">
+              <div className="flex-1 sm:w-44">
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -350,50 +356,51 @@ export default function Dashboard() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button variant="outline" onClick={handleExportMonthlyReport}>
-                <Download className="mr-2 h-4 w-4" />
-                Export Excel
+              <Button variant="outline" size="sm" onClick={handleExportMonthlyReport} className="shrink-0">
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Export Excel</span>
+                <span className="sm:hidden">Export</span>
               </Button>
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {loadingExpense ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {[1, 2, 3, 4].map(i => (
-                <Skeleton key={i} className="h-20 w-full" />
+                <Skeleton key={i} className="h-16 sm:h-20 w-full" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold text-green-600">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 sm:p-4 rounded-lg bg-muted/50">
+                <p className="text-xs text-muted-foreground">Total Revenue</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-600">
                   {currencySymbol}{monthlyTotals.revenue.toFixed(2)}
                 </p>
                 <p className="text-xs text-muted-foreground">{monthlyTotals.orderCount} orders</p>
               </div>
-              <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Total Cost</p>
-                <p className="text-2xl font-bold text-orange-600">
+              <div className="p-3 sm:p-4 rounded-lg bg-muted/50">
+                <p className="text-xs text-muted-foreground">Total Cost</p>
+                <p className="text-lg sm:text-2xl font-bold text-orange-600">
                   {currencySymbol}{monthlyTotals.cost.toFixed(2)}
                 </p>
                 <p className="text-xs text-muted-foreground">Product costs</p>
               </div>
-              <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Discounts Given</p>
-                <p className="text-2xl font-bold text-red-600">
+              <div className="p-3 sm:p-4 rounded-lg bg-muted/50">
+                <p className="text-xs text-muted-foreground">Discounts Given</p>
+                <p className="text-lg sm:text-2xl font-bold text-red-600">
                   {currencySymbol}{monthlyTotals.discounts.toFixed(2)}
                 </p>
                 <p className="text-xs text-muted-foreground">Total discounts</p>
               </div>
-              <div className="p-4 rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">Net Profit</p>
-                <p className={`text-2xl font-bold ${monthlyTotals.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div className="p-3 sm:p-4 rounded-lg bg-muted/50">
+                <p className="text-xs text-muted-foreground">Net Profit</p>
+                <p className={`text-lg sm:text-2xl font-bold ${monthlyTotals.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {currencySymbol}{monthlyTotals.profit.toFixed(2)}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {monthlyTotals.revenue > 0 
+                  {monthlyTotals.revenue > 0
                     ? `${((monthlyTotals.profit / monthlyTotals.revenue) * 100).toFixed(1)}% margin`
                     : 'No sales'}
                 </p>
@@ -403,7 +410,7 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         {/* Low Stock Alerts */}
         <Card>
           <CardHeader>
@@ -479,13 +486,12 @@ export default function Dashboard() {
                         {currencySymbol}{Number(bill.total_amount).toFixed(2)}
                       </p>
                       <span
-                        className={`text-xs capitalize ${
-                          bill.status === 'completed'
-                            ? 'text-green-600'
-                            : bill.status === 'draft'
+                        className={`text-xs capitalize ${bill.status === 'completed'
+                          ? 'text-green-600'
+                          : bill.status === 'draft'
                             ? 'text-yellow-600'
                             : 'text-red-600'
-                        }`}
+                          }`}
                       >
                         {bill.status}
                       </span>
