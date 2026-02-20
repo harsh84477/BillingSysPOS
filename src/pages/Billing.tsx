@@ -280,20 +280,24 @@ export default function Billing() {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
 
-    // Prefix logic: Use user's assigned prefix (e.g., 'A') or default from settings ('INV-') if no user prefix
-    // User prefix format: A-02180001
-    // Default format: INV-02180001
+    // Combine Business Prefix and Personal Collector Code
+    // Format: [Business]-[Collector]-[MMDD][Sequence]
+    const businessPrefix = settings?.bill_prefix?.trim() || 'INV';
+    const collectorCode = billPrefix?.trim() || '';
 
-    let prefix = settings?.bill_prefix || 'INV-';
+    let combinedPrefix = businessPrefix;
 
-    // If user has a specific prefix assigned (e.g. 'A', 'B'), use that instead of the general setting
-    // We add a hyphen after the user prefix for readability if it's just a letter
-    if (billPrefix) {
-      prefix = billPrefix;
-      if (!prefix.endsWith('-')) prefix += '-';
+    // Add collector code if available
+    if (collectorCode) {
+      // Ensure business prefix doesn't end with hyphen before adding our own
+      const base = businessPrefix.endsWith('-') ? businessPrefix.slice(0, -1) : businessPrefix;
+      combinedPrefix = `${base}-${collectorCode}`;
     }
 
-    const datePrefix = `${prefix}${month}${day}`;
+    // Ensure it ends with a hyphen before the date/sequence part
+    if (!combinedPrefix.endsWith('-')) combinedPrefix += '-';
+
+    const datePrefix = `${combinedPrefix}${month}${day}`;
 
     // Get the highest bill number for today matching this prefix
     const { data: latestBill } = await supabase
@@ -307,12 +311,11 @@ export default function Billing() {
     let sequence = 1;
     if (latestBill?.bill_number) {
       // Extract the sequence part (last 4 digits)
-      const parts = latestBill.bill_number.split(datePrefix);
-      if (parts.length > 1 && parts[1]) {
-        const lastSequence = parseInt(parts[1], 10);
-        if (!isNaN(lastSequence)) {
-          sequence = lastSequence + 1 + retryCount;
-        }
+      const numberStr = latestBill.bill_number;
+      const sequencePart = numberStr.slice(-4);
+      const lastSequence = parseInt(sequencePart, 10);
+      if (!isNaN(lastSequence)) {
+        sequence = lastSequence + 1 + retryCount;
       }
     }
 

@@ -448,14 +448,18 @@ export default function Settings() {
               <CardContent className="space-y-4">
                 <form onSubmit={handleBillingSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="bill_prefix" className="text-sm">Bill Number Prefix</Label>
+                    <Label htmlFor="bill_prefix" className="text-sm">Business Bill Prefix</Label>
                     <Input
                       id="bill_prefix"
                       name="bill_prefix"
                       defaultValue={settings?.bill_prefix}
                       disabled={!isAdmin}
                       className="h-9 sm:h-10"
+                      placeholder="e.g., POS"
                     />
+                    <p className="text-[10px] text-muted-foreground italic">
+                      This prefix identifies your business on all bills.
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-3 sm:gap-4">
                     <div className="space-y-2">
@@ -501,20 +505,20 @@ export default function Settings() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="my_bill_prefix" className="text-sm">My Bill Prefix (Your Initials)</Label>
+                  <Label htmlFor="my_bill_prefix" className="text-sm">Personal Collector Code</Label>
                   <div className="flex gap-2">
                     <Input
                       id="my_bill_prefix"
                       defaultValue={userRoles.find((r: any) => r.user_id === user?.id)?.bill_prefix || ''}
                       maxLength={2}
                       className="w-20 uppercase text-center font-mono font-bold"
-                      placeholder="-"
+                      placeholder="--"
                       onBlur={async (e) => {
                         const val = e.target.value.toUpperCase();
                         try {
                           const { error } = await supabase.rpc('update_my_bill_prefix', { _prefix: val });
                           if (error) throw error;
-                          toast.success('Your prefix updated!');
+                          toast.success('Your personal code updated!');
                           await refreshBusinessInfo();
                           queryClient.invalidateQueries({ queryKey: ['allUserRoles'] });
                         } catch (err: any) {
@@ -523,9 +527,12 @@ export default function Settings() {
                       }}
                     />
                     <div className="text-xs text-muted-foreground self-center">
-                      (e.g., 'JD' -&gt; Bills will start with JD-...)
+                      (e.g., 'UK' identifies you as the collector)
                     </div>
                   </div>
+                  <p className="text-[10px] text-muted-foreground italic mt-1">
+                    Your bills will be formatted as: BusinessPrefix-<b>Code</b>-Date-Number
+                  </p>
                 </div>
               </CardContent>
             </Card>
