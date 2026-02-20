@@ -38,8 +38,12 @@ import {
   FolderOpen,
   PanelLeftClose,
   PanelLeft,
+  Phone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// Support phone number
+const SUPPORT_PHONE = '+1234567890';
 
 // Bottom nav items for mobile (only most important pages)
 const mobileNavItems = [
@@ -113,13 +117,6 @@ function Sidebar({ className, collapsed }: { className?: string; collapsed: bool
 
   return (
     <div className={cn('flex flex-col gap-4', className)}>
-      {!collapsed && (
-        <div className="px-3 py-2">
-          <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
-            Smart POS
-          </h2>
-        </div>
-      )}
       <nav className={cn('flex flex-col gap-1', collapsed ? 'px-1' : 'px-2')}>
         {navigation.map((item) => (
           <NavItem
@@ -147,32 +144,42 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "hidden flex-shrink-0 border-r border-border bg-card lg:block transition-all duration-300",
+          "hidden flex-shrink-0 border-r border-border bg-card lg:flex flex-col transition-all duration-300 shadow-sm z-30",
           sidebarCollapsed ? "w-16" : "w-64"
         )}
       >
-        <div className="flex h-full flex-col">
-          {/* Collapse/Expand Button */}
-          <div className={cn("flex items-center border-b border-border", sidebarCollapsed ? "justify-center p-2" : "justify-end p-2")}>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="h-8 w-8"
-            >
-              {sidebarCollapsed ? (
-                <PanelLeft className="h-4 w-4" />
-              ) : (
-                <PanelLeftClose className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
+        {/* Sidebar Header (App Title & Collapse Btn) */}
+        <div className={cn("flex items-center h-14 border-b border-border transition-all", sidebarCollapsed ? "justify-center px-0" : "justify-between px-4")}>
+          {!sidebarCollapsed && (
+            <div className="flex items-center gap-2 overflow-hidden">
+               <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                 SP
+               </div>
+               <span className="font-bold text-lg tracking-tight whitespace-nowrap truncate">Smart POS</span>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="h-8 w-8 flex-shrink-0"
+          >
+            {sidebarCollapsed ? (
+              <PanelLeft className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
 
-          <Sidebar className="flex-1 pt-4" collapsed={sidebarCollapsed} />
+        {/* Sidebar Navigation */}
+        <div className="flex-1 overflow-y-auto py-4 custom-scrollbar">
+          <Sidebar collapsed={sidebarCollapsed} />
+        </div>
 
           <div className="border-t border-border p-2">
             {sidebarCollapsed ? (
@@ -234,12 +241,11 @@ export default function AppLayout() {
               </DropdownMenu>
             )}
           </div>
-        </div>
       </aside>
 
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 overflow-hidden relative">
         {/* Header */}
-        <header className="sticky top-0 z-40 flex h-14 items-center gap-2 border-b border-border bg-card px-3 lg:px-6">
+        <header className="sticky top-0 z-40 flex h-14 flex-shrink-0 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 lg:px-6 shadow-sm">
           {/* Mobile Menu - only shown on tablet, not mobile (mobile uses bottom nav) */}
           <Sheet>
             <SheetTrigger asChild>
@@ -263,13 +269,17 @@ export default function AppLayout() {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-1.5 h-9 px-2">
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline-block text-sm max-w-[120px] truncate">{user?.email}</span>
-                <span className="hidden sm:inline text-xs text-muted-foreground capitalize">
-                  ({userRole || 'user'})
-                </span>
-                <ChevronDown className="h-3.5 w-3.5" />
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full sm:w-auto sm:px-2 sm:rounded-md border border-transparent hover:border-border transition-colors">
+                <div className="flex items-center gap-2">
+                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <User className="h-4 w-4" />
+                   </div>
+                  <div className="hidden sm:flex flex-col items-start leading-none gap-0.5">
+                    <span className="text-sm font-medium w-[100px] truncate pr-1">Me</span>
+                    <span className="text-[10px] text-muted-foreground capitalize">{userRole || 'user'}</span>
+                  </div>
+                  <ChevronDown className="hidden sm:block h-3.5 w-3.5 text-muted-foreground" />
+                </div>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
@@ -280,12 +290,18 @@ export default function AppLayout() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/settings')}>
+              <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer">
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </DropdownMenuItem>
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <a href={`tel:${SUPPORT_PHONE}`}>
+                  <Phone className="mr-2 h-4 w-4" />
+                  Help & Support
+                </a>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut}>
+              <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:bg-destructive focus:text-destructive-foreground">
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign out
               </DropdownMenuItem>
@@ -294,7 +310,7 @@ export default function AppLayout() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-6 pb-20 sm:pb-4">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-20 sm:pb-6 bg-muted/20 custom-scrollbar relative z-0">
           <Outlet />
         </main>
 
