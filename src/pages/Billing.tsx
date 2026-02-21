@@ -443,17 +443,7 @@ export default function Billing() {
               <span>Subtotal:</span>
               <span>${currencySymbol}${cartCalculations.subtotal.toFixed(2)}</span>
             </div>
-<<<<<<< HEAD
-            ${discountValue > 0 ? `
-              <div class="total-row">
-                <span>Discount:</span>
-                <span>-${currencySymbol}${cartCalculations.discountAmount.toFixed(2)}</span>
-              </div>
-            ` : ''}
             ${taxRate > 0 ? `
-=======
-            ${gstPercent > 0 ? `
->>>>>>> c23cc0e7f02140564b755c74e1abc57fff4aaa28
               <div class="total-row">
                 <span>GST (${taxRate}%):</span>
                 <span>${currencySymbol}${cartCalculations.taxAmount.toFixed(2)}</span>
@@ -895,44 +885,6 @@ export default function Billing() {
                 <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
               </div>
 
-<<<<<<< HEAD
-              {/* Discount Input */}
-              {(settings?.show_discount_in_billing ?? true) && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm">Discount</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">{currencySymbol}</span>
-                    <Input
-                      type="number"
-                      value={discountValue || ''}
-                      onChange={(e) => setDiscountValue(Number(e.target.value))}
-                      className="w-20 h-8 text-right"
-                      min={0}
-                    />
-                  </div>
-                </div>
-              )}
-
-
-=======
-              {/* GST Input */}
-              {(settings?.show_gst_in_billing ?? true) && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm">GST %</span>
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      value={gstPercent || ''}
-                      onChange={(e) => setGstPercent(Number(e.target.value))}
-                      className="w-20 h-8 text-right"
-                      min={0}
-                    />
-                    <span className="text-sm">%</span>
-                  </div>
-                </div>
-              )}
->>>>>>> c23cc0e7f02140564b755c74e1abc57fff4aaa28
-
               {/* Discount Input */}
               {(settings?.show_discount_in_billing ?? true) && (
                 <div className="flex items-center justify-between gap-2">
@@ -1094,21 +1046,6 @@ export default function Billing() {
                 <span>Subtotal</span>
                 <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
               </div>
-<<<<<<< HEAD
-=======
-              {(settings?.show_gst_in_billing ?? true) && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">GST %</span>
-                  <Input
-                    type="number"
-                    value={gstPercent || ''}
-                    onChange={(e) => setGstPercent(Number(e.target.value))}
-                    className="w-24 h-8"
-                    min={0}
-                  />
-                </div>
-              )}
->>>>>>> c23cc0e7f02140564b755c74e1abc57fff4aaa28
               {(settings?.show_discount_in_billing ?? true) && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Discount</span>
@@ -1121,10 +1058,7 @@ export default function Billing() {
                   />
                 </div>
               )}
-<<<<<<< HEAD
 
-=======
->>>>>>> c23cc0e7f02140564b755c74e1abc57fff4aaa28
               <div className="flex justify-between text-lg font-bold pt-2 border-t">
                 <span>Total</span>
                 <span className="text-primary">{currencySymbol}{cartCalculations.total.toFixed(2)}</span>
