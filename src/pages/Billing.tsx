@@ -400,7 +400,7 @@ export default function Billing() {
     generateBillNumber().then(setPreviewBillNumber);
   }, []);
 
-  // Print bill function
+  // Print bill function using a hidden iframe for better mobile compatibility
   const printBill = (billNumber: string) => {
     const printContent = `
       <html>
@@ -479,30 +479,36 @@ export default function Billing() {
       </html>
     `;
 
-    const printWindow = window.open('', '_blank', 'width=400,height=600');
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.focus();
+    // Create a hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
 
-      // Wait for content to load before printing, then close after print dialog
-      printWindow.onload = () => {
-        printWindow.print();
-      };
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(printContent);
+      doc.close();
 
-      // Also try to print after a short delay as fallback for browsers that don't fire onload
+      // Wait for content to be ready
       setTimeout(() => {
         try {
-          printWindow.print();
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          // Remove the iframe after a delay to ensure print dialog opened
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 1000);
         } catch (e) {
-          // Already printed or window closed
+          console.error('Print error:', e);
+          document.body.removeChild(iframe);
         }
       }, 500);
-
-      // Close window after print dialog is dismissed
-      printWindow.onafterprint = () => {
-        printWindow.close();
-      };
     }
   };
 
