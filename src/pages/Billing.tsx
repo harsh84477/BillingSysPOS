@@ -640,23 +640,29 @@ export default function Billing() {
               All Items
             </button>
 
-            {/* Category Buttons */}
+            {/* Category Buttons - High density professional style */}
             {categories.map((category) => (
               <button
                 key={category.id}
                 onClick={() => setSelectedCategory(category.id)}
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all',
+                  'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-semibold transition-all group',
                   selectedCategory === category.id
-                    ? 'bg-primary text-primary-foreground shadow-md'
-                    : 'hover:bg-accent'
+                    ? 'bg-primary text-primary-foreground shadow-sm ring-1 ring-primary/20'
+                    : 'hover:bg-accent/50 text-muted-foreground hover:text-foreground'
                 )}
               >
-                <span
-                  className="h-4 w-4 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: category.color || '#3B82F6' }}
+                <div
+                  className={cn(
+                    "h-2 w-2 rounded-full flex-shrink-0 transition-transform group-hover:scale-125",
+                    selectedCategory === category.id ? "bg-primary-foreground" : ""
+                  )}
+                  style={selectedCategory !== category.id ? { backgroundColor: category.color || '#3B82F6' } : {}}
                 />
                 <span className="truncate">{category.name}</span>
+                {selectedCategory === category.id && (
+                  <ChevronRight className="ml-auto h-3 w-3 opacity-50" />
+                )}
               </button>
             ))}
           </div>
@@ -721,7 +727,7 @@ export default function Billing() {
               No products found
             </div>
           ) : (
-            <div className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3">
               {filteredProducts.map((product) => {
                 const iconName = product.icon || 'Package';
                 const IconComponent = ICON_MAP[iconName] || Package;
@@ -736,35 +742,39 @@ export default function Billing() {
                     onTouchStart={() => handleProductTouchStart(product)}
                     onTouchEnd={handleProductTouchEnd}
                     onContextMenu={(e) => e.preventDefault()}
-                    className="relative flex flex-col items-center rounded-xl border border-border bg-card p-2.5 sm:p-3 text-center transition-all hover:border-primary hover:shadow-lg group select-none h-full min-h-[120px]"
+                    className="relative flex flex-col items-center justify-between rounded-xl border border-border bg-card p-2 sm:p-3 text-center shadow-sm transition-all hover:border-primary hover:shadow-md hover:-translate-y-0.5 active:scale-95 group select-none aspect-square overflow-hidden animate-in fade-in zoom-in-95 duration-200"
                   >
-                    {/* Stock Badge */}
+                    {/* Stock Badge - Compact */}
                     <Badge
                       variant="secondary"
                       className={cn(
-                        'absolute -top-1.5 -right-1.5 text-[10px] px-1.5 py-0.5',
+                        'absolute top-1 right-1 text-[9px] px-1 py-0 z-10 font-bold',
                         product.stock_quantity <= product.low_stock_threshold
                           ? 'bg-destructive/10 text-destructive'
-                          : 'bg-accent text-accent-foreground'
+                          : 'bg-accent/80 text-accent-foreground'
                       )}
                     >
                       {product.stock_quantity}
                     </Badge>
 
-                    {/* Icon */}
-                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-primary/5 group-hover:bg-primary/10 mb-2 transition-colors">
-                      <IconComponent className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                    <div className="flex flex-col items-center justify-center flex-1 w-full gap-1 sm:gap-2">
+                      {/* Icon - Scaled for grid density */}
+                      <div className="flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors">
+                        <IconComponent className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
+                      </div>
+
+                      {/* Product Name - High density font sizes */}
+                      <span className="text-[10px] sm:text-xs font-semibold line-clamp-2 leading-tight px-1">
+                        {product.name}
+                      </span>
                     </div>
 
-                    {/* Product Name */}
-                    <span className="text-xs sm:text-sm font-semibold line-clamp-2 leading-tight mb-2">
-                      {product.name}
-                    </span>
-
-                    {/* Price */}
-                    <span className="text-sm sm:text-base font-bold text-primary mt-auto">
-                      {currencySymbol}{Number(product.selling_price).toFixed(2)}
-                    </span>
+                    {/* Price - Fixed at bottom */}
+                    <div className="w-full pt-1 border-t border-dashed border-border/50">
+                      <span className="text-xs sm:text-sm font-bold text-primary">
+                        {currencySymbol}{Number(product.selling_price).toFixed(2)}
+                      </span>
+                    </div>
                   </button>
                 );
               })}
@@ -790,36 +800,44 @@ export default function Billing() {
 
         {isCartExpanded ? (
           <>
-            {/* Bill Header */}
-            <div className="p-4 border-b border-border">
+            {/* Bill Header - Premium Styling */}
+            <div className="p-4 bg-muted/30 border-b border-border">
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold">Bill #{previewBillNumber}</h2>
-                  <p className="text-sm text-muted-foreground">{totalItems} items</p>
+                <div className="space-y-0.5">
+                  <h2 className="text-base font-bold tracking-tight">Invoice #{previewBillNumber}</h2>
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">{totalItems} items in cart</p>
                 </div>
-                <ShoppingCart className="h-6 w-6 text-muted-foreground" />
+                <div className="h-9 w-9 rounded-full bg-background border border-border flex items-center justify-center text-primary shadow-sm">
+                  <ShoppingCart className="h-4 w-4" />
+                </div>
               </div>
             </div>
 
-            {/* Customer Name Input */}
-            <div className="px-4 py-2 border-b border-border flex gap-2">
-              <Input
-                placeholder="Customer name (or select ->)"
-                value={customerName || (selectedCustomerId ? customers.find(c => c.id === selectedCustomerId)?.name : '') || ''}
-                onChange={(e) => {
-                  setCustomerName(e.target.value);
-                  if (selectedCustomerId) setSelectedCustomerId(null); // Clear selected if typing
-                }}
-                className="bg-background flex-1"
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsCustomerDialogOpen(true)}
-                title="Select Customer"
-              >
-                <Users className="h-4 w-4" />
-              </Button>
+            {/* Customer Section - Sophisticated Input */}
+            <div className="px-4 py-3 border-b border-border bg-card">
+              <div className="flex items-center gap-2 group">
+                <div className="relative flex-1">
+                  <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Customer Name..."
+                    value={customerName || (selectedCustomerId ? customers.find(c => c.id === selectedCustomerId)?.name : '') || ''}
+                    onChange={(e) => {
+                      setCustomerName(e.target.value);
+                      if (selectedCustomerId) setSelectedCustomerId(null);
+                    }}
+                    className="bg-background pl-8 h-9 text-xs focus-visible:ring-primary/20"
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 border border-border"
+                  onClick={() => setIsCustomerDialogOpen(true)}
+                  title="Select Customer"
+                >
+                  <Users className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             {/* Cart Items */}
