@@ -736,7 +736,7 @@ export default function Billing() {
                     onTouchStart={() => handleProductTouchStart(product)}
                     onTouchEnd={handleProductTouchEnd}
                     onContextMenu={(e) => e.preventDefault()}
-                    className="relative flex flex-col items-center justify-center rounded-xl border border-border bg-card p-2 sm:p-3 text-center transition-all hover:border-primary hover:shadow-lg group select-none aspect-square"
+                    className="relative flex flex-col items-center rounded-xl border border-border bg-card p-2.5 sm:p-3 text-center transition-all hover:border-primary hover:shadow-lg group select-none h-full min-h-[120px]"
                   >
                     {/* Stock Badge */}
                     <Badge
@@ -752,12 +752,12 @@ export default function Billing() {
                     </Badge>
 
                     {/* Icon */}
-                    <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-muted mb-1">
-                      <IconComponent className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-primary/5 group-hover:bg-primary/10 mb-2 transition-colors">
+                      <IconComponent className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                     </div>
 
                     {/* Product Name */}
-                    <span className="text-xs sm:text-sm font-medium line-clamp-2 leading-tight">
+                    <span className="text-xs sm:text-sm font-semibold line-clamp-2 leading-tight mb-2">
                       {product.name}
                     </span>
 
@@ -972,16 +972,16 @@ export default function Billing() {
         )}
       </div>
 
-      {/* Mobile Cart Button */}
+      {/* Mobile Cart Button - High quality FAB */}
       <Sheet>
         <SheetTrigger asChild>
           <Button
-            className="md:hidden fixed bottom-20 sm:bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg"
+            className="md:hidden fixed bottom-[76px] right-4 z-50 h-14 w-14 rounded-full shadow-2xl shadow-primary/30 bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all duration-200"
             size="icon"
           >
             <ShoppingCart className="h-6 w-6" />
             {cart.length > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-white">
+              <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white border-2 border-background animate-in zoom-in">
                 {cart.length}
               </span>
             )}
