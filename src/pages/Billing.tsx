@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
@@ -108,6 +110,7 @@ export default function Billing() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [customerName, setCustomerName] = useState('');
   const [discountValue, setDiscountValue] = useState(0);
+  const [applyGst, setApplyGst] = useState(true);
   const [isCartExpanded, setIsCartExpanded] = useState(true);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -192,13 +195,14 @@ export default function Billing() {
   // Cart calculations - preserving decimals
   const cartCalculations = useMemo(() => {
     const subtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
-    const taxAmount = Number(((subtotal * taxRate) / 100).toFixed(2));
+    const calculatedTax = Number(((subtotal * taxRate) / 100).toFixed(2));
+    const taxAmount = applyGst ? calculatedTax : 0;
     const totalBeforeDiscount = subtotal + taxAmount;
     const discountAmount = discountValue;
     const total = Math.max(0, totalBeforeDiscount - discountAmount);
 
-    return { subtotal, discountAmount, taxAmount, total };
-  }, [cart, discountValue, taxRate]);
+    return { subtotal, discountAmount, taxAmount, calculatedTax, total };
+  }, [cart, discountValue, taxRate, applyGst]);
 
   // Add to cart - round prices to avoid floating point issues
   const addToCart = (product: typeof products[0]) => {
@@ -443,7 +447,7 @@ export default function Billing() {
               <span>Subtotal:</span>
               <span>${currencySymbol}${cartCalculations.subtotal.toFixed(2)}</span>
             </div>
-            ${taxRate > 0 ? `
+            ${taxRate > 0 && applyGst ? `
               <div class="total-row">
                 <span>GST (${taxRate}%):</span>
                 <span>${currencySymbol}${cartCalculations.taxAmount.toFixed(2)}</span>
@@ -590,6 +594,7 @@ export default function Billing() {
       setCustomerName('');
       setSelectedCustomerId(null);
       setDiscountValue(0);
+      setApplyGst(true);
       generateBillNumber().then(setPreviewBillNumber);
       toast.success(shouldPrint ? 'Bill saved & printed!' : 'Bill saved successfully!');
     },
@@ -1046,6 +1051,25 @@ export default function Billing() {
                 <span>Subtotal</span>
                 <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
               </div>
+
+              {/* Optional GST Toggle */}
+              {(settings?.show_gst_in_billing ?? true) && taxRate > 0 && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={applyGst}
+                      onCheckedChange={setApplyGst}
+                      id="apply-gst-mobile"
+                    />
+                    <Label htmlFor="apply-gst-mobile" className="text-sm cursor-pointer">
+                      GST ({taxRate}%)
+                    </Label>
+                  </div>
+                  <span className={!applyGst ? "text-muted-foreground line-through" : ""}>
+                    {currencySymbol}{cartCalculations.calculatedTax.toFixed(2)}
+                  </span>
+                </div>
+              )}
               {(settings?.show_discount_in_billing ?? true) && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Discount</span>
