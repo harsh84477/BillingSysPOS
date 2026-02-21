@@ -899,7 +899,7 @@ export default function Billing() {
               </div>
 
               {/* GST Toggle */}
-              {taxRate > 0 && (
+              {(settings?.show_gst_in_billing ?? true) && taxRate > 0 && (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Switch
