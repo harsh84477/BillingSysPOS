@@ -721,7 +721,7 @@ export default function Billing() {
               No products found
             </div>
           ) : (
-            <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))' }}>
+            <div className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
               {filteredProducts.map((product) => {
                 const iconName = product.icon || 'Package';
                 const IconComponent = ICON_MAP[iconName] || Package;
