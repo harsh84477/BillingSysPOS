@@ -79,6 +79,7 @@ import {
   Wine,
   Wrench,
   Users,
+  User,
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
