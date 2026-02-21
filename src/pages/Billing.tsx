@@ -685,8 +685,8 @@ export default function Billing() {
               />
             </div>
           </div>
-          {/* Mobile horizontal category scroll */}
-          <div className="lg:hidden flex gap-1.5 overflow-x-auto px-2.5 pb-2.5 scrollbar-hide">
+          {/* Mobile horizontal category scroll - Fixed overflow */}
+          <div className="lg:hidden flex gap-1.5 overflow-x-auto px-2.5 pb-2.5 scroll-smooth">
             <button
               onClick={() => setSelectedCategory('all')}
               className={cn(
@@ -728,7 +728,7 @@ export default function Billing() {
               No products found
             </div>
           ) : (
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2 sm:gap-3 justify-items-center">
               {filteredProducts.map((product) => {
                 const iconName = product.icon || 'Package';
                 const IconComponent = ICON_MAP[iconName] || Package;
@@ -743,7 +743,7 @@ export default function Billing() {
                     onTouchStart={() => handleProductTouchStart(product)}
                     onTouchEnd={handleProductTouchEnd}
                     onContextMenu={(e) => e.preventDefault()}
-                    className="relative flex flex-col items-center justify-between rounded-xl border border-border bg-card p-2 sm:p-3 text-center shadow-sm transition-all hover:border-primary hover:shadow-md hover:-translate-y-0.5 active:scale-95 group select-none aspect-square overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+                    className="relative flex flex-col items-center justify-between rounded-xl border border-border bg-card p-2 sm:p-3 text-center shadow-sm transition-all hover:border-primary hover:shadow-md hover:-translate-y-0.5 active:scale-95 group select-none aspect-square overflow-hidden animate-in fade-in zoom-in-95 duration-200 w-full max-w-[140px]"
                   >
                     {/* Stock Badge - Compact */}
                     <Badge
@@ -759,9 +759,9 @@ export default function Billing() {
                     </Badge>
 
                     <div className="flex flex-col items-center justify-center flex-1 w-full gap-1 sm:gap-2">
-                      {/* Icon - Scaled for grid density */}
-                      <div className="flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors">
-                        <IconComponent className="h-4 w-4 sm:h-6 sm:w-6 text-primary" />
+                      {/* Icon - Scaled for high mobile density */}
+                      <div className="flex h-7 w-7 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors">
+                        <IconComponent className="h-3.5 w-3.5 sm:h-6 sm:w-6 text-primary" />
                       </div>
 
                       {/* Product Name - High density font sizes */}
