@@ -208,9 +208,7 @@ export default function Settings() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     updateSettings.mutate({
-      tax_name: formData.get('tax_name') as string,
       tax_rate: Number(formData.get('tax_rate')),
-      tax_inclusive: formData.get('tax_inclusive') === 'on',
     });
   };
 
@@ -541,44 +539,23 @@ export default function Settings() {
               <CardHeader className="pb-3 sm:pb-6">
                 <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                   <Calculator className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Tax Configuration
+                  GST Configuration
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleTaxSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="tax_name" className="text-sm">Tax Name</Label>
-                      <Input
-                        id="tax_name"
-                        name="tax_name"
-                        defaultValue={settings?.tax_name}
-                        disabled={!isAdmin}
-                        className="h-9 sm:h-10"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="tax_rate" className="text-sm">Tax Rate (%)</Label>
-                      <Input
-                        id="tax_rate"
-                        name="tax_rate"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        defaultValue={settings?.tax_rate}
-                        disabled={!isAdmin}
-                        className="h-9 sm:h-10"
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="tax_inclusive"
-                      name="tax_inclusive"
-                      defaultChecked={settings?.tax_inclusive}
+                  <div className="space-y-2">
+                    <Label htmlFor="tax_rate" className="text-sm">GST Percentage (%)</Label>
+                    <Input
+                      id="tax_rate"
+                      name="tax_rate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      defaultValue={settings?.tax_rate}
                       disabled={!isAdmin}
+                      className="h-9 sm:h-10 text-xl font-bold max-w-[200px]"
                     />
-                    <Label htmlFor="tax_inclusive" className="text-sm">Tax included in price</Label>
                   </div>
                   {isAdmin && (
                     <Button type="submit" disabled={updateSettings.isPending} className="w-full sm:w-auto">
@@ -601,23 +578,6 @@ export default function Settings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-start sm:items-center justify-between gap-3">
-                  <div className="space-y-0.5 flex-1">
-                    <Label className="text-sm">Show GST in Billing</Label>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      Display GST percentage input field
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings?.show_gst_in_billing ?? true}
-                    onCheckedChange={(checked) => {
-                      if (isAdmin) {
-                        updateSettings.mutate({ show_gst_in_billing: checked });
-                      }
-                    }}
-                    disabled={!isAdmin}
-                  />
-                </div>
                 <div className="flex items-start sm:items-center justify-between gap-3">
                   <div className="space-y-0.5 flex-1">
                     <Label className="text-sm">Show Discount in Billing</Label>

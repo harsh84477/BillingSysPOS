@@ -108,7 +108,6 @@ export default function Billing() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [customerName, setCustomerName] = useState('');
   const [discountValue, setDiscountValue] = useState(0);
-  const [gstPercent, setGstPercent] = useState(0);
   const [isCartExpanded, setIsCartExpanded] = useState(true);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -179,7 +178,7 @@ export default function Billing() {
   });
 
   const currencySymbol = settings?.currency_symbol || '₹';
-  const taxRate = gstPercent || settings?.tax_rate || 0;
+  const taxRate = settings?.tax_rate || 0;
 
   // Filter products
   const filteredProducts = useMemo(() => {
@@ -450,9 +449,9 @@ export default function Billing() {
                 <span>-${currencySymbol}${cartCalculations.discountAmount.toFixed(2)}</span>
               </div>
             ` : ''}
-            ${gstPercent > 0 ? `
+            ${taxRate > 0 ? `
               <div class="total-row">
-                <span>GST (${gstPercent}%):</span>
+                <span>GST (${taxRate}%):</span>
                 <span>${currencySymbol}${cartCalculations.taxAmount.toFixed(2)}</span>
               </div>
             ` : ''}
@@ -591,7 +590,6 @@ export default function Billing() {
       setCustomerName('');
       setSelectedCustomerId(null);
       setDiscountValue(0);
-      setGstPercent(0);
       generateBillNumber().then(setPreviewBillNumber);
       toast.success(shouldPrint ? 'Bill saved & printed!' : 'Bill saved successfully!');
     },
@@ -904,22 +902,7 @@ export default function Billing() {
                 </div>
               )}
 
-              {/* GST Input */}
-              {(settings?.show_gst_in_billing ?? true) && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm">GST %</span>
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      value={gstPercent || ''}
-                      onChange={(e) => setGstPercent(Number(e.target.value))}
-                      className="w-20 h-8 text-right"
-                      min={0}
-                    />
-                    <span className="text-sm">%</span>
-                  </div>
-                </div>
-              )}
+
 
               {/* Total */}
               <div className="flex justify-between text-xl font-bold pt-2 border-t">
@@ -1077,18 +1060,7 @@ export default function Billing() {
                   />
                 </div>
               )}
-              {(settings?.show_gst_in_billing ?? true) && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">GST %</span>
-                  <Input
-                    type="number"
-                    value={gstPercent || ''}
-                    onChange={(e) => setGstPercent(Number(e.target.value))}
-                    className="w-24 h-8"
-                    min={0}
-                  />
-                </div>
-              )}
+
               <div className="flex justify-between text-lg font-bold pt-2 border-t">
                 <span>Total</span>
                 <span className="text-primary">{currencySymbol}{cartCalculations.total.toFixed(2)}</span>
