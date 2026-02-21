@@ -193,10 +193,10 @@ export default function Billing() {
   // Cart calculations - preserving decimals
   const cartCalculations = useMemo(() => {
     const subtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+    const taxAmount = Number(((subtotal * taxRate) / 100).toFixed(2));
+    const totalBeforeDiscount = subtotal + taxAmount;
     const discountAmount = discountValue;
-    const afterDiscount = subtotal - discountAmount;
-    const taxAmount = Number(((afterDiscount * taxRate) / 100).toFixed(2));
-    const total = afterDiscount + taxAmount;
+    const total = Math.max(0, totalBeforeDiscount - discountAmount);
 
     return { subtotal, discountAmount, taxAmount, total };
   }, [cart, discountValue, taxRate]);
@@ -444,16 +444,16 @@ export default function Billing() {
               <span>Subtotal:</span>
               <span>${currencySymbol}${cartCalculations.subtotal.toFixed(2)}</span>
             </div>
-            ${discountValue > 0 ? `
-              <div class="total-row">
-                <span>Discount:</span>
-                <span>-${currencySymbol}${cartCalculations.discountAmount.toFixed(2)}</span>
-              </div>
-            ` : ''}
             ${gstPercent > 0 ? `
               <div class="total-row">
                 <span>GST (${gstPercent}%):</span>
                 <span>${currencySymbol}${cartCalculations.taxAmount.toFixed(2)}</span>
+              </div>
+            ` : ''}
+            ${discountValue > 0 ? `
+              <div class="total-row">
+                <span>Discount:</span>
+                <span>-${currencySymbol}${cartCalculations.discountAmount.toFixed(2)}</span>
               </div>
             ` : ''}
             <div class="total-row grand-total">
@@ -887,23 +887,6 @@ export default function Billing() {
                 <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
               </div>
 
-              {/* Discount Input */}
-              {(settings?.show_discount_in_billing ?? true) && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm">Discount</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">{currencySymbol}</span>
-                    <Input
-                      type="number"
-                      value={discountValue || ''}
-                      onChange={(e) => setDiscountValue(Number(e.target.value))}
-                      className="w-20 h-8 text-right"
-                      min={0}
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* GST Input */}
               {(settings?.show_gst_in_billing ?? true) && (
                 <div className="flex items-center justify-between gap-2">
@@ -917,6 +900,23 @@ export default function Billing() {
                       min={0}
                     />
                     <span className="text-sm">%</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Discount Input */}
+              {(settings?.show_discount_in_billing ?? true) && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm">Discount</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm">{currencySymbol}</span>
+                    <Input
+                      type="number"
+                      value={discountValue || ''}
+                      onChange={(e) => setDiscountValue(Number(e.target.value))}
+                      className="w-20 h-8 text-right"
+                      min={0}
+                    />
                   </div>
                 </div>
               )}
@@ -1065,18 +1065,6 @@ export default function Billing() {
                 <span>Subtotal</span>
                 <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
               </div>
-              {(settings?.show_discount_in_billing ?? true) && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Discount</span>
-                  <Input
-                    type="number"
-                    value={discountValue || ''}
-                    onChange={(e) => setDiscountValue(Number(e.target.value))}
-                    className="w-24 h-8"
-                    min={0}
-                  />
-                </div>
-              )}
               {(settings?.show_gst_in_billing ?? true) && (
                 <div className="flex items-center justify-between">
                   <span className="text-sm">GST %</span>
@@ -1084,6 +1072,18 @@ export default function Billing() {
                     type="number"
                     value={gstPercent || ''}
                     onChange={(e) => setGstPercent(Number(e.target.value))}
+                    className="w-24 h-8"
+                    min={0}
+                  />
+                </div>
+              )}
+              {(settings?.show_discount_in_billing ?? true) && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Discount</span>
+                  <Input
+                    type="number"
+                    value={discountValue || ''}
+                    onChange={(e) => setDiscountValue(Number(e.target.value))}
                     className="w-24 h-8"
                     min={0}
                   />
