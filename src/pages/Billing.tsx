@@ -622,7 +622,7 @@ export default function Billing() {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] sm:h-[calc(100vh-7rem)] gap-0 -m-3 sm:-m-4 lg:-m-6">
+    <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] sm:h-[calc(100vh-7rem)] gap-0 -mx-4 sm:-mx-6 lg:-mx-8 -my-3 sm:-my-4 lg:-my-6">
       {/* Left Panel - Categories */}
       <div className="hidden lg:flex w-52 flex-shrink-0 flex-col border-r border-border bg-card">
         <ScrollArea className="flex-1 p-2">
@@ -671,7 +671,7 @@ export default function Billing() {
       </div>
 
       {/* Center Panel - Products */}
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col min-w-0">
         {/* Search Bar + Mobile Category Scroll */}
         <div className="border-b border-border bg-card">
           <div className="p-2.5">
@@ -685,8 +685,8 @@ export default function Billing() {
               />
             </div>
           </div>
-          {/* Mobile horizontal category scroll - Fixed overflow */}
-          <div className="lg:hidden flex gap-1.5 overflow-x-auto px-2.5 pb-2.5 scroll-smooth">
+          {/* Mobile horizontal category scroll - Fixed overflow & swipe */}
+          <div className="lg:hidden flex flex-nowrap gap-1.5 overflow-x-auto px-2.5 pb-2.5 scroll-smooth touch-pan-x">
             <button
               onClick={() => setSelectedCategory('all')}
               className={cn(
@@ -728,7 +728,7 @@ export default function Billing() {
               No products found
             </div>
           ) : (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2 sm:gap-3 justify-items-center">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2 sm:gap-3 justify-items-center pb-20">
               {filteredProducts.map((product) => {
                 const iconName = product.icon || 'Package';
                 const IconComponent = ICON_MAP[iconName] || Package;
@@ -743,7 +743,7 @@ export default function Billing() {
                     onTouchStart={() => handleProductTouchStart(product)}
                     onTouchEnd={handleProductTouchEnd}
                     onContextMenu={(e) => e.preventDefault()}
-                    className="relative flex flex-col items-center justify-between rounded-xl border border-border bg-card p-2 sm:p-3 text-center shadow-sm transition-all hover:border-primary hover:shadow-md hover:-translate-y-0.5 active:scale-95 group select-none aspect-square overflow-hidden animate-in fade-in zoom-in-95 duration-200 w-full max-w-[140px]"
+                    className="relative flex flex-col items-center justify-between rounded-xl border border-border bg-card p-2 sm:p-3 text-center shadow-sm transition-all hover:border-primary hover:shadow-md hover:-translate-y-0.5 active:scale-95 group select-none aspect-square overflow-hidden animate-in fade-in zoom-in-95 duration-200 w-full max-w-[120px] touch-manipulation"
                   >
                     {/* Stock Badge - Compact */}
                     <Badge
