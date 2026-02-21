@@ -112,6 +112,13 @@ export default function Billing() {
   const [customerName, setCustomerName] = useState('');
   const [discountValue, setDiscountValue] = useState(0);
   const [applyGst, setApplyGst] = useState(true);
+
+  // Sync applyGst with settings once settings load
+  React.useEffect(() => {
+    if (settings && settings.show_gst_in_billing !== undefined) {
+      setApplyGst(settings.show_gst_in_billing);
+    }
+  }, [settings?.show_gst_in_billing]);
   const [isCartExpanded, setIsCartExpanded] = useState(true);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -890,6 +897,25 @@ export default function Billing() {
                 <span>Subtotal</span>
                 <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
               </div>
+
+              {/* GST Toggle */}
+              {taxRate > 0 && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={applyGst}
+                      onCheckedChange={setApplyGst}
+                      id="apply-gst-desktop"
+                    />
+                    <Label htmlFor="apply-gst-desktop" className="text-xs cursor-pointer">
+                      GST ({taxRate}%)
+                    </Label>
+                  </div>
+                  <span className={cn("text-sm", !applyGst && "text-muted-foreground line-through")}>
+                    {currencySymbol}{cartCalculations.calculatedTax.toFixed(2)}
+                  </span>
+                </div>
+              )}
 
               {/* Discount Input */}
               {(settings?.show_discount_in_billing ?? true) && (

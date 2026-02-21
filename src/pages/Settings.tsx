@@ -542,10 +542,13 @@ export default function Settings() {
                   GST Configuration
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <form onSubmit={handleTaxSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="tax_rate" className="text-sm">GST Percentage (%)</Label>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="tax_rate" className="text-sm">GST Percentage (%)</Label>
+                      <p className="text-[10px] text-muted-foreground">Default tax rate for new items</p>
+                    </div>
                     <Input
                       id="tax_rate"
                       name="tax_rate"
@@ -554,15 +557,33 @@ export default function Settings() {
                       min="0"
                       defaultValue={settings?.tax_rate}
                       disabled={!isAdmin}
-                      className="h-9 sm:h-10 text-xl font-bold max-w-[200px]"
+                      className="h-9 w-24 text-right font-bold"
                     />
                   </div>
                   {isAdmin && (
                     <Button type="submit" disabled={updateSettings.isPending} className="w-full sm:w-auto">
-                      Save Changes
+                      Update GST Rate
                     </Button>
                   )}
                 </form>
+
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm">Show GST in Billing</Label>
+                    <p className="text-[10px] text-muted-foreground">
+                      Display GST toggle and calculation in billing screen
+                    </p>
+                  </div>
+                  <Switch
+                    checked={settings?.show_gst_in_billing ?? true}
+                    onCheckedChange={(checked) => {
+                      if (isAdmin) {
+                        updateSettings.mutate({ show_gst_in_billing: checked });
+                      }
+                    }}
+                    disabled={!isAdmin}
+                  />
+                </div>
               </CardContent>
             </Card>
 
