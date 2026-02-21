@@ -898,20 +898,11 @@ export default function Billing() {
                 <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
               </div>
 
-              {/* GST Toggle */}
+              {/* GST Display (Static) */}
               {(settings?.show_gst_in_billing ?? true) && taxRate > 0 && (
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={applyGst}
-                      onCheckedChange={setApplyGst}
-                      id="apply-gst-desktop"
-                    />
-                    <Label htmlFor="apply-gst-desktop" className="text-xs cursor-pointer">
-                      GST ({taxRate}%)
-                    </Label>
-                  </div>
-                  <span className={cn("text-sm", !applyGst && "text-muted-foreground line-through")}>
+                  <span className="text-xs">GST ({taxRate}%)</span>
+                  <span className="text-sm">
                     {currencySymbol}{cartCalculations.calculatedTax.toFixed(2)}
                   </span>
                 </div>
@@ -1079,20 +1070,11 @@ export default function Billing() {
                 <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
               </div>
 
-              {/* Optional GST Toggle */}
+              {/* Optional GST Display (Static) */}
               {(settings?.show_gst_in_billing ?? true) && taxRate > 0 && (
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={applyGst}
-                      onCheckedChange={setApplyGst}
-                      id="apply-gst-mobile"
-                    />
-                    <Label htmlFor="apply-gst-mobile" className="text-sm cursor-pointer">
-                      GST ({taxRate}%)
-                    </Label>
-                  </div>
-                  <span className={!applyGst ? "text-muted-foreground line-through" : ""}>
+                  <span className="text-sm">GST ({taxRate}%)</span>
+                  <span>
                     {currencySymbol}{cartCalculations.calculatedTax.toFixed(2)}
                   </span>
                 </div>
