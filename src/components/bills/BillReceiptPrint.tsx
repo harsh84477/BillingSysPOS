@@ -180,23 +180,22 @@ export function printBillReceipt(
         ` : ''}
       </div>
 
-      <div class="items-header">
-        <span style="flex: 2;">Item</span>
-        <span style="flex: 1; text-align: right;">Amount</span>
+      <div class="items-header" style="display: flex; border-bottom: 2px solid #000; padding: 8px 0; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">
+        <span style="flex: 2;">ITEM</span>
+        <span style="flex: 0.8; text-align: right;">PRICE</span>
+        <span style="flex: 0.5; text-align: right;">QTY</span>
+        <span style="flex: 1; text-align: right;">TOTAL</span>
       </div>
       
       ${items.map(item => {
     const isLowMargin = Number(item.unit_price) <= Number(item.cost_price);
-    const rowStyle = isLowMargin ? 'color: #dc2626 !important; font-weight: bold;' : '';
+    const rowStyle = isLowMargin ? 'color: #dc2626 !important; font-weight: bold; -webkit-print-color-adjust: exact;' : '';
     return `
-          <div class="item-row" style="${rowStyle}">
-            <div class="item-main">
-              <span class="item-name">${item.product_name}</span>
-              <span class="item-price">${currencySymbol}${Number(item.total_price).toFixed(2)}</span>
-            </div>
-            <div class="item-details" style="${isLowMargin ? 'color: #dc2626 !important;' : ''}">
-              ${currencySymbol}${Number(item.unit_price).toFixed(2)} × ${item.quantity}
-            </div>
+          <div class="item-row" style="${rowStyle} display: flex; align-items: flex-start; padding: ${spacing}px 0; font-size: ${fontSize - 1}px;">
+            <span style="flex: 2; overflow-wrap: break-word;">${item.product_name}</span>
+            <span style="flex: 0.8; text-align: right;">${Number(item.unit_price).toFixed(0)}</span>
+            <span style="flex: 0.5; text-align: right;">${item.quantity}</span>
+            <span style="flex: 1; text-align: right;">${Number(item.total_price).toFixed(0)}</span>
           </div>
         `;
   }).join('')}

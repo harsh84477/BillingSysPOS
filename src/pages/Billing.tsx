@@ -495,22 +495,21 @@ export default function Billing() {
             ${customerName || selectedCustomer?.name ? `<p><strong>Customer:</strong> ${customerName || selectedCustomer?.name}</p>` : ''}
           </div>
           <div class="items">
-            <div class="item" style="font-weight: bold; border-bottom: 2px solid #000; padding: 8px 0; margin-bottom: 8px; text-transform: uppercase;">
-              <span class="item-name" style="flex: 2;">Item</span>
-              <span class="item-price" style="flex: 1; text-align: right;">Amount</span>
+            <div class="item" style="font-weight: bold; border-bottom: 2px solid #000; padding: 8px 0; margin-bottom: 8px; text-transform: uppercase; display: flex;">
+              <span style="flex: 2;">ITEM</span>
+              <span style="flex: 0.8; text-align: right;">PRICE</span>
+              <span style="flex: 0.5; text-align: right;">QTY</span>
+              <span style="flex: 1; text-align: right;">TOTAL</span>
             </div>
             ${cart.map(item => {
       const isLowMargin = item.unitPrice <= item.costPrice;
       const rowStyle = isLowMargin ? 'color: #dc2626 !important; font-weight: bold; -webkit-print-color-adjust: exact;' : '';
       return `
-              <div class="item" style="${settings?.invoice_spacing ? `margin: ${settings.invoice_spacing}px 0;` : 'margin: 5px 0;'} ${rowStyle}">
-                <div style="display: flex; justify-content: space-between; width: 100%;">
-                  <span class="item-name" style="flex: 2;">${item.name}</span>
-                  <span class="item-price" style="flex: 1; text-align: right;">${currencySymbol}${(item.unitPrice * item.quantity).toFixed(2)}</span>
-                </div>
-                <div style="font-size: 10px; ${isLowMargin ? 'color: #dc2626;' : 'color: #666;'}">
-                  ${currencySymbol}${item.unitPrice.toFixed(2)} × ${item.quantity}
-                </div>
+              <div class="item" style="${settings?.invoice_spacing ? `margin: ${settings.invoice_spacing}px 0;` : 'margin: 5px 0;'} ${rowStyle} display: flex; font-size: 11px;">
+                <span style="flex: 2; overflow-wrap: break-word;">${item.name}</span>
+                <span style="flex: 0.8; text-align: right;">${item.unitPrice.toFixed(0)}</span>
+                <span style="flex: 0.5; text-align: right;">${item.quantity}</span>
+                <span style="flex: 1; text-align: right;">${(item.unitPrice * item.quantity).toFixed(0)}</span>
               </div>
             `;
     }).join('')}
