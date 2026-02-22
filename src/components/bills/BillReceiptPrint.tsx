@@ -37,6 +37,14 @@ interface BusinessSettings {
   invoice_show_borders?: boolean;
   invoice_show_item_price?: boolean;
   invoice_footer_message?: string | null;
+  invoice_footer_font_size?: number;
+  invoice_header_align?: 'left' | 'center' | 'right';
+  invoice_show_business_phone?: boolean;
+  invoice_show_business_email?: boolean;
+  invoice_show_business_address?: boolean;
+  invoice_terms_conditions?: string | null;
+  invoice_paper_width?: '58mm' | '80mm' | 'A4';
+  invoice_show_qr_code?: boolean;
 }
 
 interface BillReceiptPrintProps {
@@ -56,6 +64,12 @@ export function printBillReceipt(
   const fontSize = settings?.invoice_font_size || 12;
   const spacing = settings?.invoice_spacing || 4;
   const showBorders = settings?.invoice_show_borders !== false;
+  const paperWidth = settings?.invoice_paper_width || '80mm';
+  const headerAlign = settings?.invoice_header_align || 'center';
+  const footerFontSize = settings?.invoice_footer_font_size || 10;
+
+  const widthStyle = paperWidth === '58mm' ? '240px' : paperWidth === 'A4' ? '100%' : '380px';
+  const maxWidthStyle = paperWidth === 'A4' ? '800px' : widthStyle;
 
   const receiptHTML = `
     <!DOCTYPE html>
@@ -67,8 +81,10 @@ export function printBillReceipt(
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
           font-family: ${style === 'modern' ? "'Inter', sans-serif" : "'Courier New', monospace"};
-          width: 400px;
-          padding: 20px;
+          width: ${widthStyle};
+          max-width: ${maxWidthStyle};
+          margin: ${paperWidth === 'A4' ? '0 auto' : '0'};
+          padding: ${paperWidth === 'A4' ? '40px' : '15px'};
           font-size: ${fontSize}px;
           line-height: 1.4;
           color: #1a1a1a;
@@ -76,7 +92,7 @@ export function printBillReceipt(
           print-color-adjust: exact;
         }
         .header { 
-          text-align: ${style === 'modern' ? 'left' : 'center'}; 
+          text-align: ${headerAlign}; 
           margin-bottom: 20px; 
           border-bottom: ${showBorders ? '1px dashed #000' : 'none'}; 
           padding-bottom: 15px; 
@@ -98,10 +114,8 @@ export function printBillReceipt(
         }
         .bill-info-row { display: flex; justify-content: space-between; margin: ${spacing}px 0; }
         
-        .items-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
         .items-header { 
           display: flex; 
-          justify-content: space-between; 
           font-weight: bold; 
           border-bottom: 2px solid #000; 
           padding: 8px 0; 
@@ -115,11 +129,9 @@ export function printBillReceipt(
           padding: ${spacing}px 0; 
           border-bottom: ${style === 'detailed' ? '1px solid #e5e7eb' : 'none'};
         }
-        .item-main { display: flex; justify-content: space-between; width: 100%; }
-        .item-name { flex: 2; font-weight: ${style === 'modern' ? '500' : 'normal'}; }
-        .item-qty { flex: 0.5; text-align: center; }
-        .item-price { flex: 1; text-align: right; }
-        .item-details { width: 100%; font-size: ${fontSize - 3}px; color: #6b7280; margin-top: 2px; }
+        .item-row:nth-child(even) {
+          background-color: ${style === 'modern' ? '#f9fafb' : 'transparent'};
+        }
 
         .totals { 
           border-top: ${showBorders ? '2px solid #000' : 'none'}; 
@@ -142,22 +154,36 @@ export function printBillReceipt(
           margin-top: 30px; 
           padding-top: 15px; 
           border-top: ${showBorders ? '1px dashed #ccc' : 'none'}; 
-          font-size: ${fontSize - 2}px;
-          color: #6b7280;
         }
+        .footer-msg { font-size: ${footerFontSize}px; font-weight: 500; margin-bottom: 5px; }
+        .footer-print-date { font-size: ${fontSize - 3}px; color: #6b7280; margin-top: 5px; }
+        .terms { font-size: ${fontSize - 3}px; color: #4b5563; margin-top: 15px; text-align: left; font-style: italic; }
         
+        .qr-placeholder {
+          margin: 15px auto;
+          width: 80px;
+          height: 80px;
+          border: 1px dashed #ccc;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 8px;
+          color: #999;
+          text-align: center;
+        }
+
         @media print {
-          body { width: 100%; }
-          @page { margin: 10mm; }
+          body { width: 100%; border: none; padding: 0; margin: 0; }
+          @page { margin: 0; }
         }
       </style>
     </head>
-    <body class="style-${style}">
+    <body>
       <div class="header">
         <div class="business-name">${settings?.business_name || 'Business'}</div>
-        ${settings?.address ? `<div class="business-info">${settings.address}</div>` : ''}
-        ${settings?.phone ? `<div class="business-info">Tel: ${settings.phone}</div>` : ''}
-        ${settings?.email ? `<div class="business-info">${settings.email}</div>` : ''}
+        ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info">${settings.address}</div>` : ''}
+        ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<div class="business-info">Tel: ${settings.phone}</div>` : ''}
+        ${settings?.invoice_show_business_email !== false && settings?.email ? `<div class="business-info">${settings.email}</div>` : ''}
       </div>
 
       <div class="bill-info">
@@ -173,29 +199,32 @@ export function printBillReceipt(
           <span>Customer:</span>
           <span>${bill.customers?.name || 'Walk-in'}</span>
         </div>
-        ${style === 'detailed' ? `
-        <div class="bill-info-row">
-          <span>Status:</span>
-          <span class="status-badge status-${bill.status}">${bill.status}</span>
-        </div>
-        ` : ''}
       </div>
 
-      <div class="items-header" style="display: flex; border-bottom: 2px solid #000; padding: 8px 0; margin-bottom: 8px; font-weight: bold; text-transform: uppercase;">
+      <div class="items-header">
         <span style="flex: 2;">ITEM</span>
         <span style="flex: 0.8; text-align: right;">PRICE</span>
         <span style="flex: 0.5; text-align: right;">QTY</span>
         <span style="flex: 1; text-align: right;">TOTAL</span>
       </div>
       
-      ${items.map(item => `
+      <div class="items-container">
+        ${items.map(item => `
           <div class="item-row" style="display: flex; align-items: flex-start; padding: ${spacing}px 0; font-size: ${fontSize - 1}px;">
-            <span style="flex: 2; overflow-wrap: break-word;">${item.product_name}</span>
+            <div style="flex: 2; overflow-wrap: break-word;">
+              <div>${item.product_name}</div>
+              ${settings?.invoice_show_item_price !== false ? `
+                <div style="font-size: ${fontSize - 3}px; color: #666;">
+                  ${Number(item.unit_price).toFixed(0)} x ${item.quantity}
+                </div>
+              ` : ''}
+            </div>
             <span style="flex: 0.8; text-align: right;">${Number(item.unit_price).toFixed(0)}</span>
             <span style="flex: 0.5; text-align: right;">${item.quantity}</span>
             <span style="flex: 1; text-align: right;">${Number(item.total_price).toFixed(0)}</span>
           </div>
         `).join('')}
+      </div>
 
       <div class="totals">
         <div class="total-row">
@@ -219,17 +248,33 @@ export function printBillReceipt(
           <span>${currencySymbol}${Number(bill.total_amount).toFixed(2)}</span>
         </div>
       </div>
+
       <div class="footer">
-        <p>${settings?.invoice_footer_message || 'Thank you for your business!'}</p>
-        <p style="margin-top: 5px; font-size: ${fontSize - 2}px;">
+        <div class="footer-msg">
+          ${settings?.invoice_footer_message || 'Thank you for your business!'}
+        </div>
+        
+        ${settings?.invoice_terms_conditions ? `
+          <div class="terms">
+            <strong>T&C:</strong> ${settings.invoice_terms_conditions}
+          </div>
+        ` : ''}
+
+        ${settings?.invoice_show_qr_code ? `
+          <div class="qr-placeholder">
+            PAYMENT QR<br/>PLACEHOLDER
+          </div>
+        ` : ''}
+
+        <div class="footer-print-date">
           Printed on ${format(new Date(), 'dd/MM/yyyy HH:mm')}
-        </p>
+        </div>
       </div>
     </body>
     </html>
   `;
 
-  const printWindow = window.open('', '_blank', 'width=450,height=600');
+  const printWindow = window.open('', '_blank', 'width=500,height=700');
   if (printWindow) {
     printWindow.document.write(receiptHTML);
     printWindow.document.close();
@@ -238,6 +283,6 @@ export function printBillReceipt(
     setTimeout(() => {
       printWindow.focus();
       printWindow.print();
-    }, 250);
+    }, 500);
   }
 }

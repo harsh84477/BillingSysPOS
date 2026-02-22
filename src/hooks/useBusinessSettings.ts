@@ -26,6 +26,14 @@ export interface BusinessSettings {
   invoice_show_borders: boolean;
   invoice_show_item_price: boolean;
   invoice_footer_message: string | null;
+  invoice_footer_font_size?: number;
+  invoice_header_align?: 'left' | 'center' | 'right';
+  invoice_show_business_phone?: boolean;
+  invoice_show_business_email?: boolean;
+  invoice_show_business_address?: boolean;
+  invoice_terms_conditions?: string | null;
+  invoice_paper_width?: '58mm' | '80mm' | 'A4';
+  invoice_show_qr_code?: boolean;
   created_at: string;
   updated_at: string;
 }

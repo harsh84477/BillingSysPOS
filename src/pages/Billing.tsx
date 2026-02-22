@@ -460,50 +460,77 @@ export default function Billing() {
 
   // Print bill function using a hidden iframe for better mobile compatibility
   const printBill = (billNumber: string) => {
+    const paperWidth = settings?.invoice_paper_width || '80mm';
+    const headerAlign = settings?.invoice_header_align || 'center';
+    const fontSize = settings?.invoice_font_size || 12;
+    const footerFontSize = settings?.invoice_footer_font_size || 10;
+    const spacing = settings?.invoice_spacing || 4;
+
+    const widthStyle = paperWidth === '58mm' ? '240px' : paperWidth === 'A4' ? '100%' : '380px';
+    const maxWidthStyle = paperWidth === 'A4' ? '800px' : widthStyle;
+
     const printContent = `
       <html>
         <head>
           <title>Bill #${billNumber}</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 20px; max-width: 300px; margin: 0 auto; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .header h1 { margin: 0; font-size: 18px; }
-            .header p { margin: 5px 0; font-size: 12px; color: #666; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+              font-family: ${settings?.invoice_style === 'modern' ? "'Inter', sans-serif" : "Courier, monospace"}; 
+              width: ${widthStyle}; 
+              max-width: ${maxWidthStyle};
+              margin: ${paperWidth === 'A4' ? '0 auto' : '0'};
+              padding: ${paperWidth === 'A4' ? '40px' : '15px'};
+              font-size: ${fontSize}px;
+              line-height: 1.4;
+            }
+            .header { text-align: ${headerAlign}; margin-bottom: 20px; }
+            .header h1 { margin: 0; font-size: ${fontSize + 6}px; }
+            .header p { margin: 2px 0; font-size: ${fontSize - 2}px; color: #666; }
             .bill-info { border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 10px 0; margin: 10px 0; }
-            .bill-info p { margin: 3px 0; font-size: 12px; }
+            .bill-info p { margin: 3px 0; font-size: ${fontSize - 1}px; }
             .items { margin: 15px 0; }
-            .item { display: flex; justify-content: space-between; font-size: 12px; margin: 5px 0; }
-            .item-name { flex: 1; }
-            .item-qty { width: 40px; text-align: center; }
-            .item-price { width: 70px; text-align: right; }
+            .item-header { display: flex; font-weight: bold; border-bottom: 2px solid #000; padding: 8px 0; margin-bottom: 8px; text-transform: uppercase; font-size: ${fontSize - 1}px; }
+            .item-row { display: flex; padding: ${spacing}px 0; font-size: ${fontSize - 1}px; }
+            .item-row:nth-of-type(even) { background-color: ${settings?.invoice_style === 'modern' ? '#f9fafb' : 'transparent'}; }
             .totals { border-top: 1px dashed #000; padding-top: 10px; margin-top: 10px; }
-            .total-row { display: flex; justify-content: space-between; font-size: 12px; margin: 3px 0; }
-            .grand-total { font-size: 16px; font-weight: bold; border-top: 1px solid #000; padding-top: 5px; margin-top: 5px; }
-            .footer { text-align: center; margin-top: 20px; font-size: 11px; color: #666; }
+            .total-row { display: flex; justify-content: space-between; font-size: ${fontSize}px; margin: 3px 0; }
+            .grand-total { font-size: ${fontSize + 4}px; font-weight: bold; border-top: 2px solid #000; padding: 8px 0; margin-top: 5px; }
+            .footer { text-align: center; margin-top: 30px; border-top: 1px dashed #ccc; padding-top: 15px; }
+            .footer-msg { font-size: ${footerFontSize}px; font-weight: bold; margin-bottom: 5px; }
+            .terms { font-size: ${fontSize - 3}px; color: #4b5563; margin-top: 15px; text-align: left; font-style: italic; }
+            .qr-placeholder { margin: 15px auto; width: 80px; height: 80px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #999; }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>${settings?.business_name || 'My Business'}</h1>
-            ${settings?.address ? `<p>${settings.address}</p>` : ''}
-            ${settings?.phone ? `<p>Ph: ${settings.phone}</p>` : ''}
+            <h1>${settings?.business_name || 'Business'}</h1>
+            ${settings?.invoice_show_business_address !== false && settings?.address ? `<p>${settings.address}</p>` : ''}
+            ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<p>Ph: ${settings.phone}</p>` : ''}
+            ${settings?.invoice_show_business_email !== false && settings?.email ? `<p>${settings.email}</p>` : ''}
           </div>
           <div class="bill-info">
             <p><strong>Bill #:</strong> ${billNumber}</p>
-            <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN')}</p>
-            <p><strong>Time:</strong> ${new Date().toLocaleTimeString('en-IN')}</p>
+            <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN')} ${new Date().toLocaleTimeString('en-IN')}</p>
             ${customerName || selectedCustomer?.name ? `<p><strong>Customer:</strong> ${customerName || selectedCustomer?.name}</p>` : ''}
           </div>
           <div class="items">
-            <div class="item" style="font-weight: bold; border-bottom: 2px solid #000; padding: 8px 0; margin-bottom: 8px; text-transform: uppercase; display: flex;">
+            <div class="item-header">
               <span style="flex: 2;">ITEM</span>
               <span style="flex: 0.8; text-align: right;">PRICE</span>
               <span style="flex: 0.5; text-align: right;">QTY</span>
               <span style="flex: 1; text-align: right;">TOTAL</span>
             </div>
             ${cart.map(item => `
-              <div class="item" style="${settings?.invoice_spacing ? `margin: ${settings.invoice_spacing}px 0;` : 'margin: 5px 0;'} display: flex; font-size: 11px;">
-                <span style="flex: 2; overflow-wrap: break-word;">${item.name}</span>
+              <div class="item-row">
+                <div style="flex: 2; overflow-wrap: break-word;">
+                  <div>${item.name}</div>
+                  ${settings?.invoice_show_item_price !== false ? `
+                    <div style="font-size: ${fontSize - 3}px; color: #666;">
+                      ${item.unitPrice.toFixed(0)} x ${item.quantity}
+                    </div>
+                  ` : ''}
+                </div>
                 <span style="flex: 0.8; text-align: right;">${item.unitPrice.toFixed(0)}</span>
                 <span style="flex: 0.5; text-align: right;">${item.quantity}</span>
                 <span style="flex: 1; text-align: right;">${(item.unitPrice * item.quantity).toFixed(0)}</span>
@@ -533,7 +560,23 @@ export default function Billing() {
             </div>
           </div>
           <div class="footer">
-            <p>${settings?.invoice_footer_message || 'Thank you for your purchase!'}</p>
+            <div class="footer-msg">${settings?.invoice_footer_message || 'Thank you for your purchase!'}</div>
+            
+            ${settings?.invoice_terms_conditions ? `
+              <div class="terms">
+                <strong>T&C:</strong> ${settings.invoice_terms_conditions}
+              </div>
+            ` : ''}
+
+            ${settings?.invoice_show_qr_code ? `
+              <div class="qr-placeholder">
+                PAYMENT QR PLACEHOLDER
+              </div>
+            ` : ''}
+
+            <p style="font-size: ${fontSize - 3}px; color: #666; margin-top: 10px;">
+              Printed on ${new Date().toLocaleString('en-IN')}
+            </p>
           </div>
         </body>
       </html>

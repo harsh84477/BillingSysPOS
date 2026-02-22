@@ -51,6 +51,14 @@ import {
   RefreshCw,
   KeyRound,
   Trash,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Monitor,
+  Smartphone,
+  Type,
+  Maximize2,
+  FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -629,61 +637,174 @@ export default function Settings() {
         {/* Invoice Customization */}
         <TabsContent value="invoices">
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+            {/* Template & Paper Section */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Receipt className="h-5 w-5" />
-                  Invoice Style
+                  General Layout
                 </CardTitle>
-                <CardDescription>
-                  Choose the template for your printed receipts
-                </CardDescription>
+                <CardDescription>Overall appearance and paper size</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {[
-                    { id: 'classic', name: 'Classic', desc: 'Typewriter style' },
-                    { id: 'modern', name: 'Modern', desc: 'Clean & fresh' },
-                    { id: 'detailed', name: 'Detailed', desc: 'Grid layout' },
+                    { id: 'classic', name: 'Classic', desc: 'Typewriter' },
+                    { id: 'modern', name: 'Modern', desc: 'Clean' },
+                    { id: 'detailed', name: 'Detailed', desc: 'Grid' },
                   ].map((s) => (
                     <button
                       key={s.id}
                       onClick={() => isAdmin && updateSettings.mutate({ invoice_style: s.id as any })}
                       className={cn(
-                        'flex flex-col items-center justify-center p-4 rounded-xl border-2 transition-all',
+                        'flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all',
                         settings?.invoice_style === s.id
-                          ? 'border-primary bg-primary/5 shadow-md'
+                          ? 'border-primary bg-primary/5 shadow-sm'
                           : 'border-border hover:border-primary/30'
                       )}
                       disabled={!isAdmin}
                     >
-                      <span className="font-bold text-sm">{s.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{s.desc}</span>
+                      <span className="font-bold text-xs">{s.name}</span>
+                      <span className="text-[9px] text-muted-foreground">{s.desc}</span>
                     </button>
                   ))}
                 </div>
 
                 <div className="space-y-4 pt-4 border-t">
+                  <div className="space-y-2">
+                    <Label>Paper Size</Label>
+                    <div className="flex gap-2">
+                      {[
+                        { id: '58mm', label: '58mm' },
+                        { id: '80mm', label: '80mm' },
+                        { id: 'A4', label: 'A4' },
+                      ].map((p) => (
+                        <Button
+                          key={p.id}
+                          variant={settings?.invoice_paper_width === p.id ? 'default' : 'outline'}
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => isAdmin && updateSettings.mutate({ invoice_paper_width: p.id as any })}
+                          disabled={!isAdmin}
+                        >
+                          {p.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Font Size</Label>
-                      <p className="text-[10px] text-muted-foreground">Adjust text size for better readability</p>
+                      <Label>Show Borders</Label>
+                      <p className="text-[10px] text-muted-foreground">Toggle separation lines</p>
+                    </div>
+                    <Switch
+                      checked={settings?.invoice_show_borders !== false}
+                      onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_show_borders: checked })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Header Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Header Settings
+                </CardTitle>
+                <CardDescription>Business identity on invoice</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Text Alignment</Label>
+                  <div className="flex gap-2">
+                    {[
+                      { id: 'left', icon: AlignLeft },
+                      { id: 'center', icon: AlignCenter },
+                      { id: 'right', icon: AlignRight },
+                    ].map((a) => (
+                      <Button
+                        key={a.id}
+                        variant={settings?.invoice_header_align === a.id ? 'default' : 'outline'}
+                        size="icon"
+                        className="flex-1"
+                        onClick={() => isAdmin && updateSettings.mutate({ invoice_header_align: a.id as any })}
+                        disabled={!isAdmin}
+                      >
+                        <a.icon className="h-4 w-4" />
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-3 border-t">
+                  <div className="flex items-center justify-between font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                    Show Details
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Address</Label>
+                    <Switch
+                      checked={settings?.invoice_show_business_address !== false}
+                      onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_show_business_address: checked })}
+                      disabled={!isAdmin}
+                      className="scale-75"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Phone Number</Label>
+                    <Switch
+                      checked={settings?.invoice_show_business_phone !== false}
+                      onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_show_business_phone: checked })}
+                      disabled={!isAdmin}
+                      className="scale-75"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Email</Label>
+                    <Switch
+                      checked={settings?.invoice_show_business_email !== false}
+                      onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_show_business_email: checked })}
+                      disabled={!isAdmin}
+                      className="scale-75"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Body Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Type className="h-5 w-5" />
+                  Body & Table
+                </CardTitle>
+                <CardDescription>Item list styling</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm">Main Font Size</Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-7 w-7 border"
                         onClick={() => isAdmin && updateSettings.mutate({ invoice_font_size: Math.max(8, (settings?.invoice_font_size || 12) - 1) })}
                         disabled={!isAdmin}
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
-                      <span className="w-8 text-center font-bold">{settings?.invoice_font_size || 12}</span>
+                      <span className="w-6 text-center text-sm font-bold">{settings?.invoice_font_size || 12}</span>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-7 w-7 border"
                         onClick={() => isAdmin && updateSettings.mutate({ invoice_font_size: Math.min(24, (settings?.invoice_font_size || 12) + 1) })}
                         disabled={!isAdmin}
                       >
@@ -694,24 +815,23 @@ export default function Settings() {
 
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label>Line Spacing</Label>
-                      <p className="text-[10px] text-muted-foreground">Increase gap between items</p>
+                      <Label className="text-sm">Line Spacing</Label>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-7 w-7 border"
                         onClick={() => isAdmin && updateSettings.mutate({ invoice_spacing: Math.max(0, (settings?.invoice_spacing || 4) - 1) })}
                         disabled={!isAdmin}
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
-                      <span className="w-8 text-center font-bold">{settings?.invoice_spacing || 4}</span>
+                      <span className="w-6 text-center text-sm font-bold">{settings?.invoice_spacing || 4}</span>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-7 w-7 border"
                         onClick={() => isAdmin && updateSettings.mutate({ invoice_spacing: Math.min(20, (settings?.invoice_spacing || 4) + 1) })}
                         disabled={!isAdmin}
                       >
@@ -719,58 +839,92 @@ export default function Settings() {
                       </Button>
                     </div>
                   </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm">Show Item Price Breakdown</Label>
+                      <p className="text-[10px] text-muted-foreground">Show price x quantity line</p>
+                    </div>
+                    <Switch
+                      checked={settings?.invoice_show_item_price !== false}
+                      onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_show_item_price: checked })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Footer Settings */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Palette className="h-5 w-5" />
-                  Display Options
+                  <FileText className="h-5 w-5" />
+                  Footer Settings
                 </CardTitle>
-                <CardDescription>
-                  Choose what information to show on the receipt
-                </CardDescription>
+                <CardDescription>Credits and legal info</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Show Borders & Lines</Label>
-                    <p className="text-[10px] text-muted-foreground">Toggle separation lines on receipt</p>
-                  </div>
-                  <Switch
-                    checked={settings?.invoice_show_borders !== false}
-                    onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_show_borders: checked })}
-                    disabled={!isAdmin}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label>Show Item Prices</Label>
-                    <p className="text-[10px] text-muted-foreground">Show unit price x quantity detail</p>
-                  </div>
-                  <Switch
-                    checked={settings?.invoice_show_item_price !== false}
-                    onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_show_item_price: checked })}
-                    disabled={!isAdmin}
-                  />
-                </div>
-
-                <div className="space-y-2 pt-4 border-t">
-                  <Label htmlFor="invoice_footer_message">Invoice Footer Message</Label>
-                  <Textarea
+                <div className="space-y-2">
+                  <Label htmlFor="invoice_footer_message">Thank You Message</Label>
+                  <Input
                     id="invoice_footer_message"
-                    placeholder="e.g., Thank you for your business!"
-                    defaultValue={settings?.invoice_footer_message || 'Thank you for your business!'}
+                    placeholder="Thank you for your business!"
+                    defaultValue={settings?.invoice_footer_message || ''}
                     onBlur={(e) => isAdmin && updateSettings.mutate({ invoice_footer_message: e.target.value })}
                     disabled={!isAdmin}
-                    rows={2}
                   />
-                  <p className="text-[10px] text-muted-foreground italic">
-                    This message will appear at the bottom of your printed invoices.
-                  </p>
+                </div>
+
+                <div className="flex items-center justify-between py-2 border-t">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm">Footer Font Size</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 border"
+                      onClick={() => isAdmin && updateSettings.mutate({ invoice_footer_font_size: Math.max(6, (settings?.invoice_footer_font_size || 10) - 1) })}
+                      disabled={!isAdmin}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="w-6 text-center text-sm font-bold">{settings?.invoice_footer_font_size || 10}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 border"
+                      onClick={() => isAdmin && updateSettings.mutate({ invoice_footer_font_size: Math.min(16, (settings?.invoice_footer_font_size || 10) + 1) })}
+                      disabled={!isAdmin}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t">
+                  <Label htmlFor="invoice_terms">Terms & Conditions</Label>
+                  <Textarea
+                    id="invoice_terms"
+                    placeholder="e.g., No refund after 7 days"
+                    defaultValue={settings?.invoice_terms_conditions || ''}
+                    onBlur={(e) => isAdmin && updateSettings.mutate({ invoice_terms_conditions: e.target.value })}
+                    disabled={!isAdmin}
+                    rows={2}
+                    className="text-xs"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm">Show Payment QR Placeholder</Label>
+                  </div>
+                  <Switch
+                    checked={settings?.invoice_show_qr_code === true}
+                    onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_show_qr_code: checked })}
+                    disabled={!isAdmin}
+                  />
                 </div>
               </CardContent>
             </Card>
