@@ -20,6 +20,11 @@ export interface BusinessSettings {
   theme: string;
   show_gst_in_billing: boolean;
   show_discount_in_billing: boolean;
+  invoice_style: 'classic' | 'modern' | 'detailed';
+  invoice_font_size: number;
+  invoice_spacing: number;
+  invoice_show_borders: boolean;
+  invoice_show_item_price: boolean;
   created_at: string;
   updated_at: string;
 }

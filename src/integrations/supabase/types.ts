@@ -181,6 +181,11 @@ export type Database = {
           currency_symbol: string
           email: string | null
           id: string
+          invoice_font_size: number
+          invoice_show_borders: boolean
+          invoice_show_item_price: boolean
+          invoice_spacing: number
+          invoice_style: string
           logo_url: string | null
           next_bill_number: number
           phone: string | null
@@ -202,6 +207,11 @@ export type Database = {
           currency_symbol?: string
           email?: string | null
           id?: string
+          invoice_font_size?: number
+          invoice_show_borders?: boolean
+          invoice_show_item_price?: boolean
+          invoice_spacing?: number
+          invoice_style?: string
           logo_url?: string | null
           next_bill_number?: number
           phone?: string | null
@@ -223,6 +233,11 @@ export type Database = {
           currency_symbol?: string
           email?: string | null
           id?: string
+          invoice_font_size?: number
+          invoice_show_borders?: boolean
+          invoice_show_item_price?: boolean
+          invoice_spacing?: number
+          invoice_style?: string
           logo_url?: string | null
           next_bill_number?: number
           phone?: string | null

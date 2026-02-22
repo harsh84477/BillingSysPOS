@@ -30,6 +30,11 @@ interface BusinessSettings {
   email?: string;
   currency_symbol?: string;
   tax_name?: string;
+  invoice_style?: 'classic' | 'modern' | 'detailed';
+  invoice_font_size?: number;
+  invoice_spacing?: number;
+  invoice_show_borders?: boolean;
+  invoice_show_item_price?: boolean;
 }
 
 interface BillReceiptPrintProps {
@@ -45,7 +50,11 @@ export function printBillReceipt(
   settings?: BusinessSettings | null
 ) {
   const currencySymbol = settings?.currency_symbol || '₹';
-  
+  const style = settings?.invoice_style || 'classic';
+  const fontSize = settings?.invoice_font_size || 12;
+  const spacing = settings?.invoice_spacing || 4;
+  const showBorders = settings?.invoice_show_borders !== false;
+
   const receiptHTML = `
     <!DOCTYPE html>
     <html>
@@ -55,37 +64,91 @@ export function printBillReceipt(
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-          font-family: 'Courier New', monospace;
+          font-family: ${style === 'modern' ? "'Inter', sans-serif" : "'Courier New', monospace"};
           width: 400px;
           padding: 20px;
-          font-size: 12px;
+          font-size: ${fontSize}px;
           line-height: 1.4;
+          color: #1a1a1a;
         }
-        .header { text-align: center; margin-bottom: 15px; border-bottom: 1px dashed #000; padding-bottom: 15px; }
-        .business-name { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
-        .business-info { font-size: 11px; color: #333; }
-        .bill-info { margin: 15px 0; padding: 10px 0; border-bottom: 1px dashed #000; }
-        .bill-info-row { display: flex; justify-content: space-between; margin: 3px 0; }
-        .items-header { display: flex; justify-content: space-between; font-weight: bold; border-bottom: 1px solid #000; padding: 5px 0; margin-bottom: 5px; }
-        .item-row { display: flex; justify-content: space-between; padding: 3px 0; }
-        .item-name { flex: 2; }
-        .item-qty { flex: 1; text-align: center; }
+        .header { 
+          text-align: ${style === 'modern' ? 'left' : 'center'}; 
+          margin-bottom: 20px; 
+          border-bottom: ${showBorders ? '1px dashed #000' : 'none'}; 
+          padding-bottom: 15px; 
+        }
+        .business-name { 
+          font-size: ${fontSize + 6}px; 
+          font-weight: bold; 
+          margin-bottom: 5px; 
+          color: ${style === 'modern' ? '#3b82f6' : '#000'};
+        }
+        .business-info { font-size: ${fontSize - 2}px; color: #4b5563; }
+        
+        .bill-info { 
+          margin: 15px 0; 
+          padding: 10px 0; 
+          border-bottom: ${showBorders ? '1px dashed #000' : 'none'};
+          background: ${style === 'detailed' ? '#f9fafb' : 'transparent'};
+          padding: ${style === 'detailed' ? '10px' : '10px 0'};
+        }
+        .bill-info-row { display: flex; justify-content: space-between; margin: ${spacing}px 0; }
+        
+        .items-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        .items-header { 
+          display: flex; 
+          justify-content: space-between; 
+          font-weight: bold; 
+          border-bottom: 2px solid #000; 
+          padding: 8px 0; 
+          margin-bottom: 8px;
+          text-transform: uppercase;
+          font-size: ${fontSize - 1}px;
+        }
+        .item-row { 
+          display: flex; 
+          flex-wrap: wrap;
+          padding: ${spacing}px 0; 
+          border-bottom: ${style === 'detailed' ? '1px solid #e5e7eb' : 'none'};
+        }
+        .item-main { display: flex; justify-content: space-between; width: 100%; }
+        .item-name { flex: 2; font-weight: ${style === 'modern' ? '500' : 'normal'}; }
+        .item-qty { flex: 0.5; text-align: center; }
         .item-price { flex: 1; text-align: right; }
-        .totals { border-top: 1px dashed #000; margin-top: 15px; padding-top: 10px; }
-        .total-row { display: flex; justify-content: space-between; margin: 3px 0; }
-        .grand-total { font-size: 16px; font-weight: bold; border-top: 2px solid #000; margin-top: 10px; padding-top: 10px; }
-        .footer { text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px dashed #000; font-size: 11px; }
-        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
-        .status-completed { background: #dcfce7; color: #166534; }
-        .status-draft { background: #fef3c7; color: #92400e; }
-        .status-cancelled { background: #fee2e2; color: #991b1b; }
+        .item-details { width: 100%; font-size: ${fontSize - 3}px; color: #6b7280; margin-top: 2px; }
+
+        .totals { 
+          border-top: ${showBorders ? '2px solid #000' : 'none'}; 
+          margin-top: 15px; 
+          padding-top: 10px; 
+        }
+        .total-row { display: flex; justify-content: space-between; margin: 4px 0; }
+        .grand-total { 
+          font-size: ${fontSize + 4}px; 
+          font-weight: bold; 
+          border-top: 2px solid #000; 
+          margin-top: 10px; 
+          padding: 12px 0;
+          background: ${style === 'modern' ? '#f3f4f6' : 'transparent'};
+          padding: ${style === 'modern' ? '8px' : '12px 0'};
+        }
+        
+        .footer { 
+          text-align: center; 
+          margin-top: 30px; 
+          padding-top: 15px; 
+          border-top: ${showBorders ? '1px dashed #ccc' : 'none'}; 
+          font-size: ${fontSize - 2}px;
+          color: #6b7280;
+        }
+        
         @media print {
           body { width: 100%; }
           @page { margin: 10mm; }
         }
       </style>
     </head>
-    <body>
+    <body class="style-${style}">
       <div class="header">
         <div class="business-name">${settings?.business_name || 'Business'}</div>
         ${settings?.address ? `<div class="business-info">${settings.address}</div>` : ''}
@@ -106,23 +169,28 @@ export function printBillReceipt(
           <span>Customer:</span>
           <span>${bill.customers?.name || 'Walk-in'}</span>
         </div>
+        ${style === 'detailed' ? `
         <div class="bill-info-row">
           <span>Status:</span>
           <span class="status-badge status-${bill.status}">${bill.status}</span>
         </div>
+        ` : ''}
       </div>
 
       <div class="items-header">
-        <span class="item-name">Item</span>
-        <span class="item-qty">Qty</span>
-        <span class="item-price">Amount</span>
+        <span style="flex: 2;">Item</span>
+        <span style="flex: 1; text-align: right;">Amount</span>
       </div>
       
       ${items.map(item => `
         <div class="item-row">
-          <span class="item-name">${item.product_name}</span>
-          <span class="item-qty">${item.quantity}</span>
-          <span class="item-price">${currencySymbol}${Number(item.total_price).toFixed(2)}</span>
+          <div class="item-main">
+            <span class="item-name">${item.product_name}</span>
+            <span class="item-price">${currencySymbol}${Number(item.total_price).toFixed(2)}</span>
+          </div>
+          <div class="item-details">
+            ${currencySymbol}${Number(item.unit_price).toFixed(2)} × ${item.quantity}
+          </div>
         </div>
       `).join('')}
 
@@ -149,9 +217,6 @@ export function printBillReceipt(
         </div>
       </div>
 
-      <div class="footer">
-        <p>Thank you for your business!</p>
-        <p style="margin-top: 5px; font-size: 10px;">Printed on ${format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
       </div>
     </body>
     </html>
@@ -161,7 +226,7 @@ export function printBillReceipt(
   if (printWindow) {
     printWindow.document.write(receiptHTML);
     printWindow.document.close();
-    
+
     // Wait for content to load then print
     setTimeout(() => {
       printWindow.focus();

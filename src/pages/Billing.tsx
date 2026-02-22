@@ -143,6 +143,10 @@ export default function Billing() {
   const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
   const [editingCartQuantity, setEditingCartQuantity] = useState('');
 
+  // Cart price edit state
+  const [editingCartPriceItemId, setEditingCartPriceItemId] = useState<string | null>(null);
+  const [editingCartPrice, setEditingCartPrice] = useState('');
+
   // Fetch categories
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', businessId],
@@ -265,6 +269,17 @@ export default function Billing() {
     );
   };
 
+  // Update price
+  const updatePrice = (productId: string, newPrice: number) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.productId === productId
+          ? { ...item, unitPrice: Math.max(0, newPrice) }
+          : item
+      )
+    );
+  };
+
   // Add to cart with specific quantity (for long-press)
   const addToCartWithQuantity = (product: typeof products[0], quantity: number) => {
     if (quantity <= 0) return;
@@ -338,6 +353,30 @@ export default function Billing() {
     } else if (e.key === 'Escape') {
       setEditingCartItemId(null);
       setEditingCartQuantity('');
+    }
+  };
+
+  // Cart price edit handlers
+  const handleCartPriceClick = (productId: string, currentPrice: number) => {
+    setEditingCartPriceItemId(productId);
+    setEditingCartPrice(currentPrice.toString());
+  };
+
+  const handleCartPriceBlur = (productId: string) => {
+    const price = parseFloat(editingCartPrice);
+    if (!isNaN(price)) {
+      updatePrice(productId, price);
+    }
+    setEditingCartPriceItemId(null);
+    setEditingCartPrice('');
+  };
+
+  const handleCartPriceKeyDown = (e: React.KeyboardEvent, productId: string) => {
+    if (e.key === 'Enter') {
+      handleCartPriceBlur(productId);
+    } else if (e.key === 'Escape') {
+      setEditingCartPriceItemId(null);
+      setEditingCartPrice('');
     }
   };
 
@@ -444,9 +483,13 @@ export default function Billing() {
               <span class="item-price">Amount</span>
             </div>
             ${cart.map(item => `
-              <div class="item">
+              <div class="item" style="${settings?.invoice_spacing ? `margin: ${settings.invoice_spacing}px 0;` : 'margin: 5px 0;'}">
                 <span class="item-name">${item.name}</span>
-                <span class="item-qty">${item.quantity}</span>
+                ${settings?.invoice_show_item_price !== false ? `
+                <div style="display: flex; gap: 10px; font-size: 10px; color: #666;">
+                  <span>${currencySymbol}${item.unitPrice.toFixed(2)} × ${item.quantity}</span>
+                </div>
+                ` : `<span class="item-qty">${item.quantity}</span>`}
                 <span class="item-price">${currencySymbol}${(item.unitPrice * item.quantity).toFixed(2)}</span>
               </div>
             `).join('')}
@@ -858,9 +901,50 @@ export default function Billing() {
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {currencySymbol}{item.unitPrice.toFixed(2)} × {item.quantity} = {currencySymbol}{(item.unitPrice * item.quantity).toFixed(2)}
-                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {editingCartPriceItemId === item.productId ? (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-muted-foreground">{currencySymbol}</span>
+                              <Input
+                                type="number"
+                                value={editingCartPrice}
+                                onChange={(e) => setEditingCartPrice(e.target.value)}
+                                onBlur={() => handleCartPriceBlur(item.productId)}
+                                onKeyDown={(e) => handleCartPriceKeyDown(e, item.productId)}
+                                className="w-16 h-5 text-[10px] p-1 h-6"
+                                autoFocus
+                                step="0.01"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <span
+                                className="text-xs text-muted-foreground cursor-pointer hover:text-primary transition-colors flex items-center gap-1"
+                                onClick={() => handleCartPriceClick(item.productId, item.unitPrice)}
+                              >
+                                {currencySymbol}{item.unitPrice.toFixed(2)}
+                              </span>
+                              <div className="flex items-center gap-0.5 ml-1">
+                                <button
+                                  onClick={() => updatePrice(item.productId, item.unitPrice - 1)}
+                                  className="h-4 w-4 rounded-full bg-accent hover:bg-accent/80 flex items-center justify-center text-[10px] text-muted-foreground"
+                                >
+                                  -
+                                </button>
+                                <button
+                                  onClick={() => updatePrice(item.productId, item.unitPrice + 1)}
+                                  className="h-4 w-4 rounded-full bg-accent hover:bg-accent/80 flex items-center justify-center text-[10px] text-muted-foreground"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          <span className="text-[10px] text-muted-foreground">× {item.quantity} = </span>
+                          <span className="text-xs font-bold text-primary">
+                            {currencySymbol}{(item.unitPrice * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
@@ -1033,9 +1117,28 @@ export default function Billing() {
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {currencySymbol}{item.unitPrice.toFixed(0)} × {item.quantity}
-                        </p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          {editingCartPriceItemId === item.productId ? (
+                            <Input
+                              type="number"
+                              value={editingCartPrice}
+                              onChange={(e) => setEditingCartPrice(e.target.value)}
+                              onBlur={() => handleCartPriceBlur(item.productId)}
+                              onKeyDown={(e) => handleCartPriceKeyDown(e, item.productId)}
+                              className="w-16 h-6 text-[10px] p-1"
+                              autoFocus
+                              step="0.01"
+                            />
+                          ) : (
+                            <span
+                              className="text-xs text-muted-foreground cursor-pointer"
+                              onClick={() => handleCartPriceClick(item.productId, item.unitPrice)}
+                            >
+                              {currencySymbol}{item.unitPrice.toFixed(2)}
+                            </span>
+                          )}
+                          <span className="text-xs text-muted-foreground"> × {item.quantity}</span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
