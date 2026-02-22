@@ -45,6 +45,7 @@ interface BusinessSettings {
   invoice_terms_conditions?: string | null;
   invoice_paper_width?: '58mm' | '80mm' | 'A4';
   invoice_show_qr_code?: boolean;
+  upi_id?: string | null;
 }
 
 interface BillReceiptPrintProps {
@@ -260,9 +261,18 @@ export function printBillReceipt(
           </div>
         ` : ''}
 
-        ${settings?.invoice_show_qr_code ? `
-          <div class="qr-placeholder">
-            PAYMENT QR<br/>PLACEHOLDER
+        ${settings?.invoice_show_qr_code && settings?.upi_id ? `
+          <div class="qr-container" style="margin: 15px auto; text-align: center;">
+            <img 
+              src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`upi://pay?pa=${settings.upi_id}&pn=${settings.business_name || 'Business'}&am=${Number(bill.total_amount).toFixed(2)}&cu=INR`)}" 
+              alt="Payment QR"
+              style="width: 120px; height: 120px; border: 1px solid #eee; padding: 5px;"
+            />
+            <p style="font-size: 8px; color: #666; margin-top: 4px;">Scan to Pay: ${currencySymbol}${Number(bill.total_amount).toFixed(2)}</p>
+          </div>
+        ` : settings?.invoice_show_qr_code ? `
+          <div class="qr-placeholder" style="margin: 15px auto; width: 80px; height: 80px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #999; text-align: center;">
+            UPI ID NOT SET
           </div>
         ` : ''}
 
