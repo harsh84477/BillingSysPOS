@@ -178,6 +178,16 @@ export function printBillReceipt(
           @page { margin: 0; }
         }
       </style>
+      <script>
+        window.onload = function() {
+          // Extra wait for images to render
+          setTimeout(function() {
+            window.print();
+            // Optional: Close window after print
+            // window.onfocus = () => setTimeout(() => window.close(), 500);
+          }, 800);
+        };
+      </script>
     </head>
     <body>
       <div class="header">
@@ -289,10 +299,9 @@ export function printBillReceipt(
     printWindow.document.write(receiptHTML);
     printWindow.document.close();
 
-    // Wait for content to load then print
+    // Wait for content to load then focus
     setTimeout(() => {
       printWindow.focus();
-      printWindow.print();
-    }, 500);
+    }, 250);
   }
 }

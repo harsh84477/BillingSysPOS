@@ -493,14 +493,15 @@ export default function Billing() {
             .item-header { display: flex; font-weight: bold; border-bottom: 2px solid #000; padding: 8px 0; margin-bottom: 8px; text-transform: uppercase; font-size: ${fontSize - 1}px; }
             .item-row { display: flex; padding: ${spacing}px 0; font-size: ${fontSize - 1}px; }
             .item-row:nth-of-type(even) { background-color: ${settings?.invoice_style === 'modern' ? '#f9fafb' : 'transparent'}; }
-            .totals { border-top: 1px dashed #000; padding-top: 10px; margin-top: 10px; }
-            .total-row { display: flex; justify-content: space-between; font-size: ${fontSize}px; margin: 3px 0; }
-            .grand-total { font-size: ${fontSize + 4}px; font-weight: bold; border-top: 2px solid #000; padding: 8px 0; margin-top: 5px; }
-            .footer { text-align: center; margin-top: 30px; border-top: 1px dashed #ccc; padding-top: 15px; }
-            .footer-msg { font-size: ${footerFontSize}px; font-weight: bold; margin-bottom: 5px; }
-            .terms { font-size: ${fontSize - 3}px; color: #4b5563; margin-top: 15px; text-align: left; font-style: italic; }
             .qr-placeholder { margin: 15px auto; width: 80px; height: 80px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #999; }
           </style>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 800);
+            };
+          </script>
         </head>
         <body>
           <div class="header">
@@ -611,11 +612,11 @@ export default function Billing() {
       setTimeout(() => {
         try {
           iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-          // Remove the iframe after a delay to ensure print dialog opened
+          // print() is handled by internal script
+          // Remove the iframe after a delay
           setTimeout(() => {
             document.body.removeChild(iframe);
-          }, 1000);
+          }, 3000);
         } catch (e) {
           console.error('Print error:', e);
           document.body.removeChild(iframe);
