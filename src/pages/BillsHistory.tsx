@@ -74,6 +74,7 @@ interface BillItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  cost_price: number;
 }
 
 export default function BillsHistory() {

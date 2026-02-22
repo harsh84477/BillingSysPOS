@@ -32,6 +32,7 @@ import {
   ShoppingCart,
   Save,
   Printer,
+  Building2,
   ChevronLeft,
   ChevronRight,
   Sparkles,
@@ -146,6 +147,8 @@ export default function Billing() {
   // Cart price edit state
   const [editingCartPriceItemId, setEditingCartPriceItemId] = useState<string | null>(null);
   const [editingCartPrice, setEditingCartPrice] = useState('');
+  const [costWarningDialogOpen, setCostWarningDialogOpen] = useState(false);
+  const [pendingPriceInfo, setPendingPriceInfo] = useState<{ productId: string; price: number } | null>(null);
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -364,11 +367,25 @@ export default function Billing() {
 
   const handleCartPriceBlur = (productId: string) => {
     const price = parseFloat(editingCartPrice);
-    if (!isNaN(price)) {
-      updatePrice(productId, price);
+    const item = cart.find((i) => i.productId === productId);
+    if (!isNaN(price) && item) {
+      if (price <= item.costPrice) {
+        setPendingPriceInfo({ productId, price });
+        setCostWarningDialogOpen(true);
+      } else {
+        updatePrice(productId, price);
+      }
     }
     setEditingCartPriceItemId(null);
     setEditingCartPrice('');
+  };
+
+  const confirmCostWarning = () => {
+    if (pendingPriceInfo) {
+      updatePrice(pendingPriceInfo.productId, pendingPriceInfo.price);
+    }
+    setCostWarningDialogOpen(false);
+    setPendingPriceInfo(null);
   };
 
   const handleCartPriceKeyDown = (e: React.KeyboardEvent, productId: string) => {
@@ -477,22 +494,25 @@ export default function Billing() {
             ${customerName || selectedCustomer?.name ? `<p><strong>Customer:</strong> ${customerName || selectedCustomer?.name}</p>` : ''}
           </div>
           <div class="items">
-            <div class="item" style="font-weight: bold; border-bottom: 1px solid #000; padding-bottom: 5px;">
-              <span class="item-name">Item</span>
-              <span class="item-qty">Qty</span>
-              <span class="item-price">Amount</span>
+            <div class="item" style="font-weight: bold; border-bottom: 2px solid #000; padding: 8px 0; margin-bottom: 8px; text-transform: uppercase;">
+              <span class="item-name" style="flex: 2;">Item</span>
+              <span class="item-price" style="flex: 1; text-align: right;">Amount</span>
             </div>
-            ${cart.map(item => `
-              <div class="item" style="${settings?.invoice_spacing ? `margin: ${settings.invoice_spacing}px 0;` : 'margin: 5px 0;'}">
-                <span class="item-name">${item.name}</span>
-                ${settings?.invoice_show_item_price !== false ? `
-                <div style="display: flex; gap: 10px; font-size: 10px; color: #666;">
-                  <span>${currencySymbol}${item.unitPrice.toFixed(2)} × ${item.quantity}</span>
+            ${cart.map(item => {
+      const isLowMargin = item.unitPrice <= item.costPrice;
+      const rowStyle = isLowMargin ? 'color: #dc2626 !important; font-weight: bold; -webkit-print-color-adjust: exact;' : '';
+      return `
+              <div class="item" style="${settings?.invoice_spacing ? `margin: ${settings.invoice_spacing}px 0;` : 'margin: 5px 0;'} ${rowStyle}">
+                <div style="display: flex; justify-content: space-between; width: 100%;">
+                  <span class="item-name" style="flex: 2;">${item.name}</span>
+                  <span class="item-price" style="flex: 1; text-align: right;">${currencySymbol}${(item.unitPrice * item.quantity).toFixed(2)}</span>
                 </div>
-                ` : `<span class="item-qty">${item.quantity}</span>`}
-                <span class="item-price">${currencySymbol}${(item.unitPrice * item.quantity).toFixed(2)}</span>
+                <div style="font-size: 10px; ${isLowMargin ? 'color: #dc2626;' : 'color: #666;'}">
+                  ${currencySymbol}${item.unitPrice.toFixed(2)} × ${item.quantity}
+                </div>
               </div>
-            `).join('')}
+            `;
+    }).join('')}
           </div>
           <div class="totals">
             <div class="total-row">
@@ -919,29 +939,21 @@ export default function Billing() {
                           ) : (
                             <div className="flex items-center gap-1">
                               <span
-                                className="text-xs text-muted-foreground cursor-pointer hover:text-primary transition-colors flex items-center gap-1"
+                                className={cn(
+                                  "text-xs cursor-pointer hover:text-primary transition-colors flex items-center gap-1",
+                                  item.unitPrice <= item.costPrice ? "text-destructive font-bold" : "text-muted-foreground"
+                                )}
                                 onClick={() => handleCartPriceClick(item.productId, item.unitPrice)}
                               >
                                 {currencySymbol}{item.unitPrice.toFixed(2)}
                               </span>
-                              <div className="flex items-center gap-0.5 ml-1">
-                                <button
-                                  onClick={() => updatePrice(item.productId, item.unitPrice - 1)}
-                                  className="h-4 w-4 rounded-full bg-accent hover:bg-accent/80 flex items-center justify-center text-[10px] text-muted-foreground"
-                                >
-                                  -
-                                </button>
-                                <button
-                                  onClick={() => updatePrice(item.productId, item.unitPrice + 1)}
-                                  className="h-4 w-4 rounded-full bg-accent hover:bg-accent/80 flex items-center justify-center text-[10px] text-muted-foreground"
-                                >
-                                  +
-                                </button>
-                              </div>
                             </div>
                           )}
                           <span className="text-[10px] text-muted-foreground">× {item.quantity} = </span>
-                          <span className="text-xs font-bold text-primary">
+                          <span className={cn(
+                            "text-xs font-bold",
+                            item.unitPrice <= item.costPrice ? "text-destructive" : "text-primary"
+                          )}>
                             {currencySymbol}{(item.unitPrice * item.quantity).toFixed(2)}
                           </span>
                         </div>
@@ -1131,7 +1143,10 @@ export default function Billing() {
                             />
                           ) : (
                             <span
-                              className="text-xs text-muted-foreground cursor-pointer"
+                              className={cn(
+                                "text-xs cursor-pointer",
+                                item.unitPrice <= item.costPrice ? "text-destructive font-bold" : "text-muted-foreground"
+                              )}
                               onClick={() => handleCartPriceClick(item.productId, item.unitPrice)}
                             >
                               {currencySymbol}{item.unitPrice.toFixed(2)}
@@ -1323,6 +1338,32 @@ export default function Billing() {
             </Button>
             <Button onClick={handleQuantityDialogConfirm} disabled={!quantityDialogValue || parseInt(quantityDialogValue, 10) <= 0}>
               Add to Cart
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cost Warning Dialog */}
+      <Dialog open={costWarningDialogOpen} onOpenChange={setCostWarningDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Building2 className="h-5 w-5" />
+              Price Alert: Below Cost Price
+            </DialogTitle>
+            <DialogDescription className="py-2">
+              This price is at or below cost price. You are selling without profit or at loss. Are you sure you want to continue?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => {
+              setCostWarningDialogOpen(false);
+              setPendingPriceInfo(null);
+            }}>
+              Cancel & Revert
+            </Button>
+            <Button variant="destructive" onClick={confirmCostWarning}>
+              Accept Price
             </Button>
           </DialogFooter>
         </DialogContent>

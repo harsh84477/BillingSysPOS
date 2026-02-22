@@ -7,6 +7,7 @@ interface BillItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  cost_price: number;
 }
 
 interface Bill {
@@ -70,6 +71,8 @@ export function printBillReceipt(
           font-size: ${fontSize}px;
           line-height: 1.4;
           color: #1a1a1a;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
         .header { 
           text-align: ${style === 'modern' ? 'left' : 'center'}; 
@@ -182,17 +185,21 @@ export function printBillReceipt(
         <span style="flex: 1; text-align: right;">Amount</span>
       </div>
       
-      ${items.map(item => `
-        <div class="item-row">
-          <div class="item-main">
-            <span class="item-name">${item.product_name}</span>
-            <span class="item-price">${currencySymbol}${Number(item.total_price).toFixed(2)}</span>
+      ${items.map(item => {
+    const isLowMargin = Number(item.unit_price) <= Number(item.cost_price);
+    const rowStyle = isLowMargin ? 'color: #dc2626 !important; font-weight: bold;' : '';
+    return `
+          <div class="item-row" style="${rowStyle}">
+            <div class="item-main">
+              <span class="item-name">${item.product_name}</span>
+              <span class="item-price">${currencySymbol}${Number(item.total_price).toFixed(2)}</span>
+            </div>
+            <div class="item-details" style="${isLowMargin ? 'color: #dc2626 !important;' : ''}">
+              ${currencySymbol}${Number(item.unit_price).toFixed(2)} × ${item.quantity}
+            </div>
           </div>
-          <div class="item-details">
-            ${currencySymbol}${Number(item.unit_price).toFixed(2)} × ${item.quantity}
-          </div>
-        </div>
-      `).join('')}
+        `;
+  }).join('')}
 
       <div class="totals">
         <div class="total-row">
@@ -216,7 +223,11 @@ export function printBillReceipt(
           <span>${currencySymbol}${Number(bill.total_amount).toFixed(2)}</span>
         </div>
       </div>
-
+      <div class="footer">
+        <p>Thank you for your business!</p>
+        <p style="margin-top: 5px; font-size: ${fontSize - 2}px;">
+          Printed on ${format(new Date(), 'dd/MM/yyyy HH:mm')}
+        </p>
       </div>
     </body>
     </html>

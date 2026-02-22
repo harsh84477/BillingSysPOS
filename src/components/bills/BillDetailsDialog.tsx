@@ -13,6 +13,7 @@ import {
 import { Printer, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { printBillReceipt } from './BillReceiptPrint';
+import { cn } from '@/lib/utils';
 
 interface Bill {
   id: string;
@@ -34,6 +35,7 @@ interface BillItem {
   quantity: number;
   unit_price: number;
   total_price: number;
+  cost_price: number;
 }
 
 interface BillDetailsDialogProps {
@@ -93,7 +95,7 @@ export function BillDetailsDialog({ bill, open, onOpenChange }: BillDetailsDialo
             </Button>
           </div>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -118,7 +120,13 @@ export function BillDetailsDialog({ bill, open, onOpenChange }: BillDetailsDialo
             <h4 className="mb-2 font-medium">Items</h4>
             <div className="space-y-2">
               {billItems.map((item) => (
-                <div key={item.id} className="flex justify-between text-sm">
+                <div
+                  key={item.id}
+                  className={cn(
+                    "flex justify-between text-sm",
+                    item.unit_price <= item.cost_price ? "text-destructive font-bold" : ""
+                  )}
+                >
                   <span>
                     {item.product_name} × {item.quantity}
                   </span>
