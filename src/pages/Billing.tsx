@@ -468,6 +468,7 @@ export default function Billing() {
 
     const widthStyle = paperWidth === '58mm' ? '240px' : paperWidth === 'A4' ? '100%' : '380px';
     const maxWidthStyle = paperWidth === 'A4' ? '800px' : widthStyle;
+    const qrSize = paperWidth === '58mm' ? 100 : 120;
 
     const printContent = `
       <html>
@@ -497,9 +498,34 @@ export default function Billing() {
           </style>
           <script>
             window.onload = function() {
+              var images = document.getElementsByTagName('img');
+              var loaded = 0;
+              var total = images.length;
+              
+              if (total === 0) {
+                setTimeout(function() { window.print(); }, 800);
+                return;
+              }
+
+              function checkAllLoaded() {
+                loaded++;
+                if (loaded >= total) {
+                  setTimeout(function() { window.print(); }, 1000);
+                }
+              }
+
+              for (var i = 0; i < total; i++) {
+                if (images[i].complete) {
+                  checkAllLoaded();
+                } else {
+                  images[i].addEventListener('load', checkAllLoaded);
+                  images[i].addEventListener('error', checkAllLoaded);
+                }
+              }
+
               setTimeout(function() {
-                window.print();
-              }, 800);
+                if (loaded < total) window.print();
+              }, 3000);
             };
           </script>
         </head>
@@ -570,11 +596,11 @@ export default function Billing() {
             ` : ''}
 
             ${settings?.invoice_show_qr_code && settings?.upi_id ? `
-              <div class="qr-container" style="margin: 15px auto; text-align: center;">
+              <div class="qr-container" style="margin: 15px auto; text-align: center; min-height: ${qrSize}px;">
                 <img 
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`upi://pay?pa=${settings.upi_id}&pn=${settings.business_name || 'Business'}&am=${cartCalculations.total.toFixed(2)}&cu=INR`)}" 
+                  src="https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`upi://pay?pa=${settings.upi_id}&pn=${settings.business_name || 'Business'}&am=${cartCalculations.total.toFixed(2)}&cu=INR`)}" 
                   alt="Payment QR"
-                  style="width: 120px; height: 120px; border: 1px solid #eee; padding: 5px;"
+                  style="width: ${qrSize}px; height: ${qrSize}px; border: 1px solid #eee; padding: 5px; display: block; margin: 0 auto;"
                 />
                 <p style="font-size: 8px; color: #666; margin-top: 4px;">Scan to Pay: ${currencySymbol}${cartCalculations.total.toFixed(2)}</p>
               </div>
