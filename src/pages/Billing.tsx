@@ -501,18 +501,14 @@ export default function Billing() {
               <span style="flex: 0.5; text-align: right;">QTY</span>
               <span style="flex: 1; text-align: right;">TOTAL</span>
             </div>
-            ${cart.map(item => {
-      const isLowMargin = item.unitPrice <= item.costPrice;
-      const rowStyle = isLowMargin ? 'color: #dc2626 !important; font-weight: bold; -webkit-print-color-adjust: exact;' : '';
-      return `
-              <div class="item" style="${settings?.invoice_spacing ? `margin: ${settings.invoice_spacing}px 0;` : 'margin: 5px 0;'} ${rowStyle} display: flex; font-size: 11px;">
+            ${cart.map(item => `
+              <div class="item" style="${settings?.invoice_spacing ? `margin: ${settings.invoice_spacing}px 0;` : 'margin: 5px 0;'} display: flex; font-size: 11px;">
                 <span style="flex: 2; overflow-wrap: break-word;">${item.name}</span>
                 <span style="flex: 0.8; text-align: right;">${item.unitPrice.toFixed(0)}</span>
                 <span style="flex: 0.5; text-align: right;">${item.quantity}</span>
                 <span style="flex: 1; text-align: right;">${(item.unitPrice * item.quantity).toFixed(0)}</span>
               </div>
-            `;
-    }).join('')}
+            `).join('')}
           </div>
           <div class="totals">
             <div class="total-row">
@@ -537,7 +533,7 @@ export default function Billing() {
             </div>
           </div>
           <div class="footer">
-            <p>Thank you for your purchase!</p>
+            <p>${settings?.invoice_footer_message || 'Thank you for your purchase!'}</p>
           </div>
         </body>
       </html>

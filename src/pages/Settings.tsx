@@ -757,6 +757,21 @@ export default function Settings() {
                     disabled={!isAdmin}
                   />
                 </div>
+
+                <div className="space-y-2 pt-4 border-t">
+                  <Label htmlFor="invoice_footer_message">Invoice Footer Message</Label>
+                  <Textarea
+                    id="invoice_footer_message"
+                    placeholder="e.g., Thank you for your business!"
+                    defaultValue={settings?.invoice_footer_message || 'Thank you for your business!'}
+                    onBlur={(e) => isAdmin && updateSettings.mutate({ invoice_footer_message: e.target.value })}
+                    disabled={!isAdmin}
+                    rows={2}
+                  />
+                  <p className="text-[10px] text-muted-foreground italic">
+                    This message will appear at the bottom of your printed invoices.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -1026,6 +1041,6 @@ export default function Settings() {
           </TabsContent>
         )}
       </Tabs>
-    </div>
+    </div >
   );
 }

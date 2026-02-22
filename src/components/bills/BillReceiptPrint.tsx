@@ -36,6 +36,7 @@ interface BusinessSettings {
   invoice_spacing?: number;
   invoice_show_borders?: boolean;
   invoice_show_item_price?: boolean;
+  invoice_footer_message?: string | null;
 }
 
 interface BillReceiptPrintProps {
@@ -187,18 +188,14 @@ export function printBillReceipt(
         <span style="flex: 1; text-align: right;">TOTAL</span>
       </div>
       
-      ${items.map(item => {
-    const isLowMargin = Number(item.unit_price) <= Number(item.cost_price);
-    const rowStyle = isLowMargin ? 'color: #dc2626 !important; font-weight: bold; -webkit-print-color-adjust: exact;' : '';
-    return `
-          <div class="item-row" style="${rowStyle} display: flex; align-items: flex-start; padding: ${spacing}px 0; font-size: ${fontSize - 1}px;">
+      ${items.map(item => `
+          <div class="item-row" style="display: flex; align-items: flex-start; padding: ${spacing}px 0; font-size: ${fontSize - 1}px;">
             <span style="flex: 2; overflow-wrap: break-word;">${item.product_name}</span>
             <span style="flex: 0.8; text-align: right;">${Number(item.unit_price).toFixed(0)}</span>
             <span style="flex: 0.5; text-align: right;">${item.quantity}</span>
             <span style="flex: 1; text-align: right;">${Number(item.total_price).toFixed(0)}</span>
           </div>
-        `;
-  }).join('')}
+        `).join('')}
 
       <div class="totals">
         <div class="total-row">
@@ -223,7 +220,7 @@ export function printBillReceipt(
         </div>
       </div>
       <div class="footer">
-        <p>Thank you for your business!</p>
+        <p>${settings?.invoice_footer_message || 'Thank you for your business!'}</p>
         <p style="margin-top: 5px; font-size: ${fontSize - 2}px;">
           Printed on ${format(new Date(), 'dd/MM/yyyy HH:mm')}
         </p>

@@ -25,6 +25,7 @@ export interface BusinessSettings {
   invoice_spacing: number;
   invoice_show_borders: boolean;
   invoice_show_item_price: boolean;
+  invoice_footer_message: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -42,7 +43,7 @@ export function useBusinessSettings() {
       const { data, error } = await query.limit(1).maybeSingle();
 
       if (error) throw error;
-      return data as BusinessSettings | null;
+      return (data as unknown) as BusinessSettings | null;
     },
     enabled: !!businessId,
   });
