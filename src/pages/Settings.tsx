@@ -918,7 +918,8 @@ export default function Settings() {
 
                 <div className="flex items-center justify-between pt-2 border-t">
                   <div className="space-y-0.5">
-                    <Label className="text-sm">Show Payment QR Placeholder</Label>
+                    <Label className="text-sm">Show Payment QR Code</Label>
+                    <p className="text-[10px] text-muted-foreground">Generates dynamic UPI QR with total amount</p>
                   </div>
                   <Switch
                     checked={settings?.invoice_show_qr_code === true}
@@ -926,6 +927,23 @@ export default function Settings() {
                     disabled={!isAdmin}
                   />
                 </div>
+
+                {settings?.invoice_show_qr_code && (
+                  <div className="space-y-2 pt-2 border-t animate-in fade-in slide-in-from-top-1">
+                    <Label htmlFor="upi_id" className="text-sm">UPI ID (VPA) for Payments</Label>
+                    <Input
+                      id="upi_id"
+                      placeholder="e.g., yourname@bank"
+                      defaultValue={settings?.upi_id || ''}
+                      onBlur={(e) => isAdmin && updateSettings.mutate({ upi_id: e.target.value })}
+                      disabled={!isAdmin}
+                      className="text-xs"
+                    />
+                    <p className="text-[10px] text-muted-foreground italic">
+                      Required for the dynamic QR code to work properly.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
