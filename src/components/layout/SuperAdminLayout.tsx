@@ -35,23 +35,23 @@ export default function SuperAdminLayout({ activeTab, onTabChange, children }: P
     const activeItem = navItems.find(n => n.id === activeTab) || navItems[0];
 
     return (
-        <div className="flex h-screen overflow-hidden bg-[#0f1117]">
+        <div className="flex h-screen overflow-hidden bg-background">
             {/* ── Sidebar ── */}
-            <aside className="hidden lg:flex w-60 flex-col flex-shrink-0 bg-[#13151f] border-r border-white/5">
+            <aside className="hidden lg:flex w-60 flex-col flex-shrink-0 bg-card border-r border-border">
                 {/* Brand */}
-                <div className="flex items-center gap-3 h-16 px-5 border-b border-white/5">
+                <div className="flex items-center gap-3 h-16 px-5 border-b border-border">
                     <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
                         <ShieldCheck className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div>
-                        <p className="text-white font-bold text-sm leading-none">Admin Console</p>
+                        <p className="font-bold text-sm leading-none">Admin Console</p>
                         <p className="text-primary/70 text-[10px] font-semibold uppercase tracking-widest mt-0.5">Master Control</p>
                     </div>
                 </div>
 
                 {/* Nav */}
                 <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
-                    <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest px-3 mb-2">Navigation</p>
+                    <p className="text-muted-foreground/50 text-[10px] font-bold uppercase tracking-widest px-3 mb-2">Navigation</p>
                     {navItems.map((item) => {
                         const active = activeTab === item.id;
                         return (
@@ -61,11 +61,11 @@ export default function SuperAdminLayout({ activeTab, onTabChange, children }: P
                                 className={cn(
                                     'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group',
                                     active
-                                        ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/40'
-                                        : 'text-white/50 hover:text-white hover:bg-white/5'
+                                        ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                                 )}
                             >
-                                <item.icon className={cn('h-4 w-4 shrink-0', active ? 'text-primary-foreground' : 'text-white/40 group-hover:text-white/70')} />
+                                <item.icon className={cn('h-4 w-4 shrink-0', active ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground')} />
                                 <span className="flex-1 text-left">{item.label}</span>
                                 {active && <ChevronRight className="h-3 w-3 opacity-60" />}
                             </button>
@@ -73,10 +73,10 @@ export default function SuperAdminLayout({ activeTab, onTabChange, children }: P
                     })}
 
                     <div className="pt-4 pb-1">
-                        <p className="text-white/25 text-[10px] font-bold uppercase tracking-widest px-3 mb-2">Environment</p>
+                        <p className="text-muted-foreground/50 text-[10px] font-bold uppercase tracking-widest px-3 mb-2">Environment</p>
                         <Link
                             to="/dashboard"
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                         >
                             <ArrowLeft className="h-4 w-4" />
                             Back to App
@@ -85,7 +85,7 @@ export default function SuperAdminLayout({ activeTab, onTabChange, children }: P
                 </nav>
 
                 {/* Logout */}
-                <div className="p-3 border-t border-white/5">
+                <div className="p-3 border-t border-border">
                     <button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition-all"
@@ -99,26 +99,26 @@ export default function SuperAdminLayout({ activeTab, onTabChange, children }: P
             {/* ── Main Area ── */}
             <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
                 {/* Top bar */}
-                <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-white/5 bg-[#13151f] px-6">
+                <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-border bg-card px-6">
                     <div className="flex items-center gap-3">
                         {/* Mobile brand */}
                         <div className="lg:hidden h-7 w-7 rounded bg-primary flex items-center justify-center">
                             <ShieldCheck className="h-4 w-4 text-primary-foreground" />
                         </div>
                         <div>
-                            <p className="text-white/90 font-bold text-sm">{activeItem.label}</p>
-                            <p className="text-white/30 text-[11px] hidden lg:block">Super Admin · Platform Control</p>
+                            <p className="font-bold text-sm">{activeItem.label}</p>
+                            <p className="text-muted-foreground text-[11px] hidden lg:block">Super Admin · Platform Control</p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                         <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-                        <span className="text-white/40 text-xs font-mono hidden sm:block">System Administrator</span>
+                        <span className="text-muted-foreground text-xs font-mono hidden sm:block">System Administrator</span>
                     </div>
                 </header>
 
                 {/* Scrollable content */}
-                <main className="flex-1 overflow-y-auto bg-[#0f1117] p-6 lg:p-8">
+                <main className="flex-1 overflow-y-auto bg-muted/30 p-6 lg:p-8">
                     <div className="max-w-7xl mx-auto">
                         {children}
                     </div>
