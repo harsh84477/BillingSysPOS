@@ -136,11 +136,11 @@ export function printBillReceipt(
         }
 
         .totals { 
-          border-top: ${showBorders ? '2px solid #000' : 'none'}; 
-          margin-top: 15px; 
+          border-top: 1px solid #000; 
+          margin-top: 20px; 
           padding-top: 10px; 
         }
-        .total-row { display: flex; justify-content: space-between; margin: 4px 0; }
+        .total-row { display: flex; justify-content: space-between; margin: 6px 0; }
         .grand-total { 
           font-size: ${fontSize + 4}px; 
           font-weight: bold; 
@@ -148,7 +148,7 @@ export function printBillReceipt(
           margin-top: 10px; 
           padding: 12px 0;
           background: ${style === 'modern' ? '#f3f4f6' : 'transparent'};
-          padding: ${style === 'modern' ? '8px' : '12px 0'};
+          padding: ${style === 'modern' ? '12px' : '15px 0'};
         }
         
         .footer { 
@@ -248,7 +248,7 @@ export function printBillReceipt(
           <div class="item-row" style="display: flex; align-items: flex-start; padding: ${spacing}px 0; font-size: ${fontSize - 1}px;">
             <div style="flex: 2; overflow-wrap: break-word;">
               <div>${item.product_name}</div>
-              ${settings?.invoice_show_item_price !== false ? `
+              ${settings?.invoice_show_item_price === true ? `
                 <div style="font-size: ${fontSize - 3}px; color: #666;">
                   ${Number(item.unit_price).toFixed(0)} x ${item.quantity}
                 </div>
