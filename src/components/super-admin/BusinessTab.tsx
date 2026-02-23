@@ -22,30 +22,52 @@ export default function BusinessTab({ plans }: Props) {
 
     const { data: businesses = [], isLoading } = useQuery({
         queryKey: ['super-admin-businesses'],
+        retry: 1,
         queryFn: async () => {
-            const { data, error } = await (supabase.rpc as any)('get_all_businesses_admin');
-            if (error) throw error;
+            // Try SECURITY DEFINER RPC first (bypasses RLS → all businesses)
+            try {
+                const { data, error } = await (supabase.rpc as any)('get_all_businesses_admin');
+                if (!error && data) {
+                    return (data as any[]).map((row) => ({
+                        id: row.id,
+                        business_name: row.business_name,
+                        mobile_number: row.mobile_number,
+                        join_code: row.join_code,
+                        created_at: row.created_at,
+                        business_settings: [{ address: row.address }],
+                        subscriptions: row.sub_id
+                            ? [{
+                                id: row.sub_id,
+                                status: row.sub_status,
+                                trial_end: row.sub_trial_end,
+                                current_period_end: row.sub_period_end,
+                                plan: row.plan_id
+                                    ? { id: row.plan_id, name: row.plan_name, price: row.plan_price }
+                                    : null,
+                            }]
+                            : [],
+                    }));
+                }
+            } catch (_) {
+                // RPC not deployed yet — fall through to direct query
+            }
 
-            // Map flat RPC rows → nested shape that BusinessProfile expects
-            return (data as any[]).map((row) => ({
-                id: row.id,
-                business_name: row.business_name,
-                mobile_number: row.mobile_number,
-                join_code: row.join_code,
-                created_at: row.created_at,
-                business_settings: [{ address: row.address }],
-                subscriptions: row.sub_id
-                    ? [{
-                        id: row.sub_id,
-                        status: row.sub_status,
-                        trial_end: row.sub_trial_end,
-                        current_period_end: row.sub_period_end,
-                        plan: row.plan_id
-                            ? { id: row.plan_id, name: row.plan_name, price: row.plan_price }
-                            : null,
-                    }]
-                    : [],
-            }));
+            // Fallback: direct table query (works with whatever RLS allows)
+            const { data, error } = await supabase
+                .from('businesses')
+                .select(`
+                    *,
+                    business_settings (address),
+                    subscriptions (
+                        id,
+                        status,
+                        trial_end,
+                        current_period_end,
+                        plan:subscription_plans (id, name, price)
+                    )
+                `);
+            if (error) throw error;
+            return data || [];
         },
     });
 
