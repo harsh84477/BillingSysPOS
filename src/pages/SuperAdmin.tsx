@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export default function SuperAdmin() {
     const { isSuperAdmin } = useAuth();
@@ -55,6 +56,7 @@ export default function SuperAdmin() {
                 .from('businesses')
                 .select(`
           *,
+          business_settings (address),
           subscriptions (
             id,
             status,
@@ -259,7 +261,7 @@ export default function SuperAdmin() {
                                     <h2 className="text-2xl font-black tracking-tight">{selectedBiz?.business_name}</h2>
                                     <p className="text-muted-foreground text-sm flex items-center gap-2 mt-1">
                                         <Building2 className="h-4 w-4" />
-                                        {selectedBiz?.business_address || 'No address provided'}
+                                        {(selectedBiz as any)?.business_settings?.[0]?.address || 'No address provided'}
                                     </p>
                                 </div>
                                 <div className="bg-muted px-4 py-2 rounded-lg border flex gap-6 items-center">

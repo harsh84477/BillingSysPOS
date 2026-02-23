@@ -45,6 +45,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type DatePreset = 'today' | 'yesterday' | 'last7days' | 'last30days' | 'thisMonth' | 'lastMonth' | 'custom';
 
@@ -85,7 +86,7 @@ export default function BillsHistory() {
   const { data: settings } = useBusinessSettings();
   const { businessId } = useAuth();
   const navigate = useNavigate();
-  const { canViewFullHistory, historyLimitDays, isTrial, isActive } = useSubscription();
+  const { canViewFullHistory, historyLimitDays, canExport, isTrial, isActive } = useSubscription();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
