@@ -541,6 +541,7 @@ export default function Billing() {
             ${settings?.invoice_show_business_address !== false && settings?.address ? `<p>${settings.address}</p>` : ''}
             ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<p>Ph: ${settings.phone}</p>` : ''}
             ${settings?.invoice_show_business_email !== false && settings?.email ? `<p>${settings.email}</p>` : ''}
+            ${settings?.gst_number ? `<p>GST: ${settings.gst_number}</p>` : ''}
           </div>
           <div class="bill-info">
             <p><strong>Bill #:</strong> ${billNumber}</p>

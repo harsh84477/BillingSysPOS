@@ -35,6 +35,7 @@ export interface BusinessSettings {
   invoice_paper_width?: '58mm' | '80mm' | 'A4';
   invoice_show_qr_code?: boolean;
   upi_id?: string | null;
+  gst_number?: string | null;
   created_at: string;
   updated_at: string;
 }

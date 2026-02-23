@@ -740,6 +740,19 @@ export default function Settings() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="gst_number">GST Number</Label>
+                  <Input
+                    id="gst_number"
+                    placeholder="e.g. 22AAAAA0000A1Z5"
+                    defaultValue={settings?.gst_number || ''}
+                    onBlur={(e) => isAdmin && updateSettings.mutate({ gst_number: e.target.value })}
+                    disabled={!isAdmin}
+                    className="text-xs h-8"
+                  />
+                </div>
+
+
                 <div className="space-y-3 pt-3 border-t">
                   <div className="flex items-center justify-between font-medium text-xs text-muted-foreground uppercase tracking-wider">
                     Show Details
