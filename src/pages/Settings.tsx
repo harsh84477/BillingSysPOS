@@ -316,7 +316,19 @@ export default function Settings() {
                       disabled={!isAdmin}
                     />
                   </div>
-                  <div className="space-y-2 md:col-span-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="gst_number">GST Number</Label>
+                    <Input
+                      id="gst_number"
+                      placeholder="e.g. 22AAAAA0000A1Z5"
+                      defaultValue={settings?.gst_number || ''}
+                      onBlur={(e) => isAdmin && updateSettings.mutate({ gst_number: e.target.value })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="address">Address</Label>
                     <Textarea
                       id="address"
@@ -740,17 +752,6 @@ export default function Settings() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="gst_number">GST Number</Label>
-                  <Input
-                    id="gst_number"
-                    placeholder="e.g. 22AAAAA0000A1Z5"
-                    defaultValue={settings?.gst_number || ''}
-                    onBlur={(e) => isAdmin && updateSettings.mutate({ gst_number: e.target.value })}
-                    disabled={!isAdmin}
-                    className="text-xs h-8"
-                  />
-                </div>
 
 
                 <div className="space-y-3 pt-3 border-t">
