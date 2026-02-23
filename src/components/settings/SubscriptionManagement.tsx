@@ -66,9 +66,9 @@ export default function SubscriptionManagement() {
                             </p>
                             <p className="text-sm">
                                 {isTrial ? (
-                                    <>Trial ends on <strong>{subscription?.trial_end ? format(new Date(subscription.trial_end), 'MMM dd, yyyy') : 'N/A'}</strong></>
+                                    <>Trial ends on <strong>{subscription?.trial_end ? format(new Date(subscription.trial_end), 'MMM dd, yyyy HH:mm') : 'N/A'}</strong></>
                                 ) : (
-                                    <>Valid until <strong>{subscription?.current_period_end ? format(new Date(subscription.current_period_end), 'MMM dd, yyyy') : 'N/A'}</strong></>
+                                    <>Valid until <strong>{subscription?.current_period_end ? format(new Date(subscription.current_period_end), 'MMM dd, yyyy HH:mm') : 'N/A'}</strong></>
                                 )}
                             </p>
                         </div>

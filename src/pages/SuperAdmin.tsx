@@ -392,7 +392,7 @@ export default function SuperAdmin() {
                                                     <h4 className="text-xl font-black">{selectedBiz?.subscriptions?.[0]?.plan?.name || 'Manual Admin Push'}</h4>
                                                     <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                                                         <Calendar className="h-3.5 w-3.5" />
-                                                        Expires: {selectedBiz?.subscriptions?.[0]?.current_period_end ? format(new Date(selectedBiz.subscriptions[0].current_period_end), 'MMM dd, yyyy') : 'Infinity'}
+                                                        Expires: {selectedBiz?.subscriptions?.[0]?.current_period_end ? format(new Date(selectedBiz.subscriptions[0].current_period_end), 'MMM dd, yyyy HH:mm') : 'Infinity'}
                                                     </p>
                                                 </div>
                                                 {selectedBiz?.subscriptions?.[0] && getStatusBadge(selectedBiz.subscriptions[0].status)}
@@ -411,13 +411,24 @@ export default function SuperAdmin() {
                                                             className="h-auto py-3 px-4 justify-between"
                                                             disabled={manageSubMutation.isPending}
                                                             onClick={() => {
-                                                                const nextMonth = new Date();
-                                                                nextMonth.setMonth(nextMonth.getMonth() + 1);
+                                                                const now = new Date();
+                                                                const periodEnd = new Date();
+
+                                                                if (plan.billing_period === 'monthly') {
+                                                                    periodEnd.setMonth(now.getMonth() + 1);
+                                                                } else if (plan.billing_period === '6_months') {
+                                                                    periodEnd.setMonth(now.getMonth() + 6);
+                                                                } else if (plan.billing_period === 'yearly') {
+                                                                    periodEnd.setFullYear(now.getFullYear() + 1);
+                                                                } else {
+                                                                    periodEnd.setMonth(now.getMonth() + 1);
+                                                                }
+
                                                                 manageSubMutation.mutate({
                                                                     bizId: selectedBusinessId,
                                                                     planId: plan.id,
                                                                     status: 'active',
-                                                                    periodEnd: nextMonth.toISOString()
+                                                                    periodEnd: periodEnd.toISOString()
                                                                 });
                                                             }}
                                                         >
