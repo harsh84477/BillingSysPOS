@@ -873,6 +873,18 @@ export default function Settings() {
                       disabled={!isAdmin}
                     />
                   </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm">Show Price Column</Label>
+                      <p className="text-[10px] text-muted-foreground">Toggle unit price column in table</p>
+                    </div>
+                    <Switch
+                      checked={settings?.invoice_show_unit_price !== false}
+                      onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_show_unit_price: checked })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

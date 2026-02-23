@@ -48,6 +48,7 @@ interface BusinessSettings {
   upi_id?: string | null;
   gst_number?: string | null;
   invoice_show_gst?: boolean;
+  invoice_show_unit_price?: boolean;
 }
 
 interface BillReceiptPrintProps {
@@ -240,8 +241,8 @@ export function printBillReceipt(
       </div>
 
       <div class="items-header">
-        <span style="flex: 2;">ITEM</span>
-        <span style="flex: 0.8; text-align: right;">PRICE</span>
+        <span style="flex: ${settings?.invoice_show_unit_price !== false ? '2' : '2.8'};">ITEM</span>
+        ${settings?.invoice_show_unit_price !== false ? '<span style="flex: 0.8; text-align: right;">PRICE</span>' : ''}
         <span style="flex: 0.5; text-align: right;">QTY</span>
         <span style="flex: 1; text-align: right;">TOTAL</span>
       </div>
@@ -249,7 +250,7 @@ export function printBillReceipt(
       <div class="items-container">
         ${items.map(item => `
           <div class="item-row" style="display: flex; align-items: flex-start; padding: ${spacing}px 0; font-size: ${fontSize - 1}px;">
-            <div style="flex: 2; overflow-wrap: break-word;">
+            <div style="flex: ${settings?.invoice_show_unit_price !== false ? '2' : '2.8'}; overflow-wrap: break-word;">
               <div>${item.product_name}</div>
               ${settings?.invoice_show_item_price === true ? `
                 <div style="font-size: ${fontSize - 3}px; color: #666;">
@@ -257,7 +258,7 @@ export function printBillReceipt(
                 </div>
               ` : ''}
             </div>
-            <span style="flex: 0.8; text-align: right;">${Number(item.unit_price).toFixed(0)}</span>
+            ${settings?.invoice_show_unit_price !== false ? `<span style="flex: 0.8; text-align: right;">${Number(item.unit_price).toFixed(0)}</span>` : ''}
             <span style="flex: 0.5; text-align: right;">${item.quantity}</span>
             <span style="flex: 1; text-align: right;">${Number(item.total_price).toFixed(0)}</span>
           </div>

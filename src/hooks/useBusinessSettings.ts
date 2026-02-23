@@ -37,6 +37,7 @@ export interface BusinessSettings {
   upi_id?: string | null;
   gst_number?: string | null;
   invoice_show_gst?: boolean;
+  invoice_show_unit_price?: boolean;
   created_at: string;
   updated_at: string;
 }
