@@ -42,9 +42,9 @@ export default function DashboardTab() {
 
     const statCards = [
         {
-            title: 'Total Revenue',
+            title: 'Total Revenue (All Businesses)',
             value: stats ? `₹${Number(stats.total_revenue).toLocaleString('en-IN')}` : '—',
-            sub: `₹${Number(stats?.monthly_revenue || 0).toLocaleString('en-IN')} this month`,
+            sub: `₹${Number(stats?.monthly_revenue || 0).toLocaleString('en-IN')} this month · platform-wide`,
             icon: DollarSign,
             gradient: 'from-emerald-500/10 to-emerald-500/5',
             iconColor: 'text-emerald-500',

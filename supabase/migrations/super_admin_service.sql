@@ -62,15 +62,27 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-    INSERT INTO subscriptions (business_id, plan_id, status, trial_end, current_period_end)
-    VALUES (p_business_id, p_plan_id, p_status, p_trial_end, p_period_end)
-    ON CONFLICT (business_id)
-    DO UPDATE SET
-        -- Preserve existing plan_id if no new plan is provided (e.g. when force-expiring)
-        plan_id = COALESCE(EXCLUDED.plan_id, subscriptions.plan_id),
-        status = EXCLUDED.status,
-        trial_end = EXCLUDED.trial_end,
-        current_period_end = EXCLUDED.current_period_end,
-        updated_at = NOW();
+    IF p_plan_id IS NULL THEN
+        -- Force-expire / cancel: only update the existing row, never INSERT
+        -- (avoids NOT NULL violation on plan_id)
+        UPDATE subscriptions
+        SET
+            status = p_status,
+            current_period_end = COALESCE(p_period_end, current_period_end),
+            trial_end = COALESCE(p_trial_end, trial_end),
+            updated_at = NOW()
+        WHERE business_id = p_business_id;
+    ELSE
+        -- Assign / switch / extend plan: full UPSERT
+        INSERT INTO subscriptions (business_id, plan_id, status, trial_end, current_period_end)
+        VALUES (p_business_id, p_plan_id, p_status, p_trial_end, p_period_end)
+        ON CONFLICT (business_id)
+        DO UPDATE SET
+            plan_id            = EXCLUDED.plan_id,
+            status             = EXCLUDED.status,
+            trial_end          = EXCLUDED.trial_end,
+            current_period_end = EXCLUDED.current_period_end,
+            updated_at         = NOW();
+    END IF;
 END;
 $$;

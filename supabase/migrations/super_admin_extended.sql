@@ -18,6 +18,50 @@ CREATE TABLE IF NOT EXISTS public.admin_logs (
 ALTER TABLE public.admin_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "No direct access to admin_logs" ON public.admin_logs FOR ALL USING (false);
 
+-- =============================================================================
+-- RPC: Get ALL businesses with subscription info (bypasses RLS)
+-- =============================================================================
+CREATE OR REPLACE FUNCTION get_all_businesses_admin()
+RETURNS TABLE(
+    id UUID,
+    business_name TEXT,
+    mobile_number TEXT,
+    join_code TEXT,
+    address TEXT,
+    created_at TIMESTAMPTZ,
+    sub_id UUID,
+    sub_status TEXT,
+    sub_trial_end TIMESTAMPTZ,
+    sub_period_end TIMESTAMPTZ,
+    plan_id UUID,
+    plan_name TEXT,
+    plan_price NUMERIC
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT
+        b.id,
+        b.business_name,
+        b.mobile_number,
+        b.join_code,
+        bs.address,
+        b.created_at,
+        s.id           AS sub_id,
+        s.status       AS sub_status,
+        s.trial_end    AS sub_trial_end,
+        s.current_period_end AS sub_period_end,
+        sp.id          AS plan_id,
+        sp.name        AS plan_name,
+        sp.price       AS plan_price
+    FROM businesses b
+    LEFT JOIN business_settings bs ON bs.business_id = b.id
+    LEFT JOIN subscriptions s      ON s.business_id = b.id
+    LEFT JOIN subscription_plans sp ON sp.id = s.plan_id
+    ORDER BY b.created_at DESC;
+$$;
+
 -- 2. Add is_blocked column to profiles (if it doesn't exist)
 DO $$
 BEGIN
