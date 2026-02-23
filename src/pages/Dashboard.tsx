@@ -156,7 +156,7 @@ export default function Dashboard() {
   const { data: recentBills, isLoading: loadingRecent } = useQuery({
     queryKey: ['recentBills'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from('bills')
         .select(`
           id,
@@ -168,10 +168,10 @@ export default function Dashboard() {
           customers (name)
         `)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(10) as any);
 
       if (error) throw error;
-      return data || [];
+      return (data || []) as any[];
     },
   });
 
