@@ -83,33 +83,44 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    v_total_revenue NUMERIC;
     v_total_businesses INT;
     v_total_users INT;
     v_active_subscriptions INT;
     v_trial_subscriptions INT;
     v_expired_subscriptions INT;
-    v_monthly_revenue NUMERIC;
     v_new_businesses_30d INT;
+    v_expiring_soon_7d INT;
+    v_no_subscription_count INT;
 BEGIN
-    SELECT COALESCE(SUM(total_amount), 0) INTO v_total_revenue FROM bills WHERE status = 'completed';
     SELECT COUNT(*) INTO v_total_businesses FROM businesses;
     SELECT COUNT(*) INTO v_total_users FROM profiles;
     SELECT COUNT(*) INTO v_active_subscriptions FROM subscriptions WHERE status = 'active' AND current_period_end > now();
     SELECT COUNT(*) INTO v_trial_subscriptions FROM subscriptions WHERE status = 'trialing' AND trial_end > now();
-    SELECT COUNT(*) INTO v_expired_subscriptions FROM subscriptions WHERE status = 'expired' OR (status = 'active' AND current_period_end < now()) OR (status = 'trialing' AND trial_end < now());
-    SELECT COALESCE(SUM(total_amount), 0) INTO v_monthly_revenue FROM bills WHERE status = 'completed' AND created_at >= date_trunc('month', now());
+    SELECT COUNT(*) INTO v_expired_subscriptions FROM subscriptions
+        WHERE status = 'expired'
+           OR (status = 'active' AND current_period_end < now())
+           OR (status = 'trialing' AND trial_end < now());
     SELECT COUNT(*) INTO v_new_businesses_30d FROM businesses WHERE created_at >= now() - INTERVAL '30 days';
 
+    -- Subscriptions expiring in the next 7 days (trial or active)
+    SELECT COUNT(*) INTO v_expiring_soon_7d FROM subscriptions
+        WHERE (status = 'trialing' AND trial_end BETWEEN now() AND now() + INTERVAL '7 days')
+           OR (status = 'active' AND current_period_end BETWEEN now() AND now() + INTERVAL '7 days');
+
+    -- Businesses with no subscription row at all
+    SELECT COUNT(*) INTO v_no_subscription_count
+        FROM businesses b
+        WHERE NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.business_id = b.id);
+
     RETURN jsonb_build_object(
-        'total_revenue', v_total_revenue,
         'total_businesses', v_total_businesses,
         'total_users', v_total_users,
         'active_subscriptions', v_active_subscriptions,
         'trial_subscriptions', v_trial_subscriptions,
         'expired_subscriptions', v_expired_subscriptions,
-        'monthly_revenue', v_monthly_revenue,
-        'new_businesses_30d', v_new_businesses_30d
+        'new_businesses_30d', v_new_businesses_30d,
+        'expiring_soon_7d', v_expiring_soon_7d,
+        'no_subscription_count', v_no_subscription_count
     );
 END;
 $$;

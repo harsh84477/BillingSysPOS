@@ -7,9 +7,11 @@ import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend
 } from 'recharts';
 import {
-    DollarSign, Building2, Users, CreditCard, TrendingUp, Clock, AlertTriangle, Activity
+    Building2, Users, CreditCard, Clock, AlertTriangle, Activity,
+    TrendingUp, Zap, Bell, ShieldAlert, UserCheck
 } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
+import { formatDistanceToNow, format } from 'date-fns';
 
 export default function DashboardTab() {
     const { data: stats, isLoading } = useQuery({
@@ -40,29 +42,60 @@ export default function DashboardTab() {
         },
     });
 
+    // Fetch recent businesses + their sub statuses for alerts/recent list
+    const { data: allBusinesses = [] } = useQuery({
+        queryKey: ['super-admin-businesses'],
+        retry: 1,
+        queryFn: async () => {
+            try {
+                const { data, error } = await (supabase.rpc as any)('get_all_businesses_admin');
+                if (!error && data) return data as any[];
+            } catch (_) { }
+            const { data, error } = await supabase.from('businesses').select('*, subscriptions(status, trial_end, current_period_end)');
+            if (error) throw error;
+            return data || [];
+        },
+    });
+
+    // Computed: expiring soon (trial_end or period_end within 7 days)
+    const now = new Date();
+    const in7 = new Date(now.getTime() + 7 * 86400000);
+
+    const expiringSoon = allBusinesses.filter((b: any) => {
+        const end = b.sub_trial_end || b.sub_period_end;
+        if (!end) return false;
+        const d = new Date(end);
+        return d > now && d <= in7 && (b.sub_status === 'trialing' || b.sub_status === 'active');
+    });
+
+    const noSub = allBusinesses.filter((b: any) => !b.sub_id);
+
+    const recent = [...allBusinesses]
+        .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 5);
+
+    const needsAttention = allBusinesses.filter((b: any) => {
+        if (!b.sub_id) return true; // no subscription
+        const end = b.sub_trial_end || b.sub_period_end;
+        if (b.sub_status === 'expired') return true;
+        if (end && new Date(end) < now) return true; // past expiry
+        return false;
+    }).slice(0, 6);
+
     const statCards = [
         {
-            title: 'Total Revenue (All Businesses)',
-            value: stats ? `₹${Number(stats.total_revenue).toLocaleString('en-IN')}` : '—',
-            sub: `₹${Number(stats?.monthly_revenue || 0).toLocaleString('en-IN')} this month · platform-wide`,
-            icon: DollarSign,
-            gradient: 'from-emerald-500/10 to-emerald-500/5',
-            iconColor: 'text-emerald-500',
-            border: 'border-emerald-500/20',
-        },
-        {
-            title: 'Businesses',
+            title: 'Total Businesses',
             value: stats?.total_businesses ?? '—',
-            sub: `+${stats?.new_businesses_30d ?? 0} last 30 days`,
+            sub: `+${stats?.new_businesses_30d ?? 0} this month`,
             icon: Building2,
             gradient: 'from-blue-500/10 to-blue-500/5',
             iconColor: 'text-blue-500',
             border: 'border-blue-500/20',
         },
         {
-            title: 'Active Subscriptions',
+            title: 'Active Plans',
             value: stats?.active_subscriptions ?? '—',
-            sub: `${stats?.trial_subscriptions ?? 0} trialing`,
+            sub: `${stats?.trial_subscriptions ?? 0} on free trial`,
             icon: CreditCard,
             gradient: 'from-violet-500/10 to-violet-500/5',
             iconColor: 'text-violet-500',
@@ -78,7 +111,7 @@ export default function DashboardTab() {
             border: 'border-orange-500/20',
         },
         {
-            title: 'Trial Businesses',
+            title: 'Trialing',
             value: stats?.trial_subscriptions ?? '—',
             sub: 'Free trial active',
             icon: Clock,
@@ -87,10 +120,19 @@ export default function DashboardTab() {
             border: 'border-cyan-500/20',
         },
         {
-            title: 'Expired',
-            value: stats?.expired_subscriptions ?? '—',
-            sub: 'Need renewal',
-            icon: AlertTriangle,
+            title: '⚠ Expiring in 7 Days',
+            value: stats?.expiring_soon_7d ?? expiringSoon.length,
+            sub: 'Need attention now',
+            icon: Bell,
+            gradient: 'from-yellow-500/10 to-yellow-500/5',
+            iconColor: 'text-yellow-500',
+            border: stats?.expiring_soon_7d > 0 ? 'border-yellow-500/50' : 'border-yellow-500/20',
+        },
+        {
+            title: 'No Subscription',
+            value: stats?.no_subscription_count ?? noSub.length,
+            sub: 'Not assigned any plan',
+            icon: ShieldAlert,
             gradient: 'from-red-500/10 to-red-500/5',
             iconColor: 'text-red-500',
             border: 'border-red-500/20',
@@ -103,6 +145,17 @@ export default function DashboardTab() {
         { name: 'Expired', value: subOverview.expired, color: '#ef4444' },
         { name: 'No Sub', value: subOverview.no_sub, color: '#94a3b8' },
     ].filter(d => d.value > 0) : [];
+
+    const getSubBadge = (b: any) => {
+        const status = b.sub_status;
+        if (!b.sub_id || !status) return <Badge variant="outline" className="text-[10px]">No Sub</Badge>;
+        const end = b.sub_trial_end || b.sub_period_end;
+        if ((status === 'trialing' || status === 'active') && end && new Date(end) < now)
+            return <Badge className="bg-red-100 text-red-700 text-[10px]">Expired</Badge>;
+        if (status === 'trialing') return <Badge className="bg-blue-100 text-blue-700 text-[10px]">Trial</Badge>;
+        if (status === 'active') return <Badge className="bg-green-100 text-green-700 text-[10px]">Active</Badge>;
+        return <Badge className="bg-red-100 text-red-700 text-[10px]">Expired</Badge>;
+    };
 
     return (
         <div className="space-y-8">
@@ -158,7 +211,7 @@ export default function DashboardTab() {
                     </CardContent>
                 </Card>
 
-                {/* Subscription Breakdown Donut */}
+                {/* Subscription Split Donut */}
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-base flex items-center gap-2">
@@ -196,7 +249,86 @@ export default function DashboardTab() {
                 </Card>
             </div>
 
-            {/* Recent Businesses */}
+            {/* Bottom Row: Recent Businesses + Needs Attention */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Recent Businesses */}
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <UserCheck className="h-4 w-4 text-primary" />
+                            Recent Sign-ups
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {recent.length === 0 ? (
+                            <div className="text-sm text-muted-foreground text-center py-6">No businesses yet.</div>
+                        ) : (
+                            <div className="space-y-3">
+                                {recent.map((b: any) => (
+                                    <div key={b.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border">
+                                        <div>
+                                            <p className="text-sm font-semibold">{b.business_name}</p>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                {b.mobile_number} · Joined {formatDistanceToNow(new Date(b.created_at), { addSuffix: true })}
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-1">
+                                            {getSubBadge(b)}
+                                            {(b.sub_trial_end || b.sub_period_end) && (
+                                                <span className="text-[10px] text-muted-foreground">
+                                                    ends {format(new Date(b.sub_trial_end || b.sub_period_end), 'dd MMM')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Needs Attention */}
+                <Card className="border-red-500/20 bg-red-500/5">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 text-red-500" />
+                            Needs Attention
+                            {needsAttention.length > 0 && (
+                                <Badge className="bg-red-500 text-white text-[10px] ml-auto">{needsAttention.length}</Badge>
+                            )}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        {needsAttention.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-6 text-muted-foreground gap-2">
+                                <Zap className="h-8 w-8 opacity-20" />
+                                <p className="text-sm">All businesses are healthy!</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {needsAttention.map((b: any) => {
+                                    const reason = !b.sub_id ? 'No subscription' :
+                                        b.sub_status === 'expired' ? 'Subscription expired' :
+                                            'Plan ended';
+                                    return (
+                                        <div key={b.id} className="flex items-center justify-between p-2 rounded-lg bg-background border border-red-500/20">
+                                            <div>
+                                                <p className="text-sm font-semibold">{b.business_name}</p>
+                                                <p className="text-[11px] text-red-500">{reason}</p>
+                                            </div>
+                                            <Badge variant="outline" className="text-[10px] border-red-400 text-red-500">
+                                                {b.plan_name || 'Unassigned'}
+                                            </Badge>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Platform Health mini stats */}
             <Card>
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base">Platform Health</CardTitle>
@@ -204,7 +336,7 @@ export default function DashboardTab() {
                 <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                         {[
-                            { label: 'Active', value: subOverview?.active ?? 0, color: 'text-green-500' },
+                            { label: 'Active Plans', value: subOverview?.active ?? 0, color: 'text-green-500' },
                             { label: 'Trialing', value: subOverview?.trialing ?? 0, color: 'text-blue-500' },
                             { label: 'Expired', value: subOverview?.expired ?? 0, color: 'text-red-500' },
                             { label: 'No Subscription', value: subOverview?.no_sub ?? 0, color: 'text-muted-foreground' },
