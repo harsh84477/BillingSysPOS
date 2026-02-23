@@ -243,36 +243,37 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="business" className="space-y-4">
-        <div className="overflow-x-auto -mx-2 px-2 pb-2">
-          <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-5 gap-1">
-            <TabsTrigger value="business" className="gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
-              <Building2 className="h-4 w-4" />
-              <span className="hidden xs:inline sm:inline">Business</span>
+        <TabsList className={cn(
+          "grid w-full gap-1",
+          isAdmin ? "grid-cols-6" : "grid-cols-5"
+        )}>
+          <TabsTrigger value="business" className="gap-1.5 px-2 py-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
+            <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Business</span>
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="gap-1.5 px-2 py-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
+            <FolderOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Categories</span>
+          </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="users" className="gap-1.5 px-2 py-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Users</span>
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
-              <Palette className="h-4 w-4" />
-              <span className="hidden xs:inline sm:inline">Theme</span>
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
-              <Receipt className="h-4 w-4" />
-              <span className="hidden xs:inline sm:inline">Billing</span>
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
-              <FolderOpen className="h-4 w-4" />
-              <span className="hidden xs:inline sm:inline">Categories</span>
-            </TabsTrigger>
-            {isAdmin && (
-              <TabsTrigger value="users" className="gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
-                <Users className="h-4 w-4" />
-                <span className="hidden xs:inline sm:inline">Users</span>
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="invoices" className="gap-1.5 px-3 py-2 text-xs sm:text-sm whitespace-nowrap">
-              <Receipt className="h-4 w-4" />
-              <span className="hidden xs:inline sm:inline">Invoices</span>
-            </TabsTrigger>
-          </TabsList>
-        </div>
+          )}
+          <TabsTrigger value="invoices" className="gap-1.5 px-2 py-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
+            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Invoices</span>
+          </TabsTrigger>
+          <TabsTrigger value="billing" className="gap-1.5 px-2 py-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
+            <Receipt className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Billing</span>
+          </TabsTrigger>
+          <TabsTrigger value="appearance" className="gap-1.5 px-2 py-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
+            <Palette className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Theme</span>
+          </TabsTrigger>
+        </TabsList>
 
         {/* Business Info */}
         <TabsContent value="business">
