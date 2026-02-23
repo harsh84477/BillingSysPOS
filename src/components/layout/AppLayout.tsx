@@ -140,13 +140,20 @@ function Sidebar({ className, collapsed }: { className?: string; collapsed: bool
 }
 
 export default function AppLayout() {
-  const { user, signOut, userRole } = useAuth();
+  const { user, signOut, userRole, isSuperAdmin, superAdminLogout } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleSignOut = async () => {
+    // If it's a custom admin session
+    if (!user && isSuperAdmin) {
+      superAdminLogout();
+      navigate('/super-admin-login');
+      return;
+    }
+
     await signOut();
     navigate('/auth');
   };
@@ -283,8 +290,12 @@ export default function AppLayout() {
                     <User className="h-4 w-4" />
                   </div>
                   <div className="hidden sm:flex flex-col items-start leading-none gap-0.5">
-                    <span className="text-sm font-medium w-[100px] truncate pr-1">Me</span>
-                    <span className="text-[10px] text-muted-foreground capitalize">{userRole || 'user'}</span>
+                    <span className="text-sm font-medium w-[100px] truncate pr-1">
+                      {user ? 'Me' : 'Admin'}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground capitalize">
+                      {user ? (userRole || 'user') : 'Super Admin'}
+                    </span>
                   </div>
                   <ChevronDown className="hidden sm:block h-3.5 w-3.5 text-muted-foreground" />
                 </div>
@@ -293,8 +304,12 @@ export default function AppLayout() {
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">My Account</p>
-                  <p className="text-xs leading-none text-muted-foreground truncate">{user?.email}</p>
+                  <p className="text-sm font-medium leading-none">
+                    {user ? 'My Account' : 'System Admin'}
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground truncate">
+                    {user?.email || 'admin@system'}
+                  </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

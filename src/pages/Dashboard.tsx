@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -61,6 +63,15 @@ function StatCard({
 }
 
 export default function Dashboard() {
+  const { user, isSuperAdmin } = useAuth();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (!user && isSuperAdmin) {
+      navigate('/super-admin');
+    }
+  }, [user, isSuperAdmin, navigate]);
+
   const today = useMemo(() => new Date(), []);
   const startOfToday = useMemo(
     () => new Date(today.getFullYear(), today.getMonth(), today.getDate()),

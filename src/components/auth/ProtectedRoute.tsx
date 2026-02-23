@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, loading, userRole, needsBusinessSetup, businessInfo } = useAuth();
+  const { user, loading, userRole, needsBusinessSetup, businessInfo, isSuperAdmin } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -20,7 +20,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     );
   }
 
-  if (!user) {
+  if (!user && !isSuperAdmin) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 

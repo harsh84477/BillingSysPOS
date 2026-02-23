@@ -17,6 +17,7 @@ import Categories from "./pages/Categories";
 import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
 import SuperAdmin from "./pages/SuperAdmin";
+import SuperAdminLogin from "./pages/SuperAdminLogin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/super-admin-login" element={<SuperAdminLogin />} />
               <Route
                 path="/business-setup"
                 element={

@@ -7,23 +7,38 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, CreditCard, ShieldCheck, Activity, Search, ExternalLink, ShieldAlert } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { Building2, Users, CreditCard, ShieldCheck, Activity, Search, ExternalLink, ShieldAlert, LogOut } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function SuperAdmin() {
-    const { isSuperAdmin } = useAuth();
+    const { isSuperAdmin, superAdminLogout } = useAuth();
     const queryClient = useQueryClient();
+    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Auto-redirect if not authorized
+    React.useEffect(() => {
+        // Check local storage for custom admin session first
+        const isCustomAdmin = localStorage.getItem('pos_custom_admin') === 'true';
+        if (!isSuperAdmin && !isCustomAdmin) {
+            navigate('/super-admin-login');
+        }
+    }, [isSuperAdmin, navigate]);
+
+    const handleLogout = () => {
+        superAdminLogout();
+        navigate('/super-admin-login');
+    };
 
     if (!isSuperAdmin) {
         return (
             <div className="flex flex-col items-center justify-center h-[70vh] space-y-4">
-                <ShieldAlert className="h-16 w-16 text-destructive" />
-                <h1 className="text-2xl font-bold">Access Denied</h1>
-                <p className="text-muted-foreground">This area is reserved for system administrators.</p>
-                <Button onClick={() => window.location.href = '/'}>Go Home</Button>
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-muted-foreground italic">Verifying administrative access...</p>
             </div>
         );
     }
@@ -88,6 +103,10 @@ export default function SuperAdmin() {
                         System-wide business and subscription management
                     </p>
                 </div>
+                <Button variant="outline" size="sm" className="gap-2" onClick={handleLogout}>
+                    <LogOut className="h-4 w-4" />
+                    Logout Admin
+                </Button>
             </div>
 
             <Tabs defaultValue="businesses" className="space-y-4">

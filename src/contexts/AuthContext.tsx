@@ -40,6 +40,8 @@ interface AuthContextType {
   joinBusiness: (joinCode: string, role: AppRole) => Promise<{ error: string | null }>;
   refreshBusinessInfo: () => Promise<void>;
   refreshSubscription: () => Promise<void>;
+  superAdminLogin: (username: string, password: string) => Promise<{ error: string | null }>;
+  superAdminLogout: () => void;
   isAdmin: boolean;
   isManager: boolean;
   isCashier: boolean;
@@ -59,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isCustomAdmin, setIsCustomAdmin] = useState(false);
   const [needsBusinessSetup, setNeedsBusinessSetup] = useState(false);
 
   const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
@@ -263,11 +266,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } else {
       setUserRole(null);
       setIsSuperAdmin(false);
+      setIsCustomAdmin(false);
       setBusinessId(null);
       setBusinessInfo(null);
       setSubscription(null);
       setNeedsBusinessSetup(false);
     }
+
+    // Check for custom admin session if not already a super admin
+    const customAdmin = localStorage.getItem('pos_custom_admin');
+    if (customAdmin === 'true') {
+      setIsCustomAdmin(true);
+    }
+
     setLoading(false);
   }, []);
 
@@ -341,16 +352,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     localStorage.removeItem('pos_pending_role');
     localStorage.removeItem('pos_pending_join_code');
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setUserRole(null);
-    setBillPrefix(null);
-    setBusinessId(null);
-    setBusinessInfo(null);
     setSubscription(null);
     setIsSuperAdmin(false);
+    setIsCustomAdmin(false);
     setNeedsBusinessSetup(false);
+    localStorage.removeItem('pos_custom_admin');
+  };
+
+  const superAdminLogout = () => {
+    setIsCustomAdmin(false);
+    localStorage.removeItem('pos_custom_admin');
+  };
+
+  const superAdminLogin = async (username: string, password: string): Promise<{ error: string | null }> => {
+    try {
+      const { data, error } = await (supabase.rpc as any)('verify_super_admin_login', {
+        p_username: username,
+        p_password_plain: password,
+      });
+
+      if (error) return { error: error.message };
+
+      const result = data as any;
+      if (result.success) {
+        setIsCustomAdmin(true);
+        localStorage.setItem('pos_custom_admin', 'true');
+        return { error: null };
+      } else {
+        return { error: result.error || 'Invalid credentials' };
+      }
+    } catch (err: any) {
+      return { error: err.message || 'Login failed' };
+    }
   };
 
   const joinBusiness = async (joinCode: string, role: AppRole): Promise<{ error: string | null }> => {
@@ -384,12 +417,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     businessId,
     businessInfo,
     subscription,
-    isSuperAdmin,
+    isSuperAdmin: isSuperAdmin || isCustomAdmin,
     needsBusinessSetup,
     signUp,
     signIn,
     signInWithGoogle,
     signOut,
+    superAdminLogin,
+    superAdminLogout,
     joinBusiness,
     refreshBusinessInfo,
     refreshSubscription,
