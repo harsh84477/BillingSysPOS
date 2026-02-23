@@ -112,10 +112,10 @@ export function printBillReceipt(
         
         .bill-info { 
           margin: 15px 0; 
-          padding: 10px 0; 
+          padding: 10px; 
+          border-top: ${showBorders ? '1px dashed #000' : 'none'};
           border-bottom: ${showBorders ? '1px dashed #000' : 'none'};
-          background: ${style === 'detailed' ? '#f9fafb' : 'transparent'};
-          padding: ${style === 'detailed' ? '10px' : '10px 0'};
+          background: #f9fafb;
         }
         .bill-info-row { display: flex; justify-content: space-between; margin: ${spacing}px 0; }
         

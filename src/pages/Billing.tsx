@@ -80,12 +80,11 @@ import {
   Watch,
   Wine,
   Wrench,
-  Users,
-  User,
   type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { printBillReceipt } from '@/components/bills/BillReceiptPrint';
 
 // Safe icon map — avoids the broken `icons` bulk export from lucide-react
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -453,243 +452,32 @@ export default function Billing() {
 
   // Get current preview bill number
   const [previewBillNumber, setPreviewBillNumber] = useState('');
-
   React.useEffect(() => {
     generateBillNumber().then(setPreviewBillNumber);
   }, []);
 
-  // Print bill function using a hidden iframe for better mobile compatibility
+  // Print bill function using unified central component
   const printBill = (billNumber: string) => {
-    const paperWidth = settings?.invoice_paper_width || '80mm';
-    const headerAlign = settings?.invoice_header_align || 'center';
-    const fontSize = settings?.invoice_font_size || 12;
-    const footerFontSize = settings?.invoice_footer_font_size || 10;
-    const spacing = settings?.invoice_spacing || 4;
+    const billData = {
+      bill_number: billNumber,
+      subtotal: cartCalculations.subtotal,
+      discount_amount: cartCalculations.discountAmount,
+      tax_amount: cartCalculations.taxAmount,
+      total_amount: cartCalculations.total,
+      created_at: new Date().toISOString(),
+      customers: selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : { name: customerName || 'Walk-in' }
+    };
 
-    const widthStyle = paperWidth === '58mm' ? '240px' : paperWidth === 'A4' ? '100%' : '380px';
-    const maxWidthStyle = paperWidth === 'A4' ? '800px' : widthStyle;
-    const qrSize = paperWidth === '58mm' ? 100 : 120;
+    const itemsData = cart.map(item => ({
+      id: item.productId,
+      product_name: item.name,
+      quantity: item.quantity,
+      unit_price: item.unitPrice,
+      total_price: item.unitPrice * item.quantity,
+      cost_price: item.costPrice || 0
+    }));
 
-    const printContent = `
-      <html>
-        <head>
-          <title>Bill #${billNumber}</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { 
-              font-family: ${settings?.invoice_style === 'modern' ? "'Inter', sans-serif" : "'Courier New', monospace"}; 
-              width: ${widthStyle}; 
-              max-width: ${maxWidthStyle};
-              margin: ${paperWidth === 'A4' ? '0 auto' : '0'};
-              padding: ${paperWidth === 'A4' ? '40px' : '15px'};
-              font-size: ${fontSize}px;
-              line-height: 1.4;
-              color: #1a1a1a;
-            }
-            .header { 
-              text-align: ${headerAlign}; 
-              margin-bottom: 20px; 
-              border-bottom: ${settings?.invoice_show_borders !== false ? '1px dashed #000' : 'none'}; 
-              padding-bottom: 15px; 
-            }
-            .business-name { 
-              font-size: ${fontSize + 6}px; 
-              font-weight: bold; 
-              margin-bottom: 5px; 
-              color: ${settings?.invoice_style === 'modern' ? '#3b82f6' : '#000'};
-            }
-            .business-info { font-size: ${fontSize - 2}px; color: #4b5563; }
-            .bill-info { 
-              margin: 15px 0; 
-              padding: 10px 0; 
-              border-bottom: ${settings?.invoice_show_borders !== false ? '1px dashed #000' : 'none'};
-              background: ${settings?.invoice_style === 'detailed' ? '#f9fafb' : 'transparent'};
-              padding: ${settings?.invoice_style === 'detailed' ? '10px' : '10px 0'};
-            }
-            .bill-info p { margin: 3px 0; font-size: ${fontSize - 1}px; }
-            .items { margin: 15px 0; }
-            .item-header { display: flex; font-weight: bold; border-bottom: 2px solid #000; padding: 8px 0; margin-bottom: 8px; text-transform: uppercase; font-size: ${fontSize - 1}px; }
-            .item-row { 
-              display: flex; 
-              padding: ${spacing}px 0; 
-              font-size: ${fontSize - 1}px; 
-              border-bottom: ${settings?.invoice_style === 'detailed' ? '1px solid #e5e7eb' : 'none'};
-            }
-            .item-row:nth-of-type(even) { background-color: ${settings?.invoice_style === 'modern' ? '#f9fafb' : 'transparent'}; }
-            .totals { border-top: 1px solid #000; padding-top: 10px; margin-top: 20px; }
-            .total-row { display: flex; justify-content: space-between; font-size: ${fontSize}px; margin: 5px 0; }
-            .grand-total { 
-              font-size: ${fontSize + 4}px; 
-              font-weight: bold; 
-              border-top: 2px solid #000; 
-              margin-top: 10px; 
-              padding: ${settings?.invoice_style === 'modern' ? '12px' : '15px 0'};
-              background: ${settings?.invoice_style === 'modern' ? '#f3f4f6' : 'transparent'};
-            }
-            .footer { 
-              text-align: center; 
-              margin-top: 30px; 
-              padding-top: 15px; 
-              border-top: ${settings?.invoice_show_borders !== false ? '1px dashed #ccc' : 'none'}; 
-            }
-            .footer-msg { font-size: ${footerFontSize}px; font-weight: 500; margin-bottom: 5px; }
-            .terms { font-size: ${fontSize - 3}px; color: #4b5563; margin-top: 15px; text-align: left; font-style: italic; }
-            .qr-placeholder { margin: 15px auto; width: 80px; height: 80px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #999; }
-          </style>
-          <script>
-            window.onload = function() {
-              var images = document.getElementsByTagName('img');
-              var loaded = 0;
-              var total = images.length;
-              
-              if (total === 0) {
-                setTimeout(function() { window.print(); }, 800);
-                return;
-              }
-
-              function checkAllLoaded() {
-                loaded++;
-                if (loaded >= total) {
-                  setTimeout(function() { window.print(); }, 1000);
-                }
-              }
-
-              for (var i = 0; i < total; i++) {
-                if (images[i].complete) {
-                  checkAllLoaded();
-                } else {
-                  images[i].addEventListener('load', checkAllLoaded);
-                  images[i].addEventListener('error', checkAllLoaded);
-                }
-              }
-
-              setTimeout(function() {
-                if (loaded < total) window.print();
-              }, 3000);
-            };
-          </script>
-        </head>
-        <body>
-          <div class="header">
-            <div class="business-name">${settings?.business_name || 'Business'}</div>
-            ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info">${settings.address}</div>` : ''}
-            ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<div class="business-info">Ph: ${settings.phone}</div>` : ''}
-            ${settings?.invoice_show_business_email !== false && settings?.email ? `<div class="business-info">${settings.email}</div>` : ''}
-            ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info">GST: ${settings.gst_number}</div>` : ''}
-          </div>
-          <div class="bill-info">
-            <p><strong>Bill #:</strong> ${billNumber}</p>
-            <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-IN')} ${new Date().toLocaleTimeString('en-IN')}</p>
-            ${customerName || selectedCustomer?.name ? `<p><strong>Customer:</strong> ${customerName || selectedCustomer?.name}</p>` : ''}
-          </div>
-          <div class="items">
-            <div class="item-header">
-              <span style="flex: ${settings?.invoice_show_unit_price !== false ? '2' : '2.8'};">ITEM</span>
-              ${settings?.invoice_show_unit_price !== false ? '<span style="flex: 0.8; text-align: right;">PRICE</span>' : ''}
-              <span style="flex: 0.5; text-align: right;">QTY</span>
-              <span style="flex: 1; text-align: right;">TOTAL</span>
-            </div>
-            ${cart.map(item => `
-              <div class="item-row">
-                <div style="flex: ${settings?.invoice_show_unit_price !== false ? '2' : '2.8'}; overflow-wrap: break-word;">
-                  <div>${item.name}</div>
-                  ${settings?.invoice_show_item_price === true ? `
-                    <div style="font-size: ${fontSize - 3}px; color: #666;">
-                      ${item.unitPrice.toFixed(0)} x ${item.quantity}
-                    </div>
-                  ` : ''}
-                </div>
-                ${settings?.invoice_show_unit_price !== false ? `<span style="flex: 0.8; text-align: right;">${item.unitPrice.toFixed(0)}</span>` : ''}
-                <span style="flex: 0.5; text-align: right;">${item.quantity}</span>
-                <span style="flex: 1; text-align: right;">${(item.unitPrice * item.quantity).toFixed(0)}</span>
-              </div>
-            `).join('')}
-          </div>
-          <div class="totals">
-            <div class="total-row">
-              <span>Subtotal:</span>
-              <span>${currencySymbol}${cartCalculations.subtotal.toFixed(2)}</span>
-            </div>
-            ${taxRate > 0 && applyGst ? `
-              <div class="total-row">
-                <span>GST (${taxRate}%):</span>
-                <span>${currencySymbol}${cartCalculations.taxAmount.toFixed(2)}</span>
-              </div>
-            ` : ''}
-            ${discountValue > 0 ? `
-              <div class="total-row">
-                <span>Discount:</span>
-                <span>-${currencySymbol}${cartCalculations.discountAmount.toFixed(2)}</span>
-              </div>
-            ` : ''}
-            <div class="total-row grand-total">
-              <span>Total:</span>
-              <span>${currencySymbol}${cartCalculations.total.toFixed(2)}</span>
-            </div>
-          </div>
-          <div class="footer">
-            <div class="footer-msg">${settings?.invoice_footer_message || 'Thank you for your purchase!'}</div>
-            
-            ${settings?.invoice_terms_conditions ? `
-              <div class="terms">
-                <strong>T&C:</strong> ${settings.invoice_terms_conditions}
-              </div>
-            ` : ''}
-
-            ${settings?.invoice_show_qr_code && settings?.upi_id ? `
-              <div class="qr-container" style="margin: 15px auto; text-align: center; min-height: ${qrSize}px;">
-                <img 
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`upi://pay?pa=${settings.upi_id}&pn=${settings.business_name || 'Business'}&am=${cartCalculations.total.toFixed(2)}&cu=INR`)}" 
-                  alt="Payment QR"
-                  style="width: ${qrSize}px; height: ${qrSize}px; border: 1px solid #eee; padding: 5px; display: block; margin: 0 auto;"
-                />
-                <p style="font-size: 8px; color: #666; margin-top: 4px;">Scan to Pay: ${currencySymbol}${cartCalculations.total.toFixed(2)}</p>
-              </div>
-            ` : settings?.invoice_show_qr_code ? `
-              <div class="qr-placeholder" style="margin: 15px auto; width: 80px; height: 80px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #999; text-align: center;">
-                UPI ID NOT SET
-              </div>
-            ` : ''}
-
-            <p style="font-size: ${fontSize - 3}px; color: #666; margin-top: 10px;">
-              Printed on ${new Date().toLocaleString('en-IN')}
-            </p>
-          </div>
-        </body>
-      </html>
-    `;
-
-    // Create a hidden iframe
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document || iframe.contentDocument;
-    if (doc) {
-      doc.open();
-      doc.write(printContent);
-      doc.close();
-
-      // Wait for content to be ready
-      setTimeout(() => {
-        try {
-          iframe.contentWindow?.focus();
-          // print() is handled by internal script
-          // Remove the iframe after a delay
-          setTimeout(() => {
-            document.body.removeChild(iframe);
-          }, 3000);
-        } catch (e) {
-          console.error('Print error:', e);
-          document.body.removeChild(iframe);
-        }
-      }, 500);
-    }
+    printBillReceipt(billData, itemsData, settings);
   };
 
   // Create bill mutation with retry logic for duplicate key handling
