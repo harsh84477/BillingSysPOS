@@ -35,7 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, FileText, Calendar, Eye, Trash2, Download, Filter, X, TrendingUp, Receipt, Clock, Printer } from 'lucide-react';
+import { Search, FileText, Calendar, Eye, Trash2, Download, Filter, X, TrendingUp, Receipt, Clock, Printer, ChevronRight } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { exportToExcel } from '@/lib/exportToExcel';

@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessSettings } from '@/hooks/useBusinessSettings';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -1062,7 +1064,38 @@ export default function Billing() {
               onChange={(e) => setCustomerName(e.target.value)}
             />
 
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 -mx-4 px-4 pb-4">
+              {/* SaaS Alerts */}
+              {isTrial && (
+                <div className="mb-4">
+                  <Alert className="bg-primary/5 border-primary/20 animate-pulse">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <AlertTitle className="text-sm font-semibold">Free Trial Active ({planName})</AlertTitle>
+                    <AlertDescription className="text-xs flex items-center justify-between">
+                      <span>Enjoy full features during your 7-day trial.</span>
+                      <Button size="sm" variant="link" className="h-auto p-0 text-primary font-bold" onClick={() => navigate('/settings')}>
+                        Upgrade
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+
+              {isExpired && (
+                <div className="mb-4">
+                  <Alert variant="destructive" className="animate-bounce">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle className="text-sm font-semibold">Subscription Expired</AlertTitle>
+                    <AlertDescription className="text-xs flex items-center justify-between">
+                      <span>Renew now to continue creating bills.</span>
+                      <Button size="sm" variant="link" className="h-auto p-0 text-white font-bold" onClick={() => navigate('/settings')}>
+                        Renew
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+
               {cart.length === 0 ? (
                 <div className="flex h-40 items-center justify-center text-muted-foreground">
                   Cart is empty
