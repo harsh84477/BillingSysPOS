@@ -47,6 +47,7 @@ interface BusinessSettings {
   invoice_show_qr_code?: boolean;
   upi_id?: string | null;
   gst_number?: string | null;
+  invoice_show_gst?: boolean;
 }
 
 interface BillReceiptPrintProps {
@@ -220,7 +221,7 @@ export function printBillReceipt(
         ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info">${settings.address}</div>` : ''}
         ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<div class="business-info">Tel: ${settings.phone}</div>` : ''}
         ${settings?.invoice_show_business_email !== false && settings?.email ? `<div class="business-info">${settings.email}</div>` : ''}
-        ${settings?.gst_number ? `<div class="business-info">GST: ${settings.gst_number}</div>` : ''}
+        ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info">GST: ${settings.gst_number}</div>` : ''}
       </div>
 
       <div class="bill-info">

@@ -9,7 +9,8 @@ ADD COLUMN IF NOT EXISTS invoice_terms_conditions TEXT,
 ADD COLUMN IF NOT EXISTS invoice_paper_width TEXT DEFAULT '80mm',
 ADD COLUMN IF NOT EXISTS invoice_show_qr_code BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS upi_id TEXT,
-ADD COLUMN IF NOT EXISTS gst_number TEXT;
+ADD COLUMN IF NOT EXISTS gst_number TEXT,
+ADD COLUMN IF NOT EXISTS invoice_show_gst BOOLEAN DEFAULT true;
 
 -- Refresh schema cache
 NOTIFY pgrst, 'reload schema';

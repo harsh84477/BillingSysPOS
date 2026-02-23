@@ -784,6 +784,15 @@ export default function Settings() {
                       className="scale-75"
                     />
                   </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">GST Number</Label>
+                    <Switch
+                      checked={settings?.invoice_show_gst !== false}
+                      onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_show_gst: checked })}
+                      disabled={!isAdmin}
+                      className="scale-75"
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -859,7 +868,7 @@ export default function Settings() {
                       <p className="text-[10px] text-muted-foreground">Show price x quantity line</p>
                     </div>
                     <Switch
-                      checked={settings?.invoice_show_item_price !== false}
+                      checked={settings?.invoice_show_item_price === true}
                       onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_show_item_price: checked })}
                       disabled={!isAdmin}
                     />
