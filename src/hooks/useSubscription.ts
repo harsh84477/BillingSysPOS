@@ -24,9 +24,13 @@ export function useSubscription() {
     const isTrial = status === 'trialing';
     const isExpired = status === 'expired';
 
-    // Active if status is 'active' OR status is 'trialing' and trial_end is in the future
-    const isActive = status === 'active' ||
-        (status === 'trialing' && subscription?.trial_end && isAfter(new Date(subscription.trial_end), new Date()));
+    // Active if:
+    // - status is 'active' (paid plan)
+    // - status is 'trialing' AND (no trial_end set yet, OR trial_end is still in the future)
+    // - No subscription at all → treat as active trial (brand new business)
+    const isActive = !subscription ||
+        status === 'active' ||
+        (status === 'trialing' && (!subscription?.trial_end || isAfter(new Date(subscription.trial_end), new Date())));
 
     // Features based on plan
     const planFeatures = (subscription?.plan?.features as any) || {};
