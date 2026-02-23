@@ -4,7 +4,7 @@ import { isAfter } from 'date-fns';
 export function useSubscription() {
     const { subscription, isSuperAdmin } = useAuth();
 
-    // Super admins have bypass on everything
+    // Super admins bypass everything
     if (isSuperAdmin) {
         return {
             subscription,
@@ -25,23 +25,24 @@ export function useSubscription() {
     const isExpired = status === 'expired';
 
     // Active if:
+    // - No subscription row at all → brand new business, treat as active trial
     // - status is 'active' (paid plan)
     // - status is 'trialing' AND (no trial_end set yet, OR trial_end is still in the future)
-    // - No subscription at all → treat as active trial (brand new business)
-    const isActive = !subscription ||
+    const isActive =
+        !subscription ||
         status === 'active' ||
-        (status === 'trialing' && (!subscription?.trial_end || isAfter(new Date(subscription.trial_end), new Date())));
+        (isTrial && (!subscription?.trial_end || isAfter(new Date(subscription.trial_end), new Date())));
 
-    // Features based on plan
+    // During trial → unlock EVERYTHING (bills, export, full history)
+    // Expired → lock everything
+    // Paid active plan → use plan-specific feature flags
     const planFeatures = (subscription?.plan?.features as any) || {};
-    const canExport = !!planFeatures.can_export;
-    const historyLimitDays = planFeatures.history_days || 7; // Default 7 days for trial/expired
+    const canExport = isTrial || !!planFeatures.can_export;
+    const canViewFullHistory = isTrial || status === 'active';
+    const historyLimitDays = (isTrial || status === 'active') ? -1 : (planFeatures.history_days || 7);
 
-    // Businesses can create bills ONLY if active or trialing (not expired)
+    // Can create bills as long as not expired AND isActive
     const canCreateBill = !isExpired && isActive;
-
-    // Only paid 'active' plans get full history (trial/expired are limited)
-    const canViewFullHistory = status === 'active' && !isExpired;
 
     return {
         subscription,
