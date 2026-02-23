@@ -477,28 +477,62 @@ export default function Billing() {
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { 
-              font-family: ${settings?.invoice_style === 'modern' ? "'Inter', sans-serif" : "Courier, monospace"}; 
+              font-family: ${settings?.invoice_style === 'modern' ? "'Inter', sans-serif" : "'Courier New', monospace"}; 
               width: ${widthStyle}; 
               max-width: ${maxWidthStyle};
               margin: ${paperWidth === 'A4' ? '0 auto' : '0'};
               padding: ${paperWidth === 'A4' ? '40px' : '15px'};
               font-size: ${fontSize}px;
               line-height: 1.4;
+              color: #1a1a1a;
             }
-            .header { text-align: ${headerAlign}; margin-bottom: 20px; }
-            .header h1 { margin: 0; font-size: ${fontSize + 6}px; }
-            .header p { margin: 2px 0; font-size: ${fontSize - 2}px; color: #666; }
-            .bill-info { border-top: 1px dashed #000; border-bottom: 1px dashed #000; padding: 10px 0; margin: 10px 0; }
+            .header { 
+              text-align: ${headerAlign}; 
+              margin-bottom: 20px; 
+              border-bottom: ${settings?.invoice_show_borders !== false ? '1px dashed #000' : 'none'}; 
+              padding-bottom: 15px; 
+            }
+            .business-name { 
+              font-size: ${fontSize + 6}px; 
+              font-weight: bold; 
+              margin-bottom: 5px; 
+              color: ${settings?.invoice_style === 'modern' ? '#3b82f6' : '#000'};
+            }
+            .business-info { font-size: ${fontSize - 2}px; color: #4b5563; }
+            .bill-info { 
+              margin: 15px 0; 
+              padding: 10px 0; 
+              border-bottom: ${settings?.invoice_show_borders !== false ? '1px dashed #000' : 'none'};
+              background: ${settings?.invoice_style === 'detailed' ? '#f9fafb' : 'transparent'};
+              padding: ${settings?.invoice_style === 'detailed' ? '10px' : '10px 0'};
+            }
             .bill-info p { margin: 3px 0; font-size: ${fontSize - 1}px; }
             .items { margin: 15px 0; }
             .item-header { display: flex; font-weight: bold; border-bottom: 2px solid #000; padding: 8px 0; margin-bottom: 8px; text-transform: uppercase; font-size: ${fontSize - 1}px; }
-            .item-row { display: flex; padding: ${spacing}px 0; font-size: ${fontSize - 1}px; }
+            .item-row { 
+              display: flex; 
+              padding: ${spacing}px 0; 
+              font-size: ${fontSize - 1}px; 
+              border-bottom: ${settings?.invoice_style === 'detailed' ? '1px solid #e5e7eb' : 'none'};
+            }
             .item-row:nth-of-type(even) { background-color: ${settings?.invoice_style === 'modern' ? '#f9fafb' : 'transparent'}; }
             .totals { border-top: 1px solid #000; padding-top: 10px; margin-top: 20px; }
             .total-row { display: flex; justify-content: space-between; font-size: ${fontSize}px; margin: 5px 0; }
-            .grand-total { font-size: ${fontSize + 4}px; font-weight: bold; border-top: 2px solid #000; padding: 10px 0; margin-top: 10px; }
-            .footer { text-align: center; margin-top: 40px; border-top: 1px solid #ccc; padding-top: 20px; }
-            .footer-msg { font-size: ${footerFontSize}px; font-weight: bold; margin-bottom: 5px; }
+            .grand-total { 
+              font-size: ${fontSize + 4}px; 
+              font-weight: bold; 
+              border-top: 2px solid #000; 
+              margin-top: 10px; 
+              padding: ${settings?.invoice_style === 'modern' ? '12px' : '15px 0'};
+              background: ${settings?.invoice_style === 'modern' ? '#f3f4f6' : 'transparent'};
+            }
+            .footer { 
+              text-align: center; 
+              margin-top: 30px; 
+              padding-top: 15px; 
+              border-top: ${settings?.invoice_show_borders !== false ? '1px dashed #ccc' : 'none'}; 
+            }
+            .footer-msg { font-size: ${footerFontSize}px; font-weight: 500; margin-bottom: 5px; }
             .terms { font-size: ${fontSize - 3}px; color: #4b5563; margin-top: 15px; text-align: left; font-style: italic; }
             .qr-placeholder { margin: 15px auto; width: 80px; height: 80px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #999; }
           </style>
@@ -537,11 +571,11 @@ export default function Billing() {
         </head>
         <body>
           <div class="header">
-            <h1>${settings?.business_name || 'Business'}</h1>
-            ${settings?.invoice_show_business_address !== false && settings?.address ? `<p>${settings.address}</p>` : ''}
-            ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<p>Ph: ${settings.phone}</p>` : ''}
-            ${settings?.invoice_show_business_email !== false && settings?.email ? `<p>${settings.email}</p>` : ''}
-            ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<p>GST: ${settings.gst_number}</p>` : ''}
+            <div class="business-name">${settings?.business_name || 'Business'}</div>
+            ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info">${settings.address}</div>` : ''}
+            ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<div class="business-info">Ph: ${settings.phone}</div>` : ''}
+            ${settings?.invoice_show_business_email !== false && settings?.email ? `<div class="business-info">${settings.email}</div>` : ''}
+            ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info">GST: ${settings.gst_number}</div>` : ''}
           </div>
           <div class="bill-info">
             <p><strong>Bill #:</strong> ${billNumber}</p>
