@@ -65,11 +65,6 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-const superAdminNavigation = [
-  ...navigation,
-  { name: 'Super Admin', href: '/super-admin', icon: ShieldCheck },
-];
-
 const themeOptions: { name: string; value: ThemeName }[] = [
   { name: 'Mint Pro', value: 'mint-pro' },
   { name: 'Sunset Orange', value: 'sunset-orange' },
@@ -120,13 +115,11 @@ function NavItem({ item, isActive, collapsed }: { item: typeof navigation[0]; is
 
 function Sidebar({ className, collapsed }: { className?: string; collapsed: boolean }) {
   const location = useLocation();
-  const { isSuperAdmin } = useAuth();
-  const activeNavigation = isSuperAdmin ? superAdminNavigation : navigation;
 
   return (
     <div className={cn('flex flex-col gap-4', className)}>
       <nav className={cn('flex flex-col gap-1', collapsed ? 'px-1' : 'px-2')}>
-        {activeNavigation.map((item) => (
+        {navigation.map((item) => (
           <NavItem
             key={item.name}
             item={item}

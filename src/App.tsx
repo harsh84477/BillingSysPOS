@@ -18,6 +18,7 @@ import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
 import SuperAdmin from "./pages/SuperAdmin";
 import SuperAdminLogin from "./pages/SuperAdminLogin";
+import SuperAdminLayout from "./components/layout/SuperAdminLayout";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,15 @@ const App = () => (
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/settings" element={<Settings />} />
+              </Route>
+
+              <Route
+                element={
+                  <ProtectedRoute>
+                    <SuperAdminLayout />
+                  </ProtectedRoute>
+                }
+              >
                 <Route path="/super-admin" element={<SuperAdmin />} />
               </Route>
               <Route path="*" element={<NotFound />} />
