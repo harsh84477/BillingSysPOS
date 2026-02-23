@@ -153,7 +153,7 @@ export default function SubscriptionTab() {
                                                         disabled={manageSubMutation.isPending}
                                                         onClick={() => manageSubMutation.mutate({
                                                             bizId: s.business_id,
-                                                            planId: s.plan_id || s.subscription_id,
+                                                            planId: s.plan_id,
                                                             status: 'active',
                                                             periodEnd: addMonths(new Date(s.current_period_end || new Date()), 1).toISOString(),
                                                         })}
@@ -168,7 +168,7 @@ export default function SubscriptionTab() {
                                                         disabled={manageSubMutation.isPending}
                                                         onClick={() => manageSubMutation.mutate({
                                                             bizId: s.business_id,
-                                                            planId: s.plan_id || s.subscription_id,
+                                                            planId: s.plan_id,
                                                             status: 'active',
                                                             periodEnd: addYears(new Date(s.current_period_end || new Date()), 1).toISOString(),
                                                         })}
@@ -183,7 +183,7 @@ export default function SubscriptionTab() {
                                                         disabled={manageSubMutation.isPending}
                                                         onClick={() => manageSubMutation.mutate({
                                                             bizId: s.business_id,
-                                                            planId: s.plan_id || s.subscription_id,
+                                                            planId: s.plan_id,
                                                             status: 'expired',
                                                             periodEnd: new Date().toISOString(),
                                                         })}

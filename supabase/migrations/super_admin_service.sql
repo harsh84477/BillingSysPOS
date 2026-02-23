@@ -51,8 +51,8 @@ $$;
 -- 4. Function to manage subscriptions manually
 CREATE OR REPLACE FUNCTION manage_business_subscription(
     p_business_id UUID,
-    p_plan_id UUID,
-    p_status TEXT,
+    p_plan_id UUID DEFAULT NULL,
+    p_status TEXT DEFAULT 'active',
     p_trial_end TIMESTAMPTZ DEFAULT NULL,
     p_period_end TIMESTAMPTZ DEFAULT NULL
 )
@@ -64,9 +64,10 @@ AS $$
 BEGIN
     INSERT INTO subscriptions (business_id, plan_id, status, trial_end, current_period_end)
     VALUES (p_business_id, p_plan_id, p_status, p_trial_end, p_period_end)
-    ON CONFLICT (business_id) 
-    DO UPDATE SET 
-        plan_id = EXCLUDED.plan_id,
+    ON CONFLICT (business_id)
+    DO UPDATE SET
+        -- Preserve existing plan_id if no new plan is provided (e.g. when force-expiring)
+        plan_id = COALESCE(EXCLUDED.plan_id, subscriptions.plan_id),
         status = EXCLUDED.status,
         trial_end = EXCLUDED.trial_end,
         current_period_end = EXCLUDED.current_period_end,

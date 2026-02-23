@@ -224,7 +224,7 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                                         className="w-full"
                                         disabled={manageSubMutation.isPending}
                                         onClick={() => manageSubMutation.mutate({
-                                            planId: sub.plan?.id,
+                                            planId: undefined,
                                             status: 'expired',
                                             periodEnd: new Date().toISOString(),
                                         })}
