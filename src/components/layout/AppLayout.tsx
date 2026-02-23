@@ -39,6 +39,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Phone,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -62,6 +63,11 @@ const navigation = [
   { name: 'Categories', href: '/categories', icon: FolderOpen },
   { name: 'Customers', href: '/customers', icon: Users },
   { name: 'Settings', href: '/settings', icon: Settings },
+];
+
+const superAdminNavigation = [
+  ...navigation,
+  { name: 'Super Admin', href: '/super-admin', icon: ShieldCheck },
 ];
 
 const themeOptions: { name: string; value: ThemeName }[] = [
@@ -114,11 +120,13 @@ function NavItem({ item, isActive, collapsed }: { item: typeof navigation[0]; is
 
 function Sidebar({ className, collapsed }: { className?: string; collapsed: boolean }) {
   const location = useLocation();
+  const { isSuperAdmin } = useAuth();
+  const activeNavigation = isSuperAdmin ? superAdminNavigation : navigation;
 
   return (
     <div className={cn('flex flex-col gap-4', className)}>
       <nav className={cn('flex flex-col gap-1', collapsed ? 'px-1' : 'px-2')}>
-        {navigation.map((item) => (
+        {activeNavigation.map((item) => (
           <NavItem
             key={item.name}
             item={item}
@@ -156,10 +164,10 @@ export default function AppLayout() {
         <div className={cn("flex items-center h-14 border-b border-border transition-all", sidebarCollapsed ? "justify-center px-0" : "justify-between px-4")}>
           {!sidebarCollapsed && (
             <div className="flex items-center gap-2 overflow-hidden">
-               <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold">
-                 SP
-               </div>
-               <span className="font-bold text-lg tracking-tight whitespace-nowrap truncate">Smart POS</span>
+              <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold">
+                SP
+              </div>
+              <span className="font-bold text-lg tracking-tight whitespace-nowrap truncate">Smart POS</span>
             </div>
           )}
           <Button
@@ -181,66 +189,66 @@ export default function AppLayout() {
           <Sidebar collapsed={sidebarCollapsed} />
         </div>
 
-          <div className="border-t border-border p-2">
-            {sidebarCollapsed ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="w-full">
-                        <Palette className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" side="right" className="w-48">
-                      {themeOptions.map((option) => (
-                        <DropdownMenuItem
-                          key={option.value}
-                          onClick={() => setTheme(option.value)}
-                          className={cn(theme === option.value && 'bg-accent')}
-                        >
-                          <span
-                            className="mr-2 h-3 w-3 rounded-full"
-                            style={{
-                              backgroundColor: `hsl(${themes[option.value].primary})`,
-                            }}
-                          />
-                          {option.name}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TooltipTrigger>
-                <TooltipContent side="right">Theme</TooltipContent>
-              </Tooltip>
-            ) : (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-start gap-2">
-                    <Palette className="h-4 w-4" />
-                    Theme
-                    <ChevronDown className="ml-auto h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  {themeOptions.map((option) => (
-                    <DropdownMenuItem
-                      key={option.value}
-                      onClick={() => setTheme(option.value)}
-                      className={cn(theme === option.value && 'bg-accent')}
-                    >
-                      <span
-                        className="mr-2 h-3 w-3 rounded-full"
-                        style={{
-                          backgroundColor: `hsl(${themes[option.value].primary})`,
-                        }}
-                      />
-                      {option.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
+        <div className="border-t border-border p-2">
+          {sidebarCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="w-full">
+                      <Palette className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" side="right" className="w-48">
+                    {themeOptions.map((option) => (
+                      <DropdownMenuItem
+                        key={option.value}
+                        onClick={() => setTheme(option.value)}
+                        className={cn(theme === option.value && 'bg-accent')}
+                      >
+                        <span
+                          className="mr-2 h-3 w-3 rounded-full"
+                          style={{
+                            backgroundColor: `hsl(${themes[option.value].primary})`,
+                          }}
+                        />
+                        {option.name}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TooltipTrigger>
+              <TooltipContent side="right">Theme</TooltipContent>
+            </Tooltip>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start gap-2">
+                  <Palette className="h-4 w-4" />
+                  Theme
+                  <ChevronDown className="ml-auto h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                {themeOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => setTheme(option.value)}
+                    className={cn(theme === option.value && 'bg-accent')}
+                  >
+                    <span
+                      className="mr-2 h-3 w-3 rounded-full"
+                      style={{
+                        backgroundColor: `hsl(${themes[option.value].primary})`,
+                      }}
+                    />
+                    {option.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </aside>
 
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden relative">
@@ -271,9 +279,9 @@ export default function AppLayout() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full sm:w-auto sm:px-2 sm:rounded-md border border-transparent hover:border-border transition-colors">
                 <div className="flex items-center gap-2">
-                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <User className="h-4 w-4" />
-                   </div>
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <User className="h-4 w-4" />
+                  </div>
                   <div className="hidden sm:flex flex-col items-start leading-none gap-0.5">
                     <span className="text-sm font-medium w-[100px] truncate pr-1">Me</span>
                     <span className="text-[10px] text-muted-foreground capitalize">{userRole || 'user'}</span>

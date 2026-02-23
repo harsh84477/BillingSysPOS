@@ -12,6 +12,16 @@ interface BusinessInfo {
   owner_id: string;
 }
 
+interface SubscriptionInfo {
+  status: 'active' | 'trialing' | 'expired' | 'cancelled';
+  trial_end: string | null;
+  current_period_end: string | null;
+  plan: {
+    name: string;
+    features: any;
+  } | null;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -20,6 +30,8 @@ interface AuthContextType {
   billPrefix: string | null;
   businessId: string | null;
   businessInfo: BusinessInfo | null;
+  subscription: SubscriptionInfo | null;
+  isSuperAdmin: boolean;
   needsBusinessSetup: boolean;
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -27,6 +39,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   joinBusiness: (joinCode: string, role: AppRole) => Promise<{ error: string | null }>;
   refreshBusinessInfo: () => Promise<void>;
+  refreshSubscription: () => Promise<void>;
   isAdmin: boolean;
   isManager: boolean;
   isCashier: boolean;
@@ -44,6 +57,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [billPrefix, setBillPrefix] = useState<string | null>(null);
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [needsBusinessSetup, setNeedsBusinessSetup] = useState(false);
 
   const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
@@ -140,6 +155,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const fetchSuperAdminStatus = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase
+        .from('super_admins')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      return !!data;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const fetchSubscription = async (bizId: string): Promise<void> => {
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select(`
+          status,
+          trial_end,
+          current_period_end,
+          plan:subscription_plans (
+            name,
+            features
+          )
+        `)
+        .eq('business_id', bizId)
+        .maybeSingle();
+
+      if (data) {
+        setSubscription({
+          status: data.status as any,
+          trial_end: data.trial_end,
+          current_period_end: data.current_period_end,
+          plan: data.plan as any
+        });
+      } else {
+        setSubscription(null);
+      }
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+    }
+  };
+
   const joinBusinessInternal = async (
     joinCode: string,
     role: AppRole,
@@ -195,15 +255,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (currentSession?.user) {
       const role = await fetchUserRole(currentSession.user.id);
       setUserRole(role);
+
+      const superStatus = await fetchSuperAdminStatus(currentSession.user.id);
+      setIsSuperAdmin(superStatus);
+
       await fetchBusinessInfo(currentSession.user.id);
     } else {
       setUserRole(null);
+      setIsSuperAdmin(false);
       setBusinessId(null);
       setBusinessInfo(null);
+      setSubscription(null);
       setNeedsBusinessSetup(false);
     }
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (businessId) {
+      fetchSubscription(businessId);
+    }
+  }, [businessId]);
 
   useEffect(() => {
     // Set up auth state listener
@@ -276,6 +348,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setBillPrefix(null);
     setBusinessId(null);
     setBusinessInfo(null);
+    setSubscription(null);
+    setIsSuperAdmin(false);
     setNeedsBusinessSetup(false);
   };
 
@@ -289,6 +363,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const role = await fetchUserRole(user.id);
       setUserRole(role);
       await fetchBusinessInfo(user.id);
+      if (businessId) {
+        await fetchSubscription(businessId);
+      }
+    }
+  };
+
+  const refreshSubscription = async () => {
+    if (businessId) {
+      await fetchSubscription(businessId);
     }
   };
 
@@ -300,6 +383,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     billPrefix,
     businessId,
     businessInfo,
+    subscription,
+    isSuperAdmin,
     needsBusinessSetup,
     signUp,
     signIn,
@@ -307,6 +392,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     joinBusiness,
     refreshBusinessInfo,
+    refreshSubscription,
     isAdmin: userRole === 'admin',
     isManager: userRole === 'manager',
     isCashier: userRole === 'cashier',

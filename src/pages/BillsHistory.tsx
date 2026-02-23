@@ -41,6 +41,10 @@ import { toast } from '@/hooks/use-toast';
 import { exportToExcel } from '@/lib/exportToExcel';
 import { BillDetailsDialog } from '@/components/bills/BillDetailsDialog';
 import { printBillReceipt } from '@/components/bills/BillReceiptPrint';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useNavigate } from 'react-router-dom';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 type DatePreset = 'today' | 'yesterday' | 'last7days' | 'last30days' | 'thisMonth' | 'lastMonth' | 'custom';
 
@@ -80,6 +84,8 @@ interface BillItem {
 export default function BillsHistory() {
   const { data: settings } = useBusinessSettings();
   const { businessId } = useAuth();
+  const navigate = useNavigate();
+  const { canViewFullHistory, historyLimitDays, isTrial, isActive } = useSubscription();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
@@ -138,12 +144,20 @@ export default function BillsHistory() {
   const currencySymbol = settings?.currency_symbol || '₹';
 
   const { data: bills = [], isLoading } = useQuery({
-    queryKey: ['bills', businessId],
+    queryKey: ['bills', businessId, canViewFullHistory],
     queryFn: async () => {
       let query = supabase
         .from('bills')
         .select('*, customers(name)');
+
       if (businessId) query = query.eq('business_id', businessId);
+
+      // SaaS Restriction: Limit history for Free/Trial users
+      if (!canViewFullHistory && historyLimitDays > 0) {
+        const cutoffDate = subDays(new Date(), historyLimitDays).toISOString();
+        query = query.gte('created_at', cutoffDate);
+      }
+
       const { data, error } = await query.order('created_at', { ascending: false });
       if (error) throw error;
       return data as Bill[];
@@ -299,12 +313,33 @@ export default function BillsHistory() {
 
   return (
     <div className="space-y-4">
+      {/* SaaS History Limit Alert */}
+      {!canViewFullHistory && (isTrial || !isActive) && (
+        <Alert className="bg-muted/50 border-dashed animate-in fade-in slide-in-from-top-4">
+          <AlertCircle className="h-4 w-4 text-orange-500" />
+          <AlertTitle className="text-sm font-semibold">History Limited ({historyLimitDays} Days)</AlertTitle>
+          <AlertDescription className="text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <span>You are viewing bills from the last {historyLimitDays} days only. Upgrade to unlock your full commerce history.</span>
+            <Button size="sm" variant="link" className="h-auto p-0 text-primary font-bold w-fit" onClick={() => navigate('/settings')}>
+              Upgrade Now
+              <ChevronRight className="ml-1 h-3 w-3" />
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Bills History</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">View all your past bills and invoices</p>
         </div>
-        <Button onClick={handleExportExcel} variant="outline" size="sm" className="shrink-0">
+        <Button
+          onClick={handleExportExcel}
+          variant="outline"
+          size="sm"
+          className="shrink-0"
+          disabled={!canExport}
+        >
           <Download className="mr-1.5 h-3.5 w-3.5" />
           <span className="hidden sm:inline">Export Excel</span>
           <span className="sm:hidden">Export</span>

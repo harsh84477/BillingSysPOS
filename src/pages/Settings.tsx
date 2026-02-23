@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast as sonnerToast } from 'sonner';
@@ -41,6 +42,7 @@ import {
   Receipt,
   Calculator,
   Users,
+  CreditCard,
   Plus,
   Minus,
   Pencil,
@@ -63,6 +65,7 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { RandomSeeder } from '@/components/RandomSeeder';
+import SubscriptionManagement from '@/components/settings/SubscriptionManagement';
 
 const themeOptions: { name: string; value: ThemeName; description: string }[] = [
   { name: 'Mint Pro', value: 'mint-pro', description: 'Fresh green tones for a modern look' },
@@ -74,9 +77,25 @@ const themeOptions: { name: string; value: ThemeName; description: string }[] = 
 
 export default function Settings() {
   const { isAdmin, isManager, user, businessInfo, refreshBusinessInfo, businessId } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const { theme, setTheme } = useTheme();
+
+  // Tab management
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'business');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setSearchParams({ tab: value });
+  };
   const { data: settings, isLoading } = useBusinessSettings();
   const updateSettings = useUpdateBusinessSettings();
   const queryClient = useQueryClient();
@@ -242,14 +261,18 @@ export default function Settings() {
         <p className="text-sm sm:text-base text-muted-foreground">Manage your business configuration</p>
       </div>
 
-      <Tabs defaultValue="business" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className={cn(
           "grid w-full gap-1",
-          isAdmin ? "grid-cols-6" : "grid-cols-5"
+          isAdmin ? "grid-cols-7" : "grid-cols-6"
         )}>
           <TabsTrigger value="business" className="gap-1.5 px-2 py-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
             <Building2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden xs:inline">Business</span>
+          </TabsTrigger>
+          <TabsTrigger value="subscription" className="gap-1.5 px-2 py-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap border-b-2 border-transparent data-[state=active]:border-primary">
+            <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Plan</span>
           </TabsTrigger>
           <TabsTrigger value="categories" className="gap-1.5 px-2 py-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
             <FolderOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -416,6 +439,11 @@ export default function Settings() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Subscription Plan */}
+        <TabsContent value="subscription">
+          <SubscriptionManagement />
         </TabsContent>
 
         {/* Theme */}

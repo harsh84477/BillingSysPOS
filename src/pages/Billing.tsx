@@ -19,6 +19,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from '@/components/ui/alert';
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -37,6 +42,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  AlertCircle,
   Package,
   Apple,
   Beef,
@@ -107,8 +113,10 @@ interface CartItem {
 
 export default function Billing() {
   const { user, businessId, billPrefix, userRole } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
+  const { isTrial, isActive, isExpired, canCreateBill, planName } = useSubscription();
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -640,8 +648,41 @@ export default function Billing() {
       </div>
 
       {/* Center Panel - Products */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Search Bar + Mobile Category Scroll */}
+      <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
+        {/* Mobile horizontal category scroll */}
+        {!canCreateBill && (
+          <div className="px-4 pt-4">
+            <Alert variant="destructive" className="animate-in fade-in slide-in-from-top-4 duration-300">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Subscription Expired</AlertTitle>
+              <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span>Your {planName} has expired. Please upgrade to continue creating bills.</span>
+                <Button size="sm" variant="outline" className="w-fit" onClick={() => navigate('/settings')}>
+                  Upgrade Now
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        {isTrial && isActive && (
+          <div className="px-4 pt-4">
+            <Alert className="bg-primary/5 border-primary/20 animate-in fade-in slide-in-from-top-4 duration-300">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <AlertTitle>Free Trial</AlertTitle>
+              <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span>You are currently using the Free Trial. Upgrade for full features and history.</span>
+                <Button size="sm" variant="link" className="text-primary p-0 h-auto w-fit" onClick={() => navigate('/settings')}>
+                  View Plans
+                  <ChevronRight className="ml-1 h-3 w-3" />
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        {/* Existing category scroll ... */}
         <div className="border-b border-border bg-card">
           <div className="p-2.5">
             <div className="relative">
@@ -965,7 +1006,7 @@ export default function Billing() {
                 <Button
                   variant="outline"
                   className="flex-1"
-                  disabled={cart.length === 0 || createBillMutation.isPending}
+                  disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
                   onClick={() => createBillMutation.mutate(false)}
                 >
                   <Save className="mr-2 h-4 w-4" />
@@ -973,11 +1014,11 @@ export default function Billing() {
                 </Button>
                 <Button
                   className="flex-1"
-                  disabled={cart.length === 0 || createBillMutation.isPending}
+                  disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
                   onClick={() => createBillMutation.mutate(true)}
                 >
                   <Printer className="mr-2 h-4 w-4" />
-                  Save & Print
+                  Checkout & Print
                 </Button>
               </div>
             </div>
@@ -1151,7 +1192,7 @@ export default function Billing() {
               <Button
                 variant="outline"
                 className="flex-1"
-                disabled={cart.length === 0 || createBillMutation.isPending}
+                disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
                 onClick={() => createBillMutation.mutate(false)}
               >
                 <Save className="mr-2 h-4 w-4" />
@@ -1159,7 +1200,7 @@ export default function Billing() {
               </Button>
               <Button
                 className="flex-1"
-                disabled={cart.length === 0 || createBillMutation.isPending}
+                disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
                 onClick={() => createBillMutation.mutate(true)}
               >
                 <Printer className="mr-2 h-4 w-4" />
