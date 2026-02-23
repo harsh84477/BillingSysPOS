@@ -10,9 +10,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Printer, Eye } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import { printBillReceipt } from './BillReceiptPrint';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
 interface Bill {
@@ -87,9 +95,12 @@ export function BillDetailsDialog({ bill, open, onOpenChange }: BillDetailsDialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Bill #{bill.bill_number}</DialogTitle>
-            <Button size="sm" variant="outline" onClick={handlePrint}>
+          <div className="flex items-center justify-between border-b pb-4">
+            <div className="space-y-1">
+              <DialogTitle className="text-xl">Bill Details</DialogTitle>
+              <p className="text-sm font-bold text-muted-foreground mr-1">#{bill.bill_number}</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={handlePrint} className="h-9 px-4">
               <Printer className="mr-2 h-4 w-4" />
               Print
             </Button>
@@ -116,46 +127,55 @@ export function BillDetailsDialog({ bill, open, onOpenChange }: BillDetailsDialo
             </div>
           </div>
 
-          <div className="border-t pt-4">
-            <h4 className="mb-2 font-medium">Items</h4>
-            <div className="space-y-2">
-              {billItems.map((item) => (
-                <div
-                  key={item.id}
-                  className={cn(
-                    "flex justify-between text-sm",
-                    item.unit_price <= item.cost_price ? "text-destructive font-bold" : ""
-                  )}
-                >
-                  <span>
-                    {item.product_name} × {item.quantity}
-                  </span>
-                  <span>{currencySymbol}{Number(item.total_price).toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead className="py-2">Item</TableHead>
+                  <TableHead className="py-2 text-right">Price</TableHead>
+                  <TableHead className="py-2 text-center">Qty</TableHead>
+                  <TableHead className="py-2 text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {billItems.map((item) => (
+                  <TableRow key={item.id} className="h-12">
+                    <TableCell className="font-medium align-middle">{item.product_name}</TableCell>
+                    <TableCell className="text-right align-middle text-muted-foreground">
+                      {currencySymbol}{Number(item.unit_price).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-center align-middle font-medium">
+                      {item.quantity}
+                    </TableCell>
+                    <TableCell className="text-right align-middle font-semibold">
+                      {currencySymbol}{Number(item.total_price).toFixed(2)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
 
-          <div className="space-y-1 border-t pt-4 text-sm">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>{currencySymbol}{Number(bill.subtotal).toFixed(2)}</span>
+          <div className="space-y-2.5 bg-muted/30 p-4 rounded-lg">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span className="font-medium">{currencySymbol}{Number(bill.subtotal).toFixed(2)}</span>
             </div>
             {Number(bill.discount_amount) > 0 && (
-              <div className="flex justify-between text-destructive">
+              <div className="flex justify-between text-sm text-destructive">
                 <span>Discount</span>
                 <span>-{currencySymbol}{Number(bill.discount_amount).toFixed(2)}</span>
               </div>
             )}
             {Number(bill.tax_amount) > 0 && (
-              <div className="flex justify-between">
-                <span>Tax</span>
-                <span>{currencySymbol}{Number(bill.tax_amount).toFixed(2)}</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{settings?.tax_name || 'Tax'}</span>
+                <span className="font-medium">{currencySymbol}{Number(bill.tax_amount).toFixed(2)}</span>
               </div>
             )}
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total</span>
-              <span className="text-primary">
+            <div className="flex justify-between border-t pt-2.5 mt-2.5">
+              <span className="text-lg font-bold">Total Amount</span>
+              <span className="text-2xl font-bold text-emerald-600">
                 {currencySymbol}{Number(bill.total_amount).toFixed(2)}
               </span>
             </div>
