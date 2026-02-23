@@ -4,14 +4,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTheme, ThemeName, themes } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -23,6 +15,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -38,31 +36,31 @@ import {
   FolderOpen,
   PanelLeftClose,
   PanelLeft,
-  Phone,
-  ShieldCheck,
+  AlertCircle,
+  BarChart2,
+  Building2,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-// Support phone number
-const SUPPORT_PHONE = '+1234567890';
-
-// Bottom nav items for mobile (only most important pages)
-const mobileNavItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Bill', href: '/billing', icon: ShoppingCart },
-  { name: 'History', href: '/bills-history', icon: FileText },
-  { name: 'Products', href: '/products', icon: Package },
-  { name: 'More', href: '/settings', icon: Settings },
-];
+import { Badge } from '@/components/ui/badge';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'New Bill', href: '/billing', icon: ShoppingCart },
   { name: 'Bills History', href: '/bills-history', icon: FileText },
+  { name: 'Due Bills', href: '/due-bills', icon: AlertCircle },
   { name: 'Products', href: '/products', icon: Package },
   { name: 'Categories', href: '/categories', icon: FolderOpen },
   { name: 'Customers', href: '/customers', icon: Users },
   { name: 'Settings', href: '/settings', icon: Settings },
+];
+
+const mobileNavItems = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Bill', href: '/billing', icon: ShoppingCart },
+  { name: 'Due', href: '/due-bills', icon: AlertCircle },
+  { name: 'History', href: '/bills-history', icon: FileText },
+  { name: 'More', href: '/settings', icon: Settings },
 ];
 
 const themeOptions: { name: string; value: ThemeName }[] = [
@@ -74,100 +72,75 @@ const themeOptions: { name: string; value: ThemeName }[] = [
 ];
 
 function NavItem({ item, isActive, collapsed }: { item: typeof navigation[0]; isActive: boolean; collapsed: boolean }) {
-  if (collapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Link
-            to={item.href}
-            className={cn(
-              'flex items-center justify-center rounded-lg p-2 transition-colors',
-              isActive
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-            )}
-          >
-            <item.icon className="h-5 w-5" />
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          {item.name}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return (
+  const content = (
     <Link
       to={item.href}
       className={cn(
-        'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+        'flex items-center gap-3 rounded-lg transition-colors',
+        collapsed ? 'justify-center p-2' : 'px-3 py-2 text-sm font-medium',
         isActive
           ? 'bg-primary text-primary-foreground'
           : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
       )}
     >
-      <item.icon className="h-5 w-5" />
-      {item.name}
+      <item.icon className="h-5 w-5 shrink-0" />
+      {!collapsed && item.name}
     </Link>
   );
-}
 
-function Sidebar({ className, collapsed }: { className?: string; collapsed: boolean }) {
-  const location = useLocation();
-
-  return (
-    <div className={cn('flex flex-col gap-4', className)}>
-      <nav className={cn('flex flex-col gap-1', collapsed ? 'px-1' : 'px-2')}>
-        {navigation.map((item) => (
-          <NavItem
-            key={item.name}
-            item={item}
-            isActive={location.pathname === item.href}
-            collapsed={collapsed}
-          />
-        ))}
-      </nav>
-    </div>
-  );
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipContent side="right">{item.name}</TooltipContent>
+      </Tooltip>
+    );
+  }
+  return content;
 }
 
 export default function AppLayout() {
-  const { user, signOut, userRole, isSuperAdmin, superAdminLogout } = useAuth();
+  const { user, signOut, userRole, businessId, isSuperAdmin, superAdminLogout, subscription } = useAuth();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  const businessName = (subscription as any)?.plan?.name
+    ? undefined
+    : undefined; // will come from auth context if exposed
+
   const handleSignOut = async () => {
-    // If it's a custom admin session
     if (!user && isSuperAdmin) {
       superAdminLogout();
       navigate('/super-admin-login');
       return;
     }
-
     await signOut();
     navigate('/auth');
   };
 
+  const roleLabel = isSuperAdmin ? 'Super Admin' : (userRole || 'user');
+  const displayName = user?.email?.split('@')[0] || (isSuperAdmin ? 'Admin' : 'User');
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Desktop Sidebar */}
-      <aside
-        className={cn(
-          "hidden flex-shrink-0 border-r border-border bg-card lg:flex flex-col transition-all duration-300 shadow-sm z-30",
-          sidebarCollapsed ? "w-16" : "w-64"
-        )}
-      >
-        {/* Sidebar Header (App Title & Collapse Btn) */}
-        <div className={cn("flex items-center h-14 border-b border-border transition-all", sidebarCollapsed ? "justify-center px-0" : "justify-between px-4")}>
+      {/* ── Desktop Sidebar ── */}
+      <aside className={cn(
+        'hidden flex-shrink-0 border-r border-border bg-card lg:flex flex-col transition-all duration-300 shadow-sm z-30',
+        sidebarCollapsed ? 'w-16' : 'w-60'
+      )}>
+        {/* Brand + collapse */}
+        <div className={cn(
+          'flex items-center h-14 border-b border-border transition-all',
+          sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-4'
+        )}>
           {!sidebarCollapsed && (
             <div className="flex items-center gap-2 overflow-hidden">
-              <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold">
+              <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm flex-shrink-0">
                 SP
               </div>
-              <span className="font-bold text-lg tracking-tight whitespace-nowrap truncate">Smart POS</span>
+              <span className="font-bold text-base tracking-tight whitespace-nowrap truncate">Smart POS</span>
             </div>
           )}
           <Button
@@ -176,20 +149,25 @@ export default function AppLayout() {
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className="h-8 w-8 flex-shrink-0"
           >
-            {sidebarCollapsed ? (
-              <PanelLeft className="h-4 w-4" />
-            ) : (
-              <PanelLeftClose className="h-4 w-4" />
-            )}
+            {sidebarCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </Button>
         </div>
 
-        {/* Sidebar Navigation */}
-        <div className="flex-1 overflow-y-auto py-4 custom-scrollbar">
-          <Sidebar collapsed={sidebarCollapsed} />
-        </div>
+        {/* Navigation */}
+        <nav className={cn('flex-1 overflow-y-auto py-3 space-y-0.5 custom-scrollbar', sidebarCollapsed ? 'px-1' : 'px-2')}>
+          {navigation.map((item) => (
+            <NavItem
+              key={item.name}
+              item={item}
+              isActive={location.pathname === item.href}
+              collapsed={sidebarCollapsed}
+            />
+          ))}
+        </nav>
 
-        <div className="border-t border-border p-2">
+        {/* ── BOTTOM: User Profile + Theme ── */}
+        <div className={cn('border-t border-border p-2 space-y-1', sidebarCollapsed ? 'px-1' : '')}>
+          {/* Theme picker */}
           {sidebarCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -200,19 +178,10 @@ export default function AppLayout() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" side="right" className="w-48">
-                    {themeOptions.map((option) => (
-                      <DropdownMenuItem
-                        key={option.value}
-                        onClick={() => setTheme(option.value)}
-                        className={cn(theme === option.value && 'bg-accent')}
-                      >
-                        <span
-                          className="mr-2 h-3 w-3 rounded-full"
-                          style={{
-                            backgroundColor: `hsl(${themes[option.value].primary})`,
-                          }}
-                        />
-                        {option.name}
+                    {themeOptions.map((opt) => (
+                      <DropdownMenuItem key={opt.value} onClick={() => setTheme(opt.value)} className={cn(theme === opt.value && 'bg-accent')}>
+                        <span className="mr-2 h-3 w-3 rounded-full inline-block" style={{ backgroundColor: `hsl(${themes[opt.value].primary})` }} />
+                        {opt.name}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -223,38 +192,68 @@ export default function AppLayout() {
           ) : (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-2">
-                  <Palette className="h-4 w-4" />
-                  Theme
-                  <ChevronDown className="ml-auto h-4 w-4" />
+                <Button variant="ghost" className="w-full justify-start gap-2 h-8 px-3 text-sm">
+                  <Palette className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Theme</span>
+                  <ChevronDown className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48">
-                {themeOptions.map((option) => (
-                  <DropdownMenuItem
-                    key={option.value}
-                    onClick={() => setTheme(option.value)}
-                    className={cn(theme === option.value && 'bg-accent')}
-                  >
-                    <span
-                      className="mr-2 h-3 w-3 rounded-full"
-                      style={{
-                        backgroundColor: `hsl(${themes[option.value].primary})`,
-                      }}
-                    />
-                    {option.name}
+                {themeOptions.map((opt) => (
+                  <DropdownMenuItem key={opt.value} onClick={() => setTheme(opt.value)} className={cn(theme === opt.value && 'bg-accent')}>
+                    <span className="mr-2 h-3 w-3 rounded-full inline-block" style={{ backgroundColor: `hsl(${themes[opt.value].primary})` }} />
+                    {opt.name}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+
+          {/* User Profile Block */}
+          {sidebarCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                >
+                  <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold uppercase">
+                    {displayName[0]}
+                  </div>
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">{displayName} · {roleLabel}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/40 border border-border">
+              <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold uppercase flex-shrink-0">
+                {displayName[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">{displayName}</p>
+                <p className="text-[11px] text-muted-foreground capitalize">{roleLabel}</p>
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={handleSignOut}
+                    className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Sign out</TooltipContent>
+              </Tooltip>
+            </div>
+          )}
         </div>
       </aside>
 
+      {/* ── Main Area ── */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden relative">
-        {/* Header */}
+        {/* Header — minimal, no user button */}
         <header className="sticky top-0 z-40 flex h-14 flex-shrink-0 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 lg:px-6 shadow-sm">
-          {/* Mobile Menu - only shown on tablet, not mobile (mobile uses bottom nav) */}
+          {/* Mobile menu */}
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="hidden sm:flex lg:hidden">
@@ -265,7 +264,11 @@ export default function AppLayout() {
               <SheetHeader className="p-4 border-b border-border">
                 <SheetTitle className="text-lg font-bold">Smart POS</SheetTitle>
               </SheetHeader>
-              <Sidebar className="mt-4" collapsed={false} />
+              <nav className="flex flex-col gap-1 p-2 mt-2">
+                {navigation.map((item) => (
+                  <NavItem key={item.name} item={item} isActive={location.pathname === item.href} collapsed={false} />
+                ))}
+              </nav>
             </SheetContent>
           </Sheet>
 
@@ -274,55 +277,10 @@ export default function AppLayout() {
 
           <div className="flex-1" />
 
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 rounded-full sm:w-auto sm:px-2 sm:rounded-md border border-transparent hover:border-border transition-colors">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <User className="h-4 w-4" />
-                  </div>
-                  <div className="hidden sm:flex flex-col items-start leading-none gap-0.5">
-                    <span className="text-sm font-medium w-[100px] truncate pr-1">
-                      {user ? 'Me' : 'Admin'}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground capitalize">
-                      {user ? (userRole || 'user') : 'Super Admin'}
-                    </span>
-                  </div>
-                  <ChevronDown className="hidden sm:block h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">
-                    {user ? 'My Account' : 'System Admin'}
-                  </p>
-                  <p className="text-xs leading-none text-muted-foreground truncate">
-                    {user?.email || 'admin@system'}
-                  </p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/settings')} className="cursor-pointer">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild className="cursor-pointer">
-                <a href={`tel:${SUPPORT_PHONE}`}>
-                  <Phone className="mr-2 h-4 w-4" />
-                  Help & Support
-                </a>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive focus:bg-destructive focus:text-destructive-foreground">
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Right side — page context only, no user button */}
+          <span className="hidden lg:block text-sm text-muted-foreground capitalize font-medium">
+            {navigation.find(n => n.href === location.pathname)?.name || ''}
+          </span>
         </header>
 
         {/* Main Content */}
@@ -330,7 +288,7 @@ export default function AppLayout() {
           <Outlet />
         </main>
 
-        {/* Mobile Bottom Navigation - only visible on small screens */}
+        {/* Mobile Bottom Navigation */}
         <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-bottom">
           <div className="flex items-center justify-around h-16">
             {mobileNavItems.map((item) => {
@@ -341,9 +299,7 @@ export default function AppLayout() {
                   to={item.href}
                   className={cn(
                     'relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-xs font-medium transition-colors',
-                    isActive
-                      ? 'text-primary'
-                      : 'text-muted-foreground'
+                    isActive ? 'text-primary' : 'text-muted-foreground'
                   )}
                 >
                   <item.icon className={cn('h-5 w-5', isActive ? 'text-primary' : 'text-muted-foreground')} />

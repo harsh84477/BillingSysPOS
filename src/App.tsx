@@ -18,6 +18,7 @@ import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
 import SuperAdmin from "./pages/SuperAdmin";
 import SuperAdminLogin from "./pages/SuperAdminLogin";
+import DueBills from "./pages/DueBills";
 
 import NotFound from "./pages/NotFound";
 
@@ -57,6 +58,7 @@ const App = () => (
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/due-bills" element={<DueBills />} />
               </Route>
 
               <Route

@@ -127,6 +127,11 @@ export default function Billing() {
   const [discountValue, setDiscountValue] = useState(0);
   const [applyGst, setApplyGst] = useState(true);
 
+  // Payment type: 'cash' (paid immediately) | 'due' (unpaid/partial)
+  const [paymentType, setPaymentType] = useState<'cash' | 'due'>('cash');
+  const [paidAmount, setPaidAmount] = useState<number | ''>('');
+  const [dueDate, setDueDate] = useState<string>('');
+
   // Sync applyGst with settings once settings load
   React.useEffect(() => {
     if (settings && settings.show_gst_in_billing !== undefined) {
@@ -517,6 +522,22 @@ export default function Billing() {
           finalCustomerId = newCustomer.id;
         }
 
+        // Compute profit: sum of (unit_price - cost_price) * qty
+        const billProfit = cart.reduce(
+          (sum, item) => sum + (item.unitPrice - item.costPrice) * item.quantity, 0
+        );
+
+        // Payment logic
+        const resolvedPaidAmount = paymentType === 'cash'
+          ? cartCalculations.total
+          : (typeof paidAmount === 'number' ? paidAmount : 0);
+        const resolvedDueAmount = Math.max(0, cartCalculations.total - resolvedPaidAmount);
+        const resolvedPaymentStatus =
+          paymentType === 'cash' ? 'paid'
+            : resolvedDueAmount <= 0 ? 'paid'
+              : resolvedPaidAmount > 0 ? 'partial'
+                : 'unpaid';
+
         const { data: bill, error: billError } = await supabase
           .from('bills')
           .insert({
@@ -532,7 +553,14 @@ export default function Billing() {
             tax_amount: cartCalculations.taxAmount,
             total_amount: cartCalculations.total,
             completed_at: new Date().toISOString(),
-          })
+            // Payment fields
+            payment_type: paymentType,
+            payment_status: resolvedPaymentStatus,
+            paid_amount: resolvedPaidAmount,
+            due_amount: resolvedDueAmount,
+            due_date: (paymentType === 'due' && dueDate) ? dueDate : null,
+            profit: billProfit,
+          } as any)
           .select()
           .single();
 
@@ -994,6 +1022,67 @@ export default function Billing() {
                   </div>
                 </div>
               )}
+
+              {/* ── Payment Type Selector ── */}
+              <div className="pt-2 border-t">
+                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Payment Type</p>
+                <div className="grid grid-cols-2 gap-1 p-1 bg-muted rounded-lg">
+                  {(['cash', 'due'] as const).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setPaymentType(type);
+                        setPaidAmount('');
+                        setDueDate('');
+                      }}
+                      className={cn(
+                        'py-1.5 rounded-md text-sm font-semibold transition-all',
+                        paymentType === type
+                          ? type === 'cash'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'bg-destructive text-destructive-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      {type === 'cash' ? '💵 Cash / Online' : '⏳ Due / Credit'}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Due-specific fields */}
+                {paymentType === 'due' && (
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-muted-foreground">Paid Now ({currencySymbol})</span>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={paidAmount}
+                        onChange={(e) => setPaidAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                        className="w-28 h-8 text-right"
+                        min={0}
+                        max={cartCalculations.total}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-muted-foreground">Due Amount</span>
+                      <span className="font-bold text-destructive text-sm">
+                        {currencySymbol}{Math.max(0, cartCalculations.total - (typeof paidAmount === 'number' ? paidAmount : 0)).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-muted-foreground">Due Date</span>
+                      <Input
+                        type="date"
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
+                        className="w-36 h-8 text-sm"
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Total */}
               <div className="flex justify-between text-xl font-bold pt-2 border-t">

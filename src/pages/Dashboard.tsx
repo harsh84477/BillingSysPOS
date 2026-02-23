@@ -164,13 +164,48 @@ export default function Dashboard() {
           total_amount,
           status,
           created_at,
+          payment_status,
           customers (name)
         `)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(10);
 
       if (error) throw error;
       return data || [];
+    },
+  });
+
+  // Fetch due stats
+  const { data: dueStats, isLoading: loadingDue } = useQuery({
+    queryKey: ['dueStats'],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from('bills')
+        .select('due_amount, due_date, payment_status')
+        .in('payment_status', ['unpaid', 'partial'])
+        .eq('status', 'completed') as any);
+      if (error) throw error;
+      const bills = (data || []) as any[];
+      const today = new Date();
+      return {
+        totalDue: bills.reduce((s: number, b: any) => s + Number(b.due_amount || 0), 0),
+        unpaidCount: bills.length,
+        overdueCount: bills.filter((b: any) => b.due_date && new Date(b.due_date) < today).length,
+      };
+    },
+  });
+
+  // Fetch today's profit
+  const { data: todayProfit, isLoading: loadingTodayProfit } = useQuery({
+    queryKey: ['todayProfit'],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from('bills')
+        .select('profit')
+        .eq('status', 'completed')
+        .gte('completed_at', startOfToday.toISOString()) as any);
+      if (error) throw error;
+      return ((data || []) as any[]).reduce((s: number, b: any) => s + Number(b.profit || 0), 0);
     },
   });
 
@@ -309,7 +344,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Stats Grid - 2 cols on mobile, 4 on desktop */}
+      {/* Stats Grid */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Today's Sales"
@@ -319,26 +354,55 @@ export default function Dashboard() {
           isLoading={loadingTodaySales}
         />
         <StatCard
-          title="Monthly Revenue"
+          title="Monthly Sales"
           value={`${currencySymbol}${monthlyRevenue?.toFixed(2) || '0.00'}`}
           icon={TrendingUp}
           description={format(today, 'MMMM yyyy')}
           isLoading={loadingMonthly}
         />
         <StatCard
-          title="Pending Bills"
-          value={pendingBills || 0}
-          icon={ShoppingCart}
-          description="Draft bills awaiting completion"
-          isLoading={loadingPending}
+          title="Profit Today"
+          value={`${currencySymbol}${(todayProfit || 0).toFixed(2)}`}
+          icon={TrendingUp}
+          description="Revenue minus cost"
+          isLoading={loadingTodayProfit}
         />
         <StatCard
           title="Customers"
           value={customerCount || 0}
           icon={Users}
-          description="Total registered customers"
+          description="Total customers"
           isLoading={loadingCustomers}
         />
+        <StatCard
+          title="Total Due Amount"
+          value={`${currencySymbol}${(dueStats?.totalDue || 0).toFixed(2)}`}
+          icon={AlertTriangle}
+          description="Outstanding balance"
+          isLoading={loadingDue}
+        />
+        <StatCard
+          title="Unpaid Bills"
+          value={dueStats?.unpaidCount || 0}
+          icon={ShoppingCart}
+          description="Pending payment"
+          isLoading={loadingDue}
+        />
+        <StatCard
+          title="Overdue Bills"
+          value={dueStats?.overdueCount || 0}
+          icon={AlertTriangle}
+          description="Past due date"
+          isLoading={loadingDue}
+        />
+        <StatCard
+          title="Low Stock Items"
+          value={lowStockProducts?.length || 0}
+          icon={Package}
+          description="Products to restock"
+          isLoading={loadingLowStock}
+        />
+
       </div>
 
       {/* Monthly Expense Report */}
@@ -516,6 +580,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </div >
   );
 }
