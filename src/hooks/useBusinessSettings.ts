@@ -38,6 +38,14 @@ export interface BusinessSettings {
   gst_number?: string | null;
   invoice_show_gst?: boolean;
   invoice_show_unit_price?: boolean;
+  // Product grid display settings
+  product_button_size?: 'small' | 'medium' | 'large' | 'xlarge';
+  product_columns?: number;
+  grid_gap?: number;
+  show_stock_badge?: boolean;
+  show_product_code?: boolean;
+  show_cost_price?: boolean;
+  auto_fit_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }

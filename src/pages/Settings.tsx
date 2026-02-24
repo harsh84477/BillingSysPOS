@@ -672,6 +672,152 @@ export default function Settings() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Product Display Settings */}
+            <Card className="lg:col-span-2">
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Monitor className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Product Display Settings
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Control how products are displayed on the billing screen
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {/* Button Size */}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-0.5 flex-1">
+                    <Label className="text-sm">Product Button Size</Label>
+                    <p className="text-xs text-muted-foreground">Controls the height and padding of each product card</p>
+                  </div>
+                  <Select
+                    value={settings?.product_button_size ?? 'medium'}
+                    onValueChange={(val) => isAdmin && updateSettings.mutate({ product_button_size: val as any })}
+                    disabled={!isAdmin}
+                  >
+                    <SelectTrigger className="w-36 h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="small">Small</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="large">Large</SelectItem>
+                      <SelectItem value="xlarge">Extra Large</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Number of Columns */}
+                <div className="flex items-center justify-between gap-4 pt-3 border-t">
+                  <div className="space-y-0.5 flex-1">
+                    <Label className="text-sm">Number of Columns</Label>
+                    <p className="text-xs text-muted-foreground">Desktop product grid columns (2–8)</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 border"
+                      onClick={() => isAdmin && updateSettings.mutate({ product_columns: Math.max(2, (settings?.product_columns ?? 5) - 1) })}
+                      disabled={!isAdmin || (settings?.product_columns ?? 5) <= 2}
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="w-8 text-center text-sm font-bold">{settings?.product_columns ?? 5}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 border"
+                      onClick={() => isAdmin && updateSettings.mutate({ product_columns: Math.min(8, (settings?.product_columns ?? 5) + 1) })}
+                      disabled={!isAdmin || (settings?.product_columns ?? 5) >= 8}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Grid Gap */}
+                <div className="space-y-2 pt-3 border-t">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm">Grid Gap</Label>
+                      <p className="text-xs text-muted-foreground">Spacing between product cards ({settings?.grid_gap ?? 8}px)</p>
+                    </div>
+                    <span className="text-sm font-bold text-primary w-10 text-right">{settings?.grid_gap ?? 8}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={4}
+                    max={30}
+                    step={2}
+                    value={settings?.grid_gap ?? 8}
+                    onChange={(e) => isAdmin && updateSettings.mutate({ grid_gap: Number(e.target.value) })}
+                    disabled={!isAdmin}
+                    className="w-full h-2 rounded-lg appearance-none bg-accent cursor-pointer accent-primary disabled:opacity-50"
+                  />
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>4px (Tight)</span>
+                    <span>30px (Spacious)</span>
+                  </div>
+                </div>
+
+                {/* Toggle Options */}
+                <div className="space-y-3 pt-3 border-t">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Visibility Toggles</div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm">Show Stock Badge</Label>
+                      <p className="text-xs text-muted-foreground">Display quantity badge on each product</p>
+                    </div>
+                    <Switch
+                      checked={settings?.show_stock_badge ?? true}
+                      onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ show_stock_badge: checked })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm">Show Product Code</Label>
+                      <p className="text-xs text-muted-foreground">Show product SKU/code on card</p>
+                    </div>
+                    <Switch
+                      checked={settings?.show_product_code ?? false}
+                      onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ show_product_code: checked })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
+
+                  {isAdmin && (
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-sm">Show Cost Price (Admin Only)</Label>
+                        <p className="text-xs text-muted-foreground">Display cost price on product cards</p>
+                      </div>
+                      <Switch
+                        checked={settings?.show_cost_price ?? false}
+                        onCheckedChange={(checked) => updateSettings.mutate({ show_cost_price: checked })}
+                        disabled={!isAdmin}
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm">Auto Fit to Screen Height</Label>
+                      <p className="text-xs text-muted-foreground">Automatically adjust card size to fill grid height</p>
+                    </div>
+                    <Switch
+                      checked={settings?.auto_fit_enabled ?? false}
+                      onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ auto_fit_enabled: checked })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 

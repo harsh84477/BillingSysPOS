@@ -114,7 +114,7 @@ interface CartItem {
 }
 
 export default function Billing() {
-  const { user, businessId, billPrefix, userRole } = useAuth();
+  const { user, businessId, billPrefix, userRole, isAdmin } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
@@ -628,8 +628,24 @@ export default function Billing() {
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  // ─── Dynamic grid settings from admin ───
+  const productColumns = settings?.product_columns ?? 5;
+  const gridGap = settings?.grid_gap ?? 8;
+  const buttonSize = settings?.product_button_size ?? 'medium';
+  const showStockBadge = settings?.show_stock_badge ?? true;
+  const showCostPrice = isAdmin && (settings?.show_cost_price ?? false);
+
+  // Size map for product card styles
+  const sizeMap = {
+    small: { card: 'p-1.5 sm:p-2', icon: 'h-6 w-6 sm:h-8 sm:w-8', fIcon: 'h-3 w-3 sm:h-4 sm:w-4', name: 'text-[9px] sm:text-[10px]', price: 'text-[10px] sm:text-xs' },
+    medium: { card: 'p-2 sm:p-3', icon: 'h-7 w-7 sm:h-11 sm:w-11', fIcon: 'h-3.5 w-3.5 sm:h-6 sm:w-6', name: 'text-[10px] sm:text-xs', price: 'text-xs sm:text-sm' },
+    large: { card: 'p-3 sm:p-4', icon: 'h-9 w-9 sm:h-14 sm:w-14', fIcon: 'h-4 w-4 sm:h-7 sm:w-7', name: 'text-xs sm:text-sm', price: 'text-sm sm:text-base' },
+    xlarge: { card: 'p-4 sm:p-5', icon: 'h-11 w-11 sm:h-16 sm:w-16', fIcon: 'h-5 w-5 sm:h-8 sm:w-8', name: 'text-sm sm:text-base', price: 'text-base sm:text-lg' },
+  };
+  const sz = sizeMap[buttonSize] || sizeMap.medium;
+
   return (
-    <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] sm:h-[calc(100vh-7rem)] gap-0 -mx-4 sm:-mx-6 lg:-mx-8 -my-3 sm:-my-4 lg:-my-6">
+    <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-3.5rem)] gap-0 -mx-4 sm:-mx-6 lg:-mx-8 -my-3 sm:-my-4 lg:-my-6">
       {/* Left Panel - Categories */}
       <div className="hidden lg:flex w-52 flex-shrink-0 flex-col border-r border-border bg-card">
         <ScrollArea className="flex-1 p-2">
@@ -760,18 +776,31 @@ export default function Billing() {
           </div>
         </div>
 
-        {/* Products Grid */}
-        <ScrollArea className="flex-1 p-3">
+        {/* Products Grid – dynamic admin-controlled */}
+        <ScrollArea className="flex-1">
           {filteredProducts.length === 0 ? (
             <div className="flex h-40 items-center justify-center text-muted-foreground">
               <Package className="mr-2 h-5 w-5" />
               No products found
             </div>
           ) : (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-2 sm:gap-3 justify-items-center pb-20">
+            <div
+              className="grid pb-20 pt-2 px-3 transition-all duration-300"
+              style={{
+                gridTemplateColumns: `repeat(${productColumns}, minmax(0, 1fr))`,
+                gap: `${gridGap}px`,
+              }}
+            >
               {filteredProducts.map((product) => {
                 const iconName = product.icon || 'Package';
                 const IconComponent = ICON_MAP[iconName] || Package;
+                const isOutOfStock = product.stock_quantity === 0;
+                const isLowStock = !isOutOfStock && product.stock_quantity <= product.low_stock_threshold;
+                const stockBadgeClass = isOutOfStock
+                  ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                  : isLowStock
+                    ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+                    : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
 
                 return (
                   <button
@@ -783,36 +812,51 @@ export default function Billing() {
                     onTouchStart={() => handleProductTouchStart(product)}
                     onTouchEnd={handleProductTouchEnd}
                     onContextMenu={(e) => e.preventDefault()}
-                    className="relative flex flex-col items-center justify-between rounded-xl border border-border bg-card p-2 sm:p-3 text-center shadow-sm transition-all hover:border-primary hover:shadow-md hover:-translate-y-0.5 active:scale-95 group select-none aspect-square overflow-hidden animate-in fade-in zoom-in-95 duration-200 w-full max-w-[120px] touch-manipulation"
+                    className={cn(
+                      'relative flex flex-col items-center justify-between rounded-xl border border-border bg-card text-center shadow-sm',
+                      'transition-all duration-200 hover:border-primary hover:shadow-md hover:-translate-y-0.5 active:scale-[0.97]',
+                      'group select-none aspect-square overflow-hidden touch-manipulation w-full',
+                      sz.card
+                    )}
                   >
-                    {/* Stock Badge - Compact */}
-                    <Badge
-                      variant="secondary"
-                      className={cn(
-                        'absolute top-1 right-1 text-[9px] px-1 py-0 z-10 font-bold',
-                        product.stock_quantity <= product.low_stock_threshold
-                          ? 'bg-destructive/10 text-destructive'
-                          : 'bg-accent/80 text-accent-foreground'
-                      )}
-                    >
-                      {product.stock_quantity}
-                    </Badge>
+                    {/* Stock Badge */}
+                    {showStockBadge && (
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          'absolute top-1 right-1 text-[9px] px-1 py-0 z-10 font-bold',
+                          stockBadgeClass
+                        )}
+                      >
+                        {product.stock_quantity}
+                      </Badge>
+                    )}
 
-                    <div className="flex flex-col items-center justify-center flex-1 w-full gap-1 sm:gap-2">
-                      {/* Icon - Scaled for high mobile density */}
-                      <div className="flex h-7 w-7 sm:h-11 sm:w-11 items-center justify-center rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors">
-                        <IconComponent className="h-3.5 w-3.5 sm:h-6 sm:w-6 text-primary" />
+                    <div className="flex flex-col items-center justify-center flex-1 w-full gap-1">
+                      {/* Icon */}
+                      <div className={cn(
+                        'flex items-center justify-center rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors',
+                        sz.icon
+                      )}>
+                        <IconComponent className={cn('text-primary', sz.fIcon)} />
                       </div>
 
-                      {/* Product Name - High density font sizes */}
-                      <span className="text-[10px] sm:text-xs font-semibold line-clamp-2 leading-tight px-1">
+                      {/* Product Name */}
+                      <span className={cn('font-semibold line-clamp-2 leading-tight px-0.5', sz.name)}>
                         {product.name}
                       </span>
+
+                      {/* Cost Price (admin only) */}
+                      {showCostPrice && (
+                        <span className="text-[9px] text-muted-foreground">
+                          Cost: {currencySymbol}{Number(product.cost_price).toFixed(2)}
+                        </span>
+                      )}
                     </div>
 
-                    {/* Price - Fixed at bottom */}
+                    {/* Price */}
                     <div className="w-full pt-1 border-t border-dashed border-border/50">
-                      <span className="text-xs sm:text-sm font-bold text-primary">
+                      <span className={cn('font-bold text-primary', sz.price)}>
                         {currencySymbol}{Number(product.selling_price).toFixed(2)}
                       </span>
                     </div>
