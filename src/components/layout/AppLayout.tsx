@@ -264,15 +264,31 @@ export default function AppLayout() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0">
+            <SheetContent side="left" className="w-72 p-0 flex flex-col">
               <SheetHeader className="p-4 border-b border-border">
                 <SheetTitle className="text-lg font-bold">Smart POS</SheetTitle>
               </SheetHeader>
-              <nav className="flex flex-col gap-1 p-2 mt-2">
+              <nav className="flex flex-col gap-1 p-2 mt-2 flex-1 overflow-y-auto">
                 {navigation.map((item) => (
                   <NavItem key={item.name} item={item} isActive={location.pathname === item.href} collapsed={false} />
                 ))}
               </nav>
+              {/* User profile & sign out (tablet Sheet) */}
+              <div className="border-t border-border p-3 space-y-2">
+                <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-muted/40 border border-border">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold uppercase flex-shrink-0">
+                    {displayName[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{displayName}</p>
+                    <p className="text-[11px] text-muted-foreground capitalize">{roleLabel}</p>
+                  </div>
+                </div>
+                <Button variant="ghost" className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
+              </div>
             </SheetContent>
           </Sheet>
 
@@ -281,10 +297,31 @@ export default function AppLayout() {
 
           <div className="flex-1" />
 
-          {/* Right side — page context only, no user button */}
+          {/* Right side — page context on desktop */}
           <span className="hidden lg:block text-sm text-muted-foreground capitalize font-medium">
             {navigation.find(n => n.href === location.pathname)?.name || ''}
           </span>
+
+          {/* Mobile/Tablet: user avatar + sign-out dropdown */}
+          <div className="lg:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold uppercase">
+                  {displayName[0]}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <div className="px-3 py-2 border-b">
+                  <p className="text-sm font-semibold truncate">{displayName}</p>
+                  <p className="text-[11px] text-muted-foreground capitalize">{roleLabel}</p>
+                </div>
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </header>
 
         {/* Main Content */}
