@@ -633,7 +633,9 @@ export default function Billing() {
   const gridGap = settings?.grid_gap ?? 8;
   const buttonSize = settings?.product_button_size ?? 'medium';
   const showStockBadge = settings?.show_stock_badge ?? true;
+  const showProductCode = settings?.show_product_code ?? false;
   const showCostPrice = isAdmin && (settings?.show_cost_price ?? false);
+  const autoFitEnabled = settings?.auto_fit_enabled ?? false;
 
   // Size map for product card styles
   const sizeMap = {
@@ -644,8 +646,89 @@ export default function Billing() {
   };
   const sz = sizeMap[buttonSize] || sizeMap.medium;
 
+  // ── Memoized Product Card Component for perf with 1000+ products ──
+  const ProductCard = React.memo(({ product }: { product: typeof products[0] }) => {
+    const iconName = product.icon || 'Package';
+    const IconComponent = ICON_MAP[iconName] || Package;
+    const isOutOfStock = product.stock_quantity === 0;
+    const isLowStock = !isOutOfStock && product.stock_quantity <= product.low_stock_threshold;
+    const stockBadgeClass = isOutOfStock
+      ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+      : isLowStock
+        ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+
+    return (
+      <button
+        key={product.id}
+        onClick={() => addToCart(product)}
+        onMouseDown={() => handleProductTouchStart(product)}
+        onMouseUp={handleProductTouchEnd}
+        onMouseLeave={handleProductTouchEnd}
+        onTouchStart={() => handleProductTouchStart(product)}
+        onTouchEnd={handleProductTouchEnd}
+        onContextMenu={(e) => e.preventDefault()}
+        className={cn(
+          'pos-product-card relative flex flex-col items-center justify-between rounded-xl border border-border bg-card text-center',
+          'group select-none overflow-hidden touch-manipulation w-full',
+          autoFitEnabled ? '' : 'aspect-square',
+          sz.card
+        )}
+      >
+        {/* Stock Badge */}
+        {showStockBadge && (
+          <Badge
+            variant="secondary"
+            className={cn(
+              'absolute top-1 right-1 text-[9px] px-1 py-0 z-10 font-bold',
+              stockBadgeClass
+            )}
+          >
+            {product.stock_quantity}
+          </Badge>
+        )}
+
+        <div className="flex flex-col items-center justify-center flex-1 w-full gap-1">
+          {/* Icon */}
+          <div className={cn(
+            'flex items-center justify-center rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors',
+            sz.icon
+          )}>
+            <IconComponent className={cn('text-primary', sz.fIcon)} />
+          </div>
+
+          {/* Product Name */}
+          <span className={cn('font-semibold line-clamp-2 leading-tight px-0.5', sz.name)}>
+            {product.name}
+          </span>
+
+          {/* Product Code */}
+          {showProductCode && product.sku && (
+            <span className="text-[8px] text-muted-foreground/70 font-mono tracking-wide">
+              {product.sku}
+            </span>
+          )}
+
+          {/* Cost Price (admin only) */}
+          {showCostPrice && (
+            <span className="text-[9px] text-muted-foreground">
+              Cost: {currencySymbol}{Number(product.cost_price).toFixed(2)}
+            </span>
+          )}
+        </div>
+
+        {/* Price */}
+        <div className="w-full pt-1 border-t border-dashed border-border/50">
+          <span className={cn('font-bold text-primary', sz.price)}>
+            {currencySymbol}{Number(product.selling_price).toFixed(2)}
+          </span>
+        </div>
+      </button>
+    );
+  });
+
   return (
-    <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-3.5rem)] gap-0 -mx-4 sm:-mx-6 lg:-mx-8 -my-3 sm:-my-4 lg:-my-6">
+    <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-3.5rem)] gap-0 w-full">
       {/* Left Panel - Categories */}
       <div className="hidden lg:flex w-52 flex-shrink-0 flex-col border-r border-border bg-card">
         <ScrollArea className="flex-1 p-2">
@@ -776,7 +859,7 @@ export default function Billing() {
           </div>
         </div>
 
-        {/* Products Grid – dynamic admin-controlled */}
+        {/* Products Grid – dynamic admin-controlled with responsive breakpoints */}
         <ScrollArea className="flex-1">
           {filteredProducts.length === 0 ? (
             <div className="flex h-40 items-center justify-center text-muted-foreground">
@@ -785,84 +868,17 @@ export default function Billing() {
             </div>
           ) : (
             <div
-              className="grid pb-20 pt-2 px-3 transition-all duration-300"
+              className="pos-product-grid pb-20 sm:pb-4 pt-2 px-3 transition-all duration-300"
               style={{
-                gridTemplateColumns: `repeat(${productColumns}, minmax(0, 1fr))`,
+                display: 'grid',
+                gridTemplateColumns: `repeat(var(--pos-cols, ${productColumns}), minmax(0, 1fr))`,
                 gap: `${gridGap}px`,
+                ['--pos-cols-desktop' as string]: productColumns,
               }}
             >
-              {filteredProducts.map((product) => {
-                const iconName = product.icon || 'Package';
-                const IconComponent = ICON_MAP[iconName] || Package;
-                const isOutOfStock = product.stock_quantity === 0;
-                const isLowStock = !isOutOfStock && product.stock_quantity <= product.low_stock_threshold;
-                const stockBadgeClass = isOutOfStock
-                  ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                  : isLowStock
-                    ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
-                    : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-
-                return (
-                  <button
-                    key={product.id}
-                    onClick={() => addToCart(product)}
-                    onMouseDown={() => handleProductTouchStart(product)}
-                    onMouseUp={handleProductTouchEnd}
-                    onMouseLeave={handleProductTouchEnd}
-                    onTouchStart={() => handleProductTouchStart(product)}
-                    onTouchEnd={handleProductTouchEnd}
-                    onContextMenu={(e) => e.preventDefault()}
-                    className={cn(
-                      'relative flex flex-col items-center justify-between rounded-xl border border-border bg-card text-center shadow-sm',
-                      'transition-all duration-200 hover:border-primary hover:shadow-md hover:-translate-y-0.5 active:scale-[0.97]',
-                      'group select-none aspect-square overflow-hidden touch-manipulation w-full',
-                      sz.card
-                    )}
-                  >
-                    {/* Stock Badge */}
-                    {showStockBadge && (
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          'absolute top-1 right-1 text-[9px] px-1 py-0 z-10 font-bold',
-                          stockBadgeClass
-                        )}
-                      >
-                        {product.stock_quantity}
-                      </Badge>
-                    )}
-
-                    <div className="flex flex-col items-center justify-center flex-1 w-full gap-1">
-                      {/* Icon */}
-                      <div className={cn(
-                        'flex items-center justify-center rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors',
-                        sz.icon
-                      )}>
-                        <IconComponent className={cn('text-primary', sz.fIcon)} />
-                      </div>
-
-                      {/* Product Name */}
-                      <span className={cn('font-semibold line-clamp-2 leading-tight px-0.5', sz.name)}>
-                        {product.name}
-                      </span>
-
-                      {/* Cost Price (admin only) */}
-                      {showCostPrice && (
-                        <span className="text-[9px] text-muted-foreground">
-                          Cost: {currencySymbol}{Number(product.cost_price).toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Price */}
-                    <div className="w-full pt-1 border-t border-dashed border-border/50">
-                      <span className={cn('font-bold text-primary', sz.price)}>
-                        {currencySymbol}{Number(product.selling_price).toFixed(2)}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+              {filteredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
             </div>
           )}
         </ScrollArea>

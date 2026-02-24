@@ -284,7 +284,12 @@ export default function AppLayout() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-20 sm:pb-6 bg-muted/20 custom-scrollbar relative z-0">
+        <main className={cn(
+          'flex-1 overflow-x-hidden relative z-0',
+          location.pathname === '/billing'
+            ? 'overflow-hidden p-0'
+            : 'overflow-y-auto p-4 lg:p-6 pb-20 sm:pb-6 bg-muted/20 custom-scrollbar'
+        )}>
           <Outlet />
         </main>
 
