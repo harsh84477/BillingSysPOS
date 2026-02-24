@@ -239,8 +239,17 @@ export default function Billing() {
 
   // Add to cart - round prices to avoid floating point issues
   const addToCart = (product: typeof products[0]) => {
+    // Stock validation: available = total stock - reserved by all drafts
+    const available = product.stock_quantity - (product.reserved_quantity || 0);
+    const existing = cart.find((item) => item.productId === product.id);
+    const currentQty = existing ? existing.quantity : 0;
+
+    if (currentQty + 1 > available) {
+      toast.error(`Out of stock! Only ${available} units available.`);
+      return;
+    }
+
     setCart((prev) => {
-      const existing = prev.find((item) => item.productId === product.id);
       if (existing) {
         return prev.map((item) =>
           item.productId === product.id
@@ -263,15 +272,29 @@ export default function Billing() {
 
   // Update quantity
   const updateQuantity = (productId: string, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((item) =>
-          item.productId === productId
-            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
-            : item
+    setCart((prev) => {
+      const item = prev.find(i => i.productId === productId);
+      if (!item) return prev;
+
+      if (delta > 0) {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+          const available = product.stock_quantity - (product.reserved_quantity || 0);
+          if (item.quantity + delta > available) {
+            toast.error(`Stock limit reached. Only ${available} units available.`);
+            return prev;
+          }
+        }
+      }
+
+      return prev
+        .map((i) =>
+          i.productId === productId
+            ? { ...i, quantity: Math.max(0, i.quantity + delta) }
+            : i
         )
-        .filter((item) => item.quantity > 0)
-    );
+        .filter((i) => i.quantity > 0);
+    });
   };
 
   // Set exact quantity for cart item
@@ -280,6 +303,16 @@ export default function Billing() {
       removeFromCart(productId);
       return;
     }
+
+    const product = products.find(p => p.id === productId);
+    if (product) {
+      const available = product.stock_quantity - (product.reserved_quantity || 0);
+      if (quantity > available) {
+        toast.error(`Insufficient stock! Max available: ${available}`);
+        return;
+      }
+    }
+
     setCart((prev) =>
       prev.map((item) =>
         item.productId === productId
@@ -303,8 +336,17 @@ export default function Billing() {
   // Add to cart with specific quantity (for long-press)
   const addToCartWithQuantity = (product: typeof products[0], quantity: number) => {
     if (quantity <= 0) return;
+
+    const available = product.stock_quantity - (product.reserved_quantity || 0);
+    const existing = cart.find((item) => item.productId === product.id);
+    const currentQty = existing ? existing.quantity : 0;
+
+    if (currentQty + quantity > available) {
+      toast.error(`Out of stock! Only ${available} units available.`);
+      return;
+    }
+
     setCart((prev) => {
-      const existing = prev.find((item) => item.productId === product.id);
       if (existing) {
         return prev.map((item) =>
           item.productId === product.id
@@ -522,32 +564,65 @@ export default function Billing() {
           finalCustomerId = newCustomer.id;
         }
 
-        // Compute profit: sum of (unit_price - cost_price) * qty
+        const isDraft = isSalesman;
+
+        // ─── DRAFT PATH: Use atomic RPC ───
+        if (isDraft) {
+          const salesmanDisplayName =
+            user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Salesman';
+
+          const items = cart.map(item => ({
+            product_id: item.productId,
+            product_name: item.name,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            cost_price: item.costPrice,
+            total_price: item.unitPrice * item.quantity,
+          }));
+
+          const { data, error } = await supabase.rpc('create_draft_bill', {
+            _business_id: businessId,
+            _bill_number: billNumber,
+            _customer_id: finalCustomerId || null,
+            _salesman_name: salesmanDisplayName,
+            _subtotal: cartCalculations.subtotal,
+            _discount_type: 'flat',
+            _discount_value: discountValue,
+            _discount_amount: cartCalculations.discountAmount,
+            _tax_amount: cartCalculations.taxAmount,
+            _total_amount: cartCalculations.total,
+            _items: items,
+          } as any);
+
+          if (error) {
+            if (error.code === '23505' && retryCount < maxRetries - 1) {
+              retryCount++;
+              continue;
+            }
+            throw error;
+          }
+
+          const result = data as any;
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to create draft');
+          }
+
+          return { bill: result, billNumber: result.bill_number || billNumber, shouldPrint, isDraft };
+        }
+
+        // ─── COMPLETED BILL PATH: existing client-side logic ───
         const billProfit = cart.reduce(
           (sum, item) => sum + (item.unitPrice - item.costPrice) * item.quantity, 0
         );
 
-        // Determine bill status based on role
-        const isDraft = isSalesman;
-        const billStatus = isDraft ? 'draft' : 'completed';
-
-        // Payment logic (only for completed bills)
-        const resolvedPaidAmount = isDraft ? 0
-          : paymentType === 'cash'
-            ? cartCalculations.total
-            : (typeof paidAmount === 'number' ? paidAmount : 0);
-        const resolvedDueAmount = isDraft ? cartCalculations.total
-          : Math.max(0, cartCalculations.total - resolvedPaidAmount);
-        const resolvedPaymentStatus = isDraft ? 'unpaid'
-          : paymentType === 'cash' ? 'paid'
-            : resolvedDueAmount <= 0 ? 'paid'
-              : resolvedPaidAmount > 0 ? 'partial'
-                : 'unpaid';
-
-        // Get salesman display name
-        const salesmanDisplayName = isDraft
-          ? (user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Salesman')
-          : null;
+        const resolvedPaidAmount = paymentType === 'cash'
+          ? cartCalculations.total
+          : (typeof paidAmount === 'number' ? paidAmount : 0);
+        const resolvedDueAmount = Math.max(0, cartCalculations.total - resolvedPaidAmount);
+        const resolvedPaymentStatus = paymentType === 'cash' ? 'paid'
+          : resolvedDueAmount <= 0 ? 'paid'
+            : resolvedPaidAmount > 0 ? 'partial'
+              : 'unpaid';
 
         const { data: bill, error: billError } = await supabase
           .from('bills')
@@ -556,28 +631,25 @@ export default function Billing() {
             customer_id: finalCustomerId,
             created_by: user?.id,
             business_id: businessId,
-            status: billStatus as any,
+            status: 'completed' as any,
             subtotal: cartCalculations.subtotal,
             discount_type: 'flat',
             discount_value: discountValue,
             discount_amount: cartCalculations.discountAmount,
             tax_amount: cartCalculations.taxAmount,
             total_amount: cartCalculations.total,
-            completed_at: isDraft ? null : new Date().toISOString(),
-            // Payment fields
-            payment_type: isDraft ? null : paymentType,
+            completed_at: new Date().toISOString(),
+            payment_type: paymentType,
             payment_status: resolvedPaymentStatus,
             paid_amount: resolvedPaidAmount,
             due_amount: resolvedDueAmount,
-            due_date: (!isDraft && paymentType === 'due' && dueDate) ? dueDate : null,
-            profit: isDraft ? 0 : billProfit,
-            salesman_name: salesmanDisplayName,
+            due_date: (paymentType === 'due' && dueDate) ? dueDate : null,
+            profit: billProfit,
           } as any)
           .select()
           .single();
 
         if (billError) {
-          // Check if it's a duplicate key error
           if (billError.code === '23505' && retryCount < maxRetries - 1) {
             retryCount++;
             continue;
@@ -601,29 +673,19 @@ export default function Billing() {
 
         if (itemsError) throw itemsError;
 
-        // Update stock: for drafts, increase reserved_quantity; for completed, decrease stock_quantity
+        // Reduce actual stock for completed bills
         for (const item of cart) {
           const product = products.find((p) => p.id === item.productId);
           if (product) {
-            if (isDraft) {
-              // Reserve stock for draft
-              const newReserved = (product.reserved_quantity || 0) + item.quantity;
-              await supabase
-                .from('products')
-                .update({ reserved_quantity: newReserved } as any)
-                .eq('id', item.productId);
-            } else {
-              // Reduce actual stock for completed bills
-              const newQuantity = product.stock_quantity - item.quantity;
-              await supabase
-                .from('products')
-                .update({ stock_quantity: newQuantity })
-                .eq('id', item.productId);
-            }
+            const newQuantity = product.stock_quantity - item.quantity;
+            await supabase
+              .from('products')
+              .update({ stock_quantity: newQuantity })
+              .eq('id', item.productId);
           }
         }
 
-        return { bill, billNumber, shouldPrint, isDraft };
+        return { bill, billNumber, shouldPrint, isDraft: false };
       }
 
       throw new Error('Failed to generate unique bill number after multiple attempts');
@@ -677,8 +739,10 @@ export default function Billing() {
   const ProductCard = React.memo(({ product }: { product: typeof products[0] }) => {
     const iconName = product.icon || 'Package';
     const IconComponent = ICON_MAP[iconName] || Package;
-    const isOutOfStock = product.stock_quantity === 0;
-    const isLowStock = !isOutOfStock && product.stock_quantity <= product.low_stock_threshold;
+    // Available stock = actual stock minus reserved stock (for drafts)
+    const availableStock = product.stock_quantity - (product.reserved_quantity || 0);
+    const isOutOfStock = availableStock <= 0;
+    const isLowStock = !isOutOfStock && availableStock <= product.low_stock_threshold;
     const stockBadgeClass = isOutOfStock
       ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
       : isLowStock
@@ -711,7 +775,7 @@ export default function Billing() {
               stockBadgeClass
             )}
           >
-            {product.stock_quantity}
+            {availableStock}
           </Badge>
         )}
 

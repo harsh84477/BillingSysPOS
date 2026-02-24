@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import {
   DollarSign,
   ShoppingCart,
@@ -27,6 +28,7 @@ import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 import { exportToExcel } from '@/lib/exportToExcel';
 import { cn } from '@/lib/utils';
+import DraftBillModal from '@/components/bills/DraftBillModal';
 
 function StatCard({
   title,
@@ -66,6 +68,7 @@ function StatCard({
 export default function Dashboard() {
   const { user, isSuperAdmin, isSalesman, userRole, isAdmin, isManager } = useAuth();
   const navigate = useNavigate();
+  const [selectedDraftBillId, setSelectedDraftBillId] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (!user && isSuperAdmin) {
@@ -172,6 +175,19 @@ export default function Dashboard() {
 
       if (error) throw error;
       return data?.filter(p => p.stock_quantity <= p.low_stock_threshold) || [];
+    },
+  });
+
+  // Fetch total reserved units
+  const { data: totalReserved = 0, isLoading: loadingReserved } = useQuery({
+    queryKey: ['reservedStockUnits'],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from('products')
+        .select('reserved_quantity')
+        .gt('reserved_quantity', 0) as any);
+      if (error) throw error;
+      return (data || []).reduce((sum: number, p: any) => sum + (p.reserved_quantity || 0), 0) || 0;
     },
   });
 
@@ -391,11 +407,18 @@ export default function Dashboard() {
           isLoading={loadingTodayProfit}
         />
         <StatCard
-          title="Customers"
-          value={customerCount || 0}
-          icon={Users}
-          description="Total customers"
-          isLoading={loadingCustomers}
+          title="Draft Bills"
+          value={pendingBills}
+          icon={ShoppingCart}
+          description="Total pending drafts"
+          isLoading={loadingPending}
+        />
+        <StatCard
+          title="Reserved Units"
+          value={totalReserved}
+          icon={Package}
+          description="Locked in drafts"
+          isLoading={loadingReserved}
         />
         <StatCard
           title="Total Due Amount"
@@ -519,13 +542,20 @@ export default function Dashboard() {
       {draftBills.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5 text-teal-600" />
-              Draft Orders
-            </CardTitle>
-            <CardDescription>
-              {isSalesman ? 'Your pending draft orders' : 'Draft orders from salesmen awaiting finalization'}
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5 text-teal-600" />
+                  Draft Orders
+                </CardTitle>
+                <CardDescription>
+                  {isSalesman ? 'Your pending draft orders' : 'Draft orders from salesmen awaiting finalization'}
+                </CardDescription>
+              </div>
+              <Badge variant="secondary" className="bg-teal-100 text-teal-700">
+                {draftBills.length} Pending
+              </Badge>
+            </div>
           </CardHeader>
           <CardContent>
             {loadingDrafts ? (
@@ -535,30 +565,43 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : (
-              <div className="space-y-3">
-                {draftBills.map((draft: any) => (
-                  <div
-                    key={draft.id}
-                    className="flex items-center justify-between rounded-lg border border-teal-500/20 p-3 bg-teal-500/5 hover:bg-teal-500/10 transition-colors cursor-pointer"
-                    onClick={() => navigate('/bills-history')}
-                  >
-                    <div>
-                      <p className="font-medium text-sm">{draft.bill_number}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {draft.salesman_name || 'Unknown'} • {draft.customers?.name || 'Walk-in'}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {format(new Date(draft.created_at), 'dd/MM/yy HH:mm')}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-sm">
-                        {currencySymbol}{Number(draft.total_amount).toFixed(2)}
-                      </p>
-                      <span className="text-[10px] text-teal-600 font-semibold uppercase">Draft</span>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-muted-foreground font-medium">
+                      <th className="text-left py-2 px-1">Bill #</th>
+                      <th className="text-left py-2 px-1">Salesman</th>
+                      <th className="text-left py-2 px-1">Customer</th>
+                      <th className="text-left py-2 px-1 hidden sm:table-cell">Last Updated</th>
+                      <th className="text-right py-2 px-1">Total</th>
+                      <th className="text-right py-2 px-1">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {draftBills.map((draft: any) => (
+                      <tr
+                        key={draft.id}
+                        className="hover:bg-muted/50 cursor-pointer transition-colors"
+                        onClick={() => setSelectedDraftBillId(draft.id)}
+                      >
+                        <td className="py-3 px-1 font-medium">{draft.bill_number}</td>
+                        <td className="py-3 px-1">{draft.salesman_name || 'N/A'}</td>
+                        <td className="py-3 px-1">{draft.customers?.name || 'Walk-in'}</td>
+                        <td className="py-3 px-1 hidden sm:table-cell text-xs text-muted-foreground">
+                          {format(new Date(draft.created_at), 'dd/MM HH:mm')}
+                        </td>
+                        <td className="py-3 px-1 text-right font-bold">
+                          {currencySymbol}{Number(draft.total_amount).toFixed(2)}
+                        </td>
+                        <td className="py-3 px-1 text-right">
+                          <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none text-[10px]">
+                            DRAFT
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
@@ -660,6 +703,13 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Draft Bill Popup Modal */}
+      <DraftBillModal
+        billId={selectedDraftBillId}
+        open={!!selectedDraftBillId}
+        onClose={() => setSelectedDraftBillId(null)}
+      />
     </div >
   );
 }

@@ -46,6 +46,7 @@ import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import DraftBillModal from '@/components/bills/DraftBillModal';
 
 type DatePreset = 'today' | 'yesterday' | 'last7days' | 'last30days' | 'thisMonth' | 'lastMonth' | 'custom';
 
@@ -72,6 +73,7 @@ interface Bill {
   created_by: string | null;
   customer_id: string | null;
   customers: { name: string } | null;
+  salesman_name?: string | null;
 }
 
 interface BillItem {
@@ -92,6 +94,7 @@ export default function BillsHistory() {
   const [selectedBill, setSelectedBill] = useState<Bill | null>(null);
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedDraftBillId, setSelectedDraftBillId] = useState<string | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -200,21 +203,35 @@ export default function BillsHistory() {
   };
 
   const deleteBillMutation = useMutation({
-    mutationFn: async (billId: string) => {
+    mutationFn: async (bill: Bill) => {
+      // For draft bills, use cancel RPC to restore reserved stock
+      if (bill.status === 'draft') {
+        const { data, error } = await supabase.rpc('cancel_draft_bill', {
+          _bill_id: bill.id,
+        } as any);
+        if (error) throw error;
+        const result = data as any;
+        if (!result.success) throw new Error(result.error || 'Failed to cancel draft');
+        return;
+      }
+
+      // For other bills, delete normally
       const { error: itemsError } = await supabase
         .from('bill_items')
         .delete()
-        .eq('bill_id', billId);
+        .eq('bill_id', bill.id);
       if (itemsError) throw itemsError;
 
       const { error: billError } = await supabase
         .from('bills')
         .delete()
-        .eq('id', billId);
+        .eq('id', bill.id);
       if (billError) throw billError;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bills'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['draftBills'] });
       toast({
         title: 'Bill deleted',
         description: 'The bill has been permanently deleted.',
@@ -228,66 +245,6 @@ export default function BillsHistory() {
         variant: 'destructive',
       });
       console.error('Delete error:', error);
-    },
-  });
-
-  // Finalize draft bill mutation (admin/manager only)
-  const finalizeDraftMutation = useMutation({
-    mutationFn: async (billId: string) => {
-      // Get bill items so we can transfer reserved -> actual stock
-      const { data: billItems, error: itemsError } = await supabase
-        .from('bill_items')
-        .select('product_id, quantity')
-        .eq('bill_id', billId);
-      if (itemsError) throw itemsError;
-
-      // For each item: decrease stock_quantity and decrease reserved_quantity
-      for (const item of (billItems || [])) {
-        const { data: product } = await supabase
-          .from('products')
-          .select('stock_quantity, reserved_quantity')
-          .eq('id', item.product_id)
-          .single();
-        if (product) {
-          await supabase
-            .from('products')
-            .update({
-              stock_quantity: product.stock_quantity - item.quantity,
-              reserved_quantity: Math.max(0, (product.reserved_quantity || 0) - item.quantity),
-            } as any)
-            .eq('id', item.product_id);
-        }
-      }
-
-      // Update bill status to completed
-      const { error: updateError } = await supabase
-        .from('bills')
-        .update({
-          status: 'completed' as any,
-          completed_at: new Date().toISOString(),
-          payment_status: 'paid',
-          payment_type: 'cash',
-          paid_amount: 0, // will be set by admin later if needed
-        } as any)
-        .eq('id', billId);
-      if (updateError) throw updateError;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bills'] });
-      queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['draftBills'] });
-      toast({
-        title: 'Draft Finalized',
-        description: 'The draft order has been completed and stock updated.',
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: 'Error',
-        description: 'Failed to finalize draft bill.',
-        variant: 'destructive',
-      });
-      console.error('Finalize error:', error);
     },
   });
 
@@ -601,12 +558,11 @@ export default function BillsHistory() {
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedBill(bill)}>
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
-                      {bill.status === 'draft' && (isAdmin || isManager) && (
+                      {bill.status === 'draft' && (
                         <Button
                           variant="ghost" size="icon" className="h-7 w-7 text-green-600"
-                          onClick={() => finalizeDraftMutation.mutate(bill.id)}
-                          disabled={finalizeDraftMutation.isPending}
-                          title="Finalize Draft"
+                          onClick={() => setSelectedDraftBillId(bill.id)}
+                          title="Open Draft"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" />
                         </Button>
@@ -660,13 +616,12 @@ export default function BillsHistory() {
                             <Button variant="ghost" size="icon" onClick={() => setSelectedBill(bill)} title="View Bill">
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {bill.status === 'draft' && (isAdmin || isManager) && (
+                            {bill.status === 'draft' && (
                               <Button
                                 variant="ghost" size="icon"
-                                onClick={() => finalizeDraftMutation.mutate(bill.id)}
-                                disabled={finalizeDraftMutation.isPending}
+                                onClick={() => setSelectedDraftBillId(bill.id)}
                                 className="text-green-600 hover:text-green-700"
-                                title="Finalize Draft Order"
+                                title="Open Draft Order"
                               >
                                 <CheckCircle2 className="h-4 w-4" />
                               </Button>
@@ -715,7 +670,7 @@ export default function BillsHistory() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => billToDelete && deleteBillMutation.mutate(billToDelete.id)}
+              onClick={() => billToDelete && deleteBillMutation.mutate(billToDelete)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteBillMutation.isPending ? 'Deleting...' : 'Delete'}
@@ -723,6 +678,13 @@ export default function BillsHistory() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Draft Bill Popup Modal */}
+      <DraftBillModal
+        billId={selectedDraftBillId}
+        open={!!selectedDraftBillId}
+        onClose={() => setSelectedDraftBillId(null)}
+      />
     </div>
   );
 }
