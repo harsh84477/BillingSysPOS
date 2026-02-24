@@ -1,0 +1,65 @@
+[33m0e9e516[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mbackup/today-changes[m[33m)[m h
+[33maab8cf6[m feat: Add Billing page with comprehensive point-of-sale (POS) functionality including cart management, payment processing, and receipt printing.
+[33m2f1fad0[m feat: Add a new dashboard page displaying key business metrics and introduce master production schema migration.
+[33mcc0a2ba[m feat: Implement core POS functionalities including billing, inventory, customer/supplier management, expenses, and reporting with RBAC.
+[33m200638d[m hj
+[33m09b12b5[m feat: Introduce a comprehensive dashboard, billing page, and bill history, including draft bill management and salesman role support.
+[33m64a1565[m feat: Implement core application layout with role-based navigation and add salesman role.
+[33m7053c36[m feat: implement initial Point of Sale application with billing, dashboard, authentication, and settings modules.
+[33m1fc930e[m feat: implement core application layout with sidebar navigation, theme switching, and user profile, alongside a new billing page and global styles.
+[33m12d3a53[m feat: Introduce product grid display settings, including database schema, business settings hook, and a new settings page for configuration.
+[33m59b0553[m feat: Add dashboard page displaying key business metrics, recent activities, and monthly financial reports with export functionality.
+[33madaf0d4[m feat: Introduce due billing and profit tracking by adding columns to `bills` and `customers` tables, and creating RPC functions for due bills and dashboard statistics.
+[33m477bf7c[m feat: Add SuperAdminLayout component for the super admin dashboard, including navigation and authentication.
+[33me753009[m ffgh
+[33m0564cf9[m feat: Add SuperAdminLayout component for the super admin dashboard, including navigation, header, and content area.
+[33m57acf22[m feat: Implement Super Admin feature including dedicated routes, layout, and pages.
+[33m1d081db[m feat: introduce super admin extended service with audit logs, user blocking, and various platform analytics RPCs.
+[33me117b8d[m feat: Provision 30-day free trials for new businesses and implement a `useSubscription` hook for feature management.
+[33ma70a199[m feat: add super admin service functions for cross-business data access and a `useSubscription` hook for client-side subscription status and feature management.
+[33m33856f8[m feat: Implement super admin business management tab with business listing, search, filter, and detailed profile views.
+[33m13fbd89[m feat: add super admin dashboard with business list and platform statistics, backed by new Supabase RPCs.
+[33m6c65e8d[m feat: add Super Admin business profile view with cross-business data access and subscription management capabilities.
+[33m3194a10[m feat: Implement a comprehensive super-admin panel with user, business, plan, subscription, and log management capabilities.
+[33mf9c8372[m feat: Add subscription management UI component and a new Super Admin page.
+[33me9dd654[m feat: Add Super Admin dashboard and bills history pages.
+[33maa91575[m feat: Establish core application layout with collapsible sidebar, theme selection, and initial super admin functionality.
+[33md58fdf0[m feat: Add AuthContext for user authentication, roles, business management, and super admin support with accompanying database migration.
+[33ma44284c[m feat: Implement a new billing page with full POS functionality and a corresponding bills history page.
+[33mffa8550[m feat: Implement core POS billing functionality and foundational SaaS infrastructure including authentication, subscription management, and related database migrations.
+[33ma6431f8[m feat: add a comprehensive settings page for managing business details, categories, user roles, billing, and appearance.
+[33mb5c1d5d[m fix
+[33m4e9b664[m feat: Add a new settings page with sections for business information, appearance, billing, categories, and user management.
+[33mc1fa6df[m feat: add bill receipt printing functionality with customizable styles and business settings.
+[33m45d2d45[m feat: implement comprehensive billing/POS page with product catalog, cart management, and customer selection.
+[33m4b80f39[m feat: Remove Lovable integration and rebrand the project as a POS system with updated documentation and metadata.
+[33m65c3a8e[m feat: add BillDetailsDialog component to display and print bill information.
+[33m904d434[m feat: Introduce comprehensive business settings page with invoice customization, billing, categories, themes, and user management.
+[33m00a5bfd[m feat: Introduce a comprehensive settings page for business, theme, billing, categories, and user management, including advanced invoice customization.
+[33m4da9ed1[m feat: Implement a new billing and Point of Sale (POS) system including product and cart management, customer selection, receipt generation, and advanced invoice customization.
+[33me04799f[m feat: Implement customizable bill receipt printing functionality.
+[33mc407f3d[m feat: Create a new Billing page to manage point-of-sale transactions, including product selection, cart operations, customer assignment, and dynamic total calculations.
+[33md52a7fe[m feat: Add bill receipt printing utility and a new billing page.
+[33mfb3de4e[m feat: implement billing page with point-of-sale functionality and receipt printing component.
+[33m73453b2[m feat: Introduce a new settings page to configure business details, appearance, billing, categories, and user roles.
+[33m758233e[m feat: Add a new settings page with sections for business information, theme, billing, categories, and user management.
+[33m7a5633a[m feat: Implement advanced invoice customization settings with new Supabase columns and React hooks.
+[33macb47b8[m feat: Add advanced invoice customization options and bill receipt printing functionality.
+[33md2ce73e[m feat: Implement a comprehensive billing and point-of-sale system, including business settings management and receipt generation.
+[33m12f10d5[m feat: Implement new billing page with integrated receipt printing functionality.
+[33maf60244[m feat: Add new billing/POS page with product, cart, and customer management.
+[33m4d25f6d[m feat: Implement a comprehensive billing system with point-of-sale functionality, bill history, and receipt printing.
+[33m6d0776f[m feat: Implement customizable bill receipt printing with new business settings, a dedicated settings page, and database schema updates.
+[33m5c0d4b7[m feat: add billing/POS page with product selection, cart management, and checkout functionality.
+[33m68f9a9c[m feat: Implement a new billing page with point-of-sale functionality, including cart management, product selection, and bill generation.
+[33m820f8a0[m feat: implement point-of-sale (POS) billing page with product selection, cart management, and transaction processing.
+[33md2a9136[m feat: implement a new billing page with full point-of-sale (POS) functionality including product selection, cart management, and bill generation.
+[33mbfbf231[m feat: implement initial POS billing page with product selection, cart management, and bill generation.
+[33m4d98915[m feat: implement a comprehensive billing/POS page with product management, cart functionality, and bill generation.
+[33m0d44baa[m feat: implement billing/POS page with product management, cart functionality, and bill generation.
+[33md0e2fe1[m feat: Add a new billing page for point-of-sale transactions, including cart management, product selection, and bill generation.
+[33me18176f[m feat: add new billing/POS page for managing sales, cart, products, and customers.
+[33m83bb540[m feat: introduce a comprehensive settings page for managing business information, theme, billing, categories, and user roles.
+[33m781e2f7[m Merge branch 'main' of https://github.com/harsh84477/BillingSysPOS
+[33m06ce6b9[m feat: Implement Bills History page with search, filtering, export, and print functionalities, and add a new reusable Badge UI component.
+[33mc073486[m build: Increase Vite chu
