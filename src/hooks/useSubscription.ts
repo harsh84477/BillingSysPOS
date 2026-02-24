@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { isAfter } from 'date-fns';
 
 export function useSubscription() {
-    const { subscription, isSuperAdmin } = useAuth();
+    const { subscription, subscriptionLoading, isSuperAdmin } = useAuth();
 
     // Super admins bypass everything
     if (isSuperAdmin) {
@@ -17,6 +17,23 @@ export function useSubscription() {
             canExport: true,
             historyLimitDays: -1,
             planName: 'Super Admin',
+            loading: false,
+        };
+    }
+
+    if (subscriptionLoading) {
+        return {
+            subscription: null,
+            status: 'loading',
+            isTrial: false,
+            isActive: true, // Optimistically active while loading
+            isExpired: false,
+            canCreateBill: true,
+            canViewFullHistory: true,
+            canExport: true,
+            historyLimitDays: -1,
+            planName: 'Loading...',
+            loading: true,
         };
     }
 
@@ -34,7 +51,6 @@ export function useSubscription() {
         (isTrial && (!subscription?.trial_end || isAfter(new Date(subscription.trial_end), new Date())));
 
     // During trial → unlock EVERYTHING (bills, export, full history)
-    // Expired → lock everything
     // Paid active plan → use plan-specific feature flags
     const planFeatures = (subscription?.plan?.features as any) || {};
     const canExport = isTrial || !!planFeatures.can_export;
@@ -55,5 +71,6 @@ export function useSubscription() {
         canExport,
         historyLimitDays,
         planName: subscription?.plan?.name || 'Free Trial',
+        loading: false,
     };
 }

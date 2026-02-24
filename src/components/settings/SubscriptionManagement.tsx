@@ -9,7 +9,10 @@ import { Check, CreditCard, Sparkles, Clock, AlertTriangle } from 'lucide-react'
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
+import { useAuth } from '@/contexts/AuthContext';
+
 export default function SubscriptionManagement() {
+    const { isAdmin } = useAuth();
     const { subscription, planName, isTrial, isActive, isExpired, historyLimitDays, canExport } = useSubscription();
 
     // Fetch available plans
@@ -110,58 +113,60 @@ export default function SubscriptionManagement() {
                 </CardContent>
             </Card>
 
-            {/* Available Plans */}
-            <div className="space-y-4">
-                <h3 className="text-lg font-bold tracking-tight">Upgrade Options</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {plans.map((plan) => (
-                        <Card key={plan.id} className={`flex flex-col ${plan.name.includes('Yearly') ? 'border-primary shadow-md relative' : ''}`}>
-                            {plan.name.includes('Yearly') && (
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                                    Best Value
+            {/* Available Plans - Admin Only */}
+            {isAdmin && (
+                <div className="space-y-4">
+                    <h3 className="text-lg font-bold tracking-tight">Upgrade Options</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {plans.map((plan) => (
+                            <Card key={plan.id} className={`flex flex-col ${plan.name.includes('Yearly') ? 'border-primary shadow-md relative' : ''}`}>
+                                {plan.name.includes('Yearly') && (
+                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                                        Best Value
+                                    </div>
+                                )}
+                                <CardHeader>
+                                    <CardTitle>{plan.name}</CardTitle>
+                                    <div className="mt-2 flex items-baseline gap-1">
+                                        <span className="text-3xl font-bold">₹{plan.price}</span>
+                                        <span className="text-sm text-muted-foreground capitalize">/ {plan.billing_period.replace('_', ' ')}</span>
+                                    </div>
+                                    <CardDescription className="mt-2">{plan.description}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex-1">
+                                    <ul className="space-y-2.5 text-sm">
+                                        <li className="flex items-center gap-2">
+                                            <Check className="h-4 w-4 text-green-500 shrink-0" />
+                                            <span>Full Billing History</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="h-4 w-4 text-green-500 shrink-0" />
+                                            <span>Advanced Reports & PDF</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="h-4 w-4 text-green-500 shrink-0" />
+                                            <span>Unlimited Data Export</span>
+                                        </li>
+                                        <li className="flex items-center gap-2">
+                                            <Check className="h-4 w-4 text-green-500 shrink-0" />
+                                            <span>24/7 Priority Support</span>
+                                        </li>
+                                    </ul>
+                                </CardContent>
+                                <div className="p-6 pt-0 mt-auto">
+                                    <Button
+                                        className="w-full"
+                                        variant={plan.name.includes('Yearly') ? 'default' : 'outline'}
+                                        onClick={() => handleUpgrade(plan)}
+                                    >
+                                        Choose {plan.name}
+                                    </Button>
                                 </div>
-                            )}
-                            <CardHeader>
-                                <CardTitle>{plan.name}</CardTitle>
-                                <div className="mt-2 flex items-baseline gap-1">
-                                    <span className="text-3xl font-bold">₹{plan.price}</span>
-                                    <span className="text-sm text-muted-foreground capitalize">/ {plan.billing_period.replace('_', ' ')}</span>
-                                </div>
-                                <CardDescription className="mt-2">{plan.description}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex-1">
-                                <ul className="space-y-2.5 text-sm">
-                                    <li className="flex items-center gap-2">
-                                        <Check className="h-4 w-4 text-green-500 shrink-0" />
-                                        <span>Full Billing History</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Check className="h-4 w-4 text-green-500 shrink-0" />
-                                        <span>Advanced Reports & PDF</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Check className="h-4 w-4 text-green-500 shrink-0" />
-                                        <span>Unlimited Data Export</span>
-                                    </li>
-                                    <li className="flex items-center gap-2">
-                                        <Check className="h-4 w-4 text-green-500 shrink-0" />
-                                        <span>24/7 Priority Support</span>
-                                    </li>
-                                </ul>
-                            </CardContent>
-                            <div className="p-6 pt-0 mt-auto">
-                                <Button
-                                    className="w-full"
-                                    variant={plan.name.includes('Yearly') ? 'default' : 'outline'}
-                                    onClick={() => handleUpgrade(plan)}
-                                >
-                                    Choose {plan.name}
-                                </Button>
-                            </div>
-                        </Card>
-                    ))}
+                            </Card>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
             <p className="text-center text-xs text-muted-foreground pt-4">
                 Need a custom plan for multiple branches? <Button variant="link" className="h-auto p-0 text-xs text-primary">Contact Sales</Button>

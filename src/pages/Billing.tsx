@@ -114,11 +114,11 @@ interface CartItem {
 }
 
 export default function Billing() {
-  const { user, businessId, billPrefix, userRole, isAdmin, isSalesman } = useAuth();
+  const { user, businessId, billPrefix, userRole, isAdmin, isManager, isSalesman } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
-  const { isTrial, isActive, isExpired, canCreateBill, planName } = useSubscription();
+  const { isTrial, isActive, isExpired, canCreateBill, planName, loading: subscriptionLoading } = useSubscription();
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -701,7 +701,7 @@ export default function Billing() {
       setCustomerName('');
       setSelectedCustomerId(null);
       setDiscountValue(0);
-      setApplyGst(true);
+      setApplyGst(settings?.show_gst_in_billing ?? true);
       generateBillNumber().then(setPreviewBillNumber);
       if (isDraft) {
         toast.success('Draft order saved! Stock has been reserved.');
@@ -886,17 +886,19 @@ export default function Billing() {
           </div>
         )}
 
-        {isTrial && isActive && (
+        {isTrial && isActive && !subscriptionLoading && (isAdmin || isManager) && (
           <div className="px-4 pt-4">
             <Alert className="bg-primary/5 border-primary/20 animate-in fade-in slide-in-from-top-4 duration-300">
               <Sparkles className="h-4 w-4 text-primary" />
               <AlertTitle>Free Trial</AlertTitle>
               <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <span>You are currently using the Free Trial. Upgrade for full features and history.</span>
-                <Button size="sm" variant="link" className="text-primary p-0 h-auto w-fit" onClick={() => navigate('/settings')}>
-                  View Plans
-                  <ChevronRight className="ml-1 h-3 w-3" />
-                </Button>
+                {isAdmin && (
+                  <Button size="sm" variant="link" className="text-primary p-0 h-auto w-fit" onClick={() => navigate('/settings')}>
+                    View Plans
+                    <ChevronRight className="ml-1 h-3 w-3" />
+                  </Button>
+                )}
               </AlertDescription>
             </Alert>
           </div>

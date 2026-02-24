@@ -170,11 +170,15 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
         const subtotal = items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
         const discountAmount = discountValue;
         const afterDiscount = Math.max(0, subtotal - discountAmount);
-        const taxRate = settings?.tax_rate || 0;
+
+        // Only calculate tax if enabled in settings
+        const showGst = settings?.show_gst_in_billing ?? true;
+        const taxRate = showGst ? (settings?.tax_rate || 0) : 0;
+
         const computedTax = (afterDiscount * taxRate) / 100;
         const total = afterDiscount + computedTax;
-        return { subtotal, discountAmount, tax: computedTax, total };
-    }, [items, discountValue, settings?.tax_rate]);
+        return { subtotal, discountAmount, tax: computedTax, total, showGst };
+    }, [items, discountValue, settings?.tax_rate, settings?.show_gst_in_billing]);
 
     // Update item quantity
     const updateQuantity = (index: number, delta: number) => {
@@ -574,7 +578,7 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                                                     autoFocus
                                                 />
                                             </div>
-                                            <div className="max-h-40 overflow-y-auto space-y-1">
+                                            <div className="max-h-[400px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
                                                 {filteredProducts.map(product => {
                                                     const avail = product.stock_quantity - (product.reserved_quantity || 0);
                                                     return (
@@ -583,25 +587,36 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                                                             onClick={() => addProduct(product)}
                                                             disabled={avail <= 0}
                                                             className={cn(
-                                                                'w-full flex items-center justify-between px-2 py-1.5 rounded-md text-left text-sm transition-colors',
+                                                                'w-full flex items-center justify-between px-3 py-2.5 rounded-md text-left text-sm transition-colors border border-transparent hover:border-primary/20',
                                                                 avail <= 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'
                                                             )}
                                                         >
-                                                            <span className="truncate font-medium">{product.name}</span>
-                                                            <div className="flex items-center gap-2 shrink-0">
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    {currencySymbol}{Number(product.selling_price).toFixed(2)}
-                                                                </span>
-                                                                <Badge variant="secondary" className={cn(
-                                                                    'text-[10px] px-1',
-                                                                    avail <= 0 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-700'
-                                                                )}>
-                                                                    {avail}
-                                                                </Badge>
+                                                            <div className="flex flex-col min-w-0">
+                                                                <span className="truncate font-semibold">{product.name}</span>
+                                                                {product.sku && (
+                                                                    <span className="text-[10px] text-muted-foreground font-mono">SKU: {product.sku}</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-3 shrink-0 ml-2">
+                                                                <div className="text-right">
+                                                                    <div className="text-xs font-bold">{currencySymbol}{Number(product.selling_price).toFixed(2)}</div>
+                                                                    <div className={cn(
+                                                                        'text-[10px] font-medium',
+                                                                        avail <= product.low_stock_threshold ? 'text-destructive' : 'text-green-600'
+                                                                    )}>
+                                                                        {avail} in stock
+                                                                    </div>
+                                                                </div>
+                                                                <Plus className="h-4 w-4 text-primary" />
                                                             </div>
                                                         </button>
                                                     );
                                                 })}
+                                                {filteredProducts.length === 0 && (
+                                                    <div className="py-8 text-center text-muted-foreground text-xs italic">
+                                                        No products found matching "{searchQuery}"
+                                                    </div>
+                                                )}
                                             </div>
                                             <Button
                                                 variant="ghost"
@@ -630,7 +645,7 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                                             <span>-{currencySymbol}{calculations.discountAmount.toFixed(2)}</span>
                                         </div>
                                     )}
-                                    {calculations.tax > 0 && (
+                                    {calculations.showGst && calculations.tax > 0 && (
                                         <div className="flex justify-between text-muted-foreground">
                                             <span>Tax ({settings?.tax_rate || 0}%)</span>
                                             <span>+{currencySymbol}{calculations.tax.toFixed(2)}</span>

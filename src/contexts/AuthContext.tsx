@@ -31,6 +31,7 @@ interface AuthContextType {
   businessId: string | null;
   businessInfo: BusinessInfo | null;
   subscription: SubscriptionInfo | null;
+  subscriptionLoading: boolean;
   isSuperAdmin: boolean;
   needsBusinessSetup: boolean;
   signUp: (email: string, password: string, displayName?: string) => Promise<{ error: Error | null }>;
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isCustomAdmin, setIsCustomAdmin] = useState(false);
   const [needsBusinessSetup, setNeedsBusinessSetup] = useState(false);
@@ -176,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchSubscription = async (bizId: string): Promise<void> => {
     try {
+      setSubscriptionLoading(true);
       const { data, error } = await supabase
         .from('subscriptions')
         .select(`
@@ -202,6 +205,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error('Error fetching subscription:', error);
+    } finally {
+      setSubscriptionLoading(false);
     }
   };
 
@@ -419,6 +424,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     businessId,
     businessInfo,
     subscription,
+    subscriptionLoading,
     isSuperAdmin: isSuperAdmin || isCustomAdmin,
     needsBusinessSetup,
     signUp,
