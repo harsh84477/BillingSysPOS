@@ -7,10 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, ShoppingCart, Crown, UserCog, User, ArrowLeft, KeyRound, LogIn } from 'lucide-react';
+import { Loader2, ShoppingCart, Crown, UserCog, User, ArrowLeft, KeyRound, LogIn, Briefcase } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
-type SelectedRole = 'owner' | 'manager' | 'cashier' | 'existing' | null;
+type SelectedRole = 'owner' | 'manager' | 'cashier' | 'salesman' | 'existing' | null;
 
 const ROLE_CARDS = [
   {
@@ -39,6 +39,15 @@ const ROLE_CARDS = [
     gradient: 'from-emerald-500/20 to-green-500/20',
     border: 'border-emerald-500/30 hover:border-emerald-500/60',
     iconColor: 'text-emerald-500',
+  },
+  {
+    role: 'salesman' as const,
+    title: 'Salesman',
+    description: 'Create draft orders from the field. View products & live stock.',
+    icon: Briefcase,
+    gradient: 'from-teal-500/20 to-cyan-500/20',
+    border: 'border-teal-500/30 hover:border-teal-500/60',
+    iconColor: 'text-teal-500',
   },
   {
     role: 'existing' as const,
@@ -205,8 +214,8 @@ export default function Auth() {
   }
 
   // Step 2 for Manager/Cashier: Enter Join Code
-  if ((selectedRole === 'manager' || selectedRole === 'cashier') && !joinCodeVerified) {
-    const roleLabel = selectedRole === 'manager' ? 'Manager' : 'Cashier';
+  if ((selectedRole === 'manager' || selectedRole === 'cashier' || selectedRole === 'salesman') && !joinCodeVerified) {
+    const roleLabel = selectedRole === 'manager' ? 'Manager' : selectedRole === 'salesman' ? 'Salesman' : 'Cashier';
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
@@ -264,7 +273,9 @@ export default function Auth() {
       ? 'Your Account'
       : selectedRole === 'manager'
         ? 'Manager'
-        : 'Cashier';
+        : selectedRole === 'salesman'
+          ? 'Salesman'
+          : 'Cashier';
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">

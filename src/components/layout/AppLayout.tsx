@@ -44,23 +44,23 @@ import {
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'New Bill', href: '/billing', icon: ShoppingCart },
-  { name: 'Bills History', href: '/bills-history', icon: FileText },
-  { name: 'Due Bills', href: '/due-bills', icon: AlertCircle },
-  { name: 'Products', href: '/products', icon: Package },
-  { name: 'Categories', href: '/categories', icon: FolderOpen },
-  { name: 'Customers', href: '/customers', icon: Users },
-  { name: 'Settings', href: '/settings', icon: Settings },
+const allNavigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'cashier', 'salesman'] },
+  { name: 'New Bill', href: '/billing', icon: ShoppingCart, roles: ['admin', 'manager', 'cashier', 'salesman'] },
+  { name: 'Bills History', href: '/bills-history', icon: FileText, roles: ['admin', 'manager', 'cashier', 'salesman'] },
+  { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['admin', 'manager', 'cashier'] },
+  { name: 'Products', href: '/products', icon: Package, roles: ['admin', 'manager'] },
+  { name: 'Categories', href: '/categories', icon: FolderOpen, roles: ['admin', 'manager'] },
+  { name: 'Customers', href: '/customers', icon: Users, roles: ['admin', 'manager'] },
+  { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin', 'manager'] },
 ];
 
-const mobileNavItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Bill', href: '/billing', icon: ShoppingCart },
-  { name: 'Due', href: '/due-bills', icon: AlertCircle },
-  { name: 'History', href: '/bills-history', icon: FileText },
-  { name: 'More', href: '/settings', icon: Settings },
+const allMobileNavItems = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'cashier', 'salesman'] },
+  { name: 'Bill', href: '/billing', icon: ShoppingCart, roles: ['admin', 'manager', 'cashier', 'salesman'] },
+  { name: 'Due', href: '/due-bills', icon: AlertCircle, roles: ['admin', 'manager', 'cashier'] },
+  { name: 'History', href: '/bills-history', icon: FileText, roles: ['admin', 'manager', 'cashier', 'salesman'] },
+  { name: 'More', href: '/settings', icon: Settings, roles: ['admin', 'manager'] },
 ];
 
 const themeOptions: { name: string; value: ThemeName }[] = [
@@ -71,7 +71,7 @@ const themeOptions: { name: string; value: ThemeName }[] = [
   { name: 'Dark Pro', value: 'dark-pro' },
 ];
 
-function NavItem({ item, isActive, collapsed }: { item: typeof navigation[0]; isActive: boolean; collapsed: boolean }) {
+function NavItem({ item, isActive, collapsed }: { item: typeof allNavigation[0]; isActive: boolean; collapsed: boolean }) {
   const content = (
     <Link
       to={item.href}
@@ -122,6 +122,10 @@ export default function AppLayout() {
 
   const roleLabel = isSuperAdmin ? 'Super Admin' : (userRole || 'user');
   const displayName = user?.email?.split('@')[0] || (isSuperAdmin ? 'Admin' : 'User');
+
+  // Filter nav items by role
+  const navigation = allNavigation.filter(item => !userRole || item.roles.includes(userRole));
+  const mobileNavItems = allMobileNavItems.filter(item => !userRole || item.roles.includes(userRole));
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

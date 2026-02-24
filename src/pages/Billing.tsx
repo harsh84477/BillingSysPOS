@@ -114,7 +114,7 @@ interface CartItem {
 }
 
 export default function Billing() {
-  const { user, businessId, billPrefix, userRole, isAdmin } = useAuth();
+  const { user, businessId, billPrefix, userRole, isAdmin, isSalesman } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
@@ -527,16 +527,27 @@ export default function Billing() {
           (sum, item) => sum + (item.unitPrice - item.costPrice) * item.quantity, 0
         );
 
-        // Payment logic
-        const resolvedPaidAmount = paymentType === 'cash'
-          ? cartCalculations.total
-          : (typeof paidAmount === 'number' ? paidAmount : 0);
-        const resolvedDueAmount = Math.max(0, cartCalculations.total - resolvedPaidAmount);
-        const resolvedPaymentStatus =
-          paymentType === 'cash' ? 'paid'
+        // Determine bill status based on role
+        const isDraft = isSalesman;
+        const billStatus = isDraft ? 'draft' : 'completed';
+
+        // Payment logic (only for completed bills)
+        const resolvedPaidAmount = isDraft ? 0
+          : paymentType === 'cash'
+            ? cartCalculations.total
+            : (typeof paidAmount === 'number' ? paidAmount : 0);
+        const resolvedDueAmount = isDraft ? cartCalculations.total
+          : Math.max(0, cartCalculations.total - resolvedPaidAmount);
+        const resolvedPaymentStatus = isDraft ? 'unpaid'
+          : paymentType === 'cash' ? 'paid'
             : resolvedDueAmount <= 0 ? 'paid'
               : resolvedPaidAmount > 0 ? 'partial'
                 : 'unpaid';
+
+        // Get salesman display name
+        const salesmanDisplayName = isDraft
+          ? (user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Salesman')
+          : null;
 
         const { data: bill, error: billError } = await supabase
           .from('bills')
@@ -545,21 +556,22 @@ export default function Billing() {
             customer_id: finalCustomerId,
             created_by: user?.id,
             business_id: businessId,
-            status: 'completed' as const,
+            status: billStatus as any,
             subtotal: cartCalculations.subtotal,
             discount_type: 'flat',
             discount_value: discountValue,
             discount_amount: cartCalculations.discountAmount,
             tax_amount: cartCalculations.taxAmount,
             total_amount: cartCalculations.total,
-            completed_at: new Date().toISOString(),
+            completed_at: isDraft ? null : new Date().toISOString(),
             // Payment fields
-            payment_type: paymentType,
+            payment_type: isDraft ? null : paymentType,
             payment_status: resolvedPaymentStatus,
             paid_amount: resolvedPaidAmount,
             due_amount: resolvedDueAmount,
-            due_date: (paymentType === 'due' && dueDate) ? dueDate : null,
-            profit: billProfit,
+            due_date: (!isDraft && paymentType === 'due' && dueDate) ? dueDate : null,
+            profit: isDraft ? 0 : billProfit,
+            salesman_name: salesmanDisplayName,
           } as any)
           .select()
           .single();
@@ -589,36 +601,51 @@ export default function Billing() {
 
         if (itemsError) throw itemsError;
 
-        // Update stock quantities
+        // Update stock: for drafts, increase reserved_quantity; for completed, decrease stock_quantity
         for (const item of cart) {
           const product = products.find((p) => p.id === item.productId);
           if (product) {
-            const newQuantity = product.stock_quantity - item.quantity;
-            await supabase
-              .from('products')
-              .update({ stock_quantity: newQuantity })
-              .eq('id', item.productId);
+            if (isDraft) {
+              // Reserve stock for draft
+              const newReserved = (product.reserved_quantity || 0) + item.quantity;
+              await supabase
+                .from('products')
+                .update({ reserved_quantity: newReserved } as any)
+                .eq('id', item.productId);
+            } else {
+              // Reduce actual stock for completed bills
+              const newQuantity = product.stock_quantity - item.quantity;
+              await supabase
+                .from('products')
+                .update({ stock_quantity: newQuantity })
+                .eq('id', item.productId);
+            }
           }
         }
 
-        return { bill, billNumber, shouldPrint };
+        return { bill, billNumber, shouldPrint, isDraft };
       }
 
       throw new Error('Failed to generate unique bill number after multiple attempts');
     },
-    onSuccess: ({ billNumber, shouldPrint }) => {
-      if (shouldPrint) {
+    onSuccess: ({ billNumber, shouldPrint, isDraft }) => {
+      if (shouldPrint && !isDraft) {
         printBill(billNumber);
       }
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
+      queryClient.invalidateQueries({ queryKey: ['draftBills'] });
       setCart([]);
       setCustomerName('');
       setSelectedCustomerId(null);
       setDiscountValue(0);
       setApplyGst(true);
       generateBillNumber().then(setPreviewBillNumber);
-      toast.success(shouldPrint ? 'Bill saved & printed!' : 'Bill saved successfully!');
+      if (isDraft) {
+        toast.success('Draft order saved! Stock has been reserved.');
+      } else {
+        toast.success(shouldPrint ? 'Bill saved & printed!' : 'Bill saved successfully!');
+      }
     },
     onError: (error: Error) => {
       toast.error(`Error: ${error.message}`);
@@ -1083,66 +1110,82 @@ export default function Billing() {
                 </div>
               )}
 
-              {/* ── Payment Type Selector ── */}
-              <div className="pt-2 border-t">
-                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Payment Type</p>
-                <div className="grid grid-cols-2 gap-1 p-1 bg-muted rounded-lg">
-                  {(['cash', 'due'] as const).map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => {
-                        setPaymentType(type);
-                        setPaidAmount('');
-                        setDueDate('');
-                      }}
-                      className={cn(
-                        'py-1.5 rounded-md text-sm font-semibold transition-all',
-                        paymentType === type
-                          ? type === 'cash'
-                            ? 'bg-primary text-primary-foreground shadow-sm'
-                            : 'bg-destructive text-destructive-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      )}
-                    >
-                      {type === 'cash' ? '💵 Cash / Online' : '⏳ Due / Credit'}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Due-specific fields */}
-                {paymentType === 'due' && (
-                  <div className="mt-2 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-muted-foreground">Paid Now ({currencySymbol})</span>
-                      <Input
-                        type="number"
-                        placeholder="0"
-                        value={paidAmount}
-                        onChange={(e) => setPaidAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                        className="w-28 h-8 text-right"
-                        min={0}
-                        max={cartCalculations.total}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-muted-foreground">Due Amount</span>
-                      <span className="font-bold text-destructive text-sm">
-                        {currencySymbol}{Math.max(0, cartCalculations.total - (typeof paidAmount === 'number' ? paidAmount : 0)).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-muted-foreground">Due Date</span>
-                      <Input
-                        type="date"
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
-                        className="w-36 h-8 text-sm"
-                        min={new Date().toISOString().split('T')[0]}
-                      />
-                    </div>
+              {/* ── Payment Type Selector (hidden for salesman) ── */}
+              {!isSalesman && (
+                <div className="pt-2 border-t">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Payment Type</p>
+                  <div className="grid grid-cols-2 gap-1 p-1 bg-muted rounded-lg">
+                    {(['cash', 'due'] as const).map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => {
+                          setPaymentType(type);
+                          setPaidAmount('');
+                          setDueDate('');
+                        }}
+                        className={cn(
+                          'py-1.5 rounded-md text-sm font-semibold transition-all',
+                          paymentType === type
+                            ? type === 'cash'
+                              ? 'bg-primary text-primary-foreground shadow-sm'
+                              : 'bg-destructive text-destructive-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        {type === 'cash' ? '💵 Cash / Online' : '⏳ Due / Credit'}
+                      </button>
+                    ))}
                   </div>
-                )}
-              </div>
+
+                  {/* Due-specific fields */}
+                  {paymentType === 'due' && (
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-muted-foreground">Paid Now ({currencySymbol})</span>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={paidAmount}
+                          onChange={(e) => setPaidAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                          className="w-28 h-8 text-right"
+                          min={0}
+                          max={cartCalculations.total}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-muted-foreground">Due Amount</span>
+                        <span className="font-bold text-destructive text-sm">
+                          {currencySymbol}{Math.max(0, cartCalculations.total - (typeof paidAmount === 'number' ? paidAmount : 0)).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm text-muted-foreground">Due Date</span>
+                        <Input
+                          type="date"
+                          value={dueDate}
+                          onChange={(e) => setDueDate(e.target.value)}
+                          className="w-36 h-8 text-sm"
+                          min={new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Salesman info badge */}
+              {isSalesman && (
+                <div className="pt-2 border-t">
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-teal-500/10 border border-teal-500/20">
+                    <div className="h-6 w-6 rounded-full bg-teal-500/20 flex items-center justify-center">
+                      <Save className="h-3.5 w-3.5 text-teal-600" />
+                    </div>
+                    <p className="text-xs text-teal-700 dark:text-teal-400">
+                      Orders saved as <strong>Draft</strong>. Stock will be reserved. Admin/Manager will finalize.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Total */}
               <div className="flex justify-between text-xl font-bold pt-2 border-t">
@@ -1154,23 +1197,36 @@ export default function Billing() {
 
               {/* Action Buttons */}
               <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                  onClick={() => createBillMutation.mutate(false)}
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  Save Bill
-                </Button>
-                <Button
-                  className="flex-1"
-                  disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                  onClick={() => createBillMutation.mutate(true)}
-                >
-                  <Printer className="mr-2 h-4 w-4" />
-                  Checkout & Print
-                </Button>
+                {isSalesman ? (
+                  <Button
+                    className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
+                    disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                    onClick={() => createBillMutation.mutate(false)}
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    {createBillMutation.isPending ? 'Saving Draft...' : 'Save Draft Order'}
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                      onClick={() => createBillMutation.mutate(false)}
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Bill
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                      onClick={() => createBillMutation.mutate(true)}
+                    >
+                      <Printer className="mr-2 h-4 w-4" />
+                      Checkout & Print
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </>
@@ -1371,23 +1427,36 @@ export default function Billing() {
             </div>
 
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                onClick={() => createBillMutation.mutate(false)}
-              >
-                <Save className="mr-2 h-4 w-4" />
-                Save
-              </Button>
-              <Button
-                className="flex-1"
-                disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                onClick={() => createBillMutation.mutate(true)}
-              >
-                <Printer className="mr-2 h-4 w-4" />
-                Save & Print
-              </Button>
+              {isSalesman ? (
+                <Button
+                  className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
+                  disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                  onClick={() => createBillMutation.mutate(false)}
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {createBillMutation.isPending ? 'Saving...' : 'Save Draft Order'}
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                    onClick={() => createBillMutation.mutate(false)}
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                    onClick={() => createBillMutation.mutate(true)}
+                  >
+                    <Printer className="mr-2 h-4 w-4" />
+                    Save & Print
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </SheetContent>

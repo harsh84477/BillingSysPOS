@@ -26,6 +26,7 @@ import {
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 import { exportToExcel } from '@/lib/exportToExcel';
+import { cn } from '@/lib/utils';
 
 function StatCard({
   title,
@@ -63,7 +64,7 @@ function StatCard({
 }
 
 export default function Dashboard() {
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, isSalesman, userRole, isAdmin, isManager } = useAuth();
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -135,6 +136,28 @@ export default function Dashboard() {
 
       if (error) throw error;
       return count || 0;
+    },
+  });
+
+  // Fetch draft bills (visible to all, but salesman sees own only)
+  const { data: draftBills = [], isLoading: loadingDrafts } = useQuery({
+    queryKey: ['draftBills', user?.id, userRole],
+    queryFn: async () => {
+      let query = supabase
+        .from('bills')
+        .select('id, bill_number, total_amount, salesman_name, created_by, created_at, customers(name)')
+        .eq('status', 'draft')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      // Salesman can only see their own drafts
+      if (isSalesman && user?.id) {
+        query = query.eq('created_by', user.id);
+      }
+
+      const { data, error } = await query as any;
+      if (error) throw error;
+      return (data || []) as any[];
     },
   });
 
@@ -402,6 +425,13 @@ export default function Dashboard() {
           description="Products to restock"
           isLoading={loadingLowStock}
         />
+        <StatCard
+          title="Draft Orders"
+          value={draftBills.length}
+          icon={ShoppingCart}
+          description={isSalesman ? 'Your draft orders' : 'Pending salesman orders'}
+          isLoading={loadingDrafts}
+        />
 
       </div>
 
@@ -484,6 +514,56 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Draft Bills Section */}
+      {draftBills.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-teal-600" />
+              Draft Orders
+            </CardTitle>
+            <CardDescription>
+              {isSalesman ? 'Your pending draft orders' : 'Draft orders from salesmen awaiting finalization'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingDrafts ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {draftBills.map((draft: any) => (
+                  <div
+                    key={draft.id}
+                    className="flex items-center justify-between rounded-lg border border-teal-500/20 p-3 bg-teal-500/5 hover:bg-teal-500/10 transition-colors cursor-pointer"
+                    onClick={() => navigate('/bills-history')}
+                  >
+                    <div>
+                      <p className="font-medium text-sm">{draft.bill_number}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {draft.salesman_name || 'Unknown'} • {draft.customers?.name || 'Walk-in'}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {format(new Date(draft.created_at), 'dd/MM/yy HH:mm')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-sm">
+                        {currencySymbol}{Number(draft.total_amount).toFixed(2)}
+                      </p>
+                      <span className="text-[10px] text-teal-600 font-semibold uppercase">Draft</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Low Stock Alerts */}

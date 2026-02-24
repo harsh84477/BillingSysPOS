@@ -381,7 +381,7 @@ export default function Settings() {
                   Team Join Code
                 </CardTitle>
                 <CardDescription>
-                  Share this code with your managers and cashiers to let them join your business
+                  Share this code with your managers, salesmen and cashiers to let them join your business
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1350,10 +1350,12 @@ export default function Settings() {
                                   ? 'default'
                                   : ur.role === 'manager'
                                     ? 'secondary'
-                                    : 'outline'
+                                    : ur.role === 'salesman'
+                                      ? 'outline'
+                                      : 'outline'
                               }
                             >
-                              {ur.role === 'admin' ? '👑 Admin' : ur.role === 'manager' ? '🔧 Manager' : '💵 Cashier'}
+                              {ur.role === 'admin' ? '👑 Admin' : ur.role === 'manager' ? '🔧 Manager' : ur.role === 'salesman' ? '💼 Salesman' : '💵 Cashier'}
                             </Badge>
                           </TableCell>
                           <TableCell>

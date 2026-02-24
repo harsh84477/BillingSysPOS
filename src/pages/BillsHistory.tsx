@@ -35,7 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, FileText, Calendar, Eye, Trash2, Download, Filter, X, TrendingUp, Receipt, Clock, Printer, ChevronRight } from 'lucide-react';
+import { Search, FileText, Calendar, Eye, Trash2, Download, Filter, X, TrendingUp, Receipt, Clock, Printer, ChevronRight, CheckCircle2 } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { exportToExcel } from '@/lib/exportToExcel';
@@ -69,6 +69,7 @@ interface Bill {
   total_amount: number;
   created_at: string;
   completed_at: string | null;
+  created_by: string | null;
   customer_id: string | null;
   customers: { name: string } | null;
 }
@@ -84,7 +85,7 @@ interface BillItem {
 
 export default function BillsHistory() {
   const { data: settings } = useBusinessSettings();
-  const { businessId } = useAuth();
+  const { businessId, user, isAdmin, isManager, isSalesman } = useAuth();
   const navigate = useNavigate();
   const { canViewFullHistory, historyLimitDays, canExport, isTrial, isActive } = useSubscription();
   const [searchQuery, setSearchQuery] = useState('');
@@ -152,6 +153,11 @@ export default function BillsHistory() {
         .select('*, customers(name)');
 
       if (businessId) query = query.eq('business_id', businessId);
+
+      // Salesman can only see their own bills
+      if (isSalesman && user?.id) {
+        query = query.eq('created_by', user.id);
+      }
 
       // SaaS Restriction: Limit history for Free/Trial users
       if (!canViewFullHistory && historyLimitDays > 0) {
@@ -222,6 +228,66 @@ export default function BillsHistory() {
         variant: 'destructive',
       });
       console.error('Delete error:', error);
+    },
+  });
+
+  // Finalize draft bill mutation (admin/manager only)
+  const finalizeDraftMutation = useMutation({
+    mutationFn: async (billId: string) => {
+      // Get bill items so we can transfer reserved -> actual stock
+      const { data: billItems, error: itemsError } = await supabase
+        .from('bill_items')
+        .select('product_id, quantity')
+        .eq('bill_id', billId);
+      if (itemsError) throw itemsError;
+
+      // For each item: decrease stock_quantity and decrease reserved_quantity
+      for (const item of (billItems || [])) {
+        const { data: product } = await supabase
+          .from('products')
+          .select('stock_quantity, reserved_quantity')
+          .eq('id', item.product_id)
+          .single();
+        if (product) {
+          await supabase
+            .from('products')
+            .update({
+              stock_quantity: product.stock_quantity - item.quantity,
+              reserved_quantity: Math.max(0, (product.reserved_quantity || 0) - item.quantity),
+            } as any)
+            .eq('id', item.product_id);
+        }
+      }
+
+      // Update bill status to completed
+      const { error: updateError } = await supabase
+        .from('bills')
+        .update({
+          status: 'completed' as any,
+          completed_at: new Date().toISOString(),
+          payment_status: 'paid',
+          payment_type: 'cash',
+          paid_amount: 0, // will be set by admin later if needed
+        } as any)
+        .eq('id', billId);
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bills'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['draftBills'] });
+      toast({
+        title: 'Draft Finalized',
+        description: 'The draft order has been completed and stock updated.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        description: 'Failed to finalize draft bill.',
+        variant: 'destructive',
+      });
+      console.error('Finalize error:', error);
     },
   });
 
@@ -535,12 +601,24 @@ export default function BillsHistory() {
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedBill(bill)}>
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
+                      {bill.status === 'draft' && (isAdmin || isManager) && (
+                        <Button
+                          variant="ghost" size="icon" className="h-7 w-7 text-green-600"
+                          onClick={() => finalizeDraftMutation.mutate(bill.id)}
+                          disabled={finalizeDraftMutation.isPending}
+                          title="Finalize Draft"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePrintBill(bill)}>
                         <Printer className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setBillToDelete(bill)}>
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {(!isSalesman || (bill.status === 'draft' && bill.created_by === user?.id)) && (
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setBillToDelete(bill)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -582,17 +660,30 @@ export default function BillsHistory() {
                             <Button variant="ghost" size="icon" onClick={() => setSelectedBill(bill)} title="View Bill">
                               <Eye className="h-4 w-4" />
                             </Button>
+                            {bill.status === 'draft' && (isAdmin || isManager) && (
+                              <Button
+                                variant="ghost" size="icon"
+                                onClick={() => finalizeDraftMutation.mutate(bill.id)}
+                                disabled={finalizeDraftMutation.isPending}
+                                className="text-green-600 hover:text-green-700"
+                                title="Finalize Draft Order"
+                              >
+                                <CheckCircle2 className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button variant="ghost" size="icon" onClick={() => handlePrintBill(bill)} title="Print Bill">
                               <Printer className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost" size="icon"
-                              onClick={() => setBillToDelete(bill)}
-                              className="text-destructive hover:text-destructive"
-                              title="Delete Bill"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {(!isSalesman || (bill.status === 'draft' && (bill as any).created_by === user?.id)) && (
+                              <Button
+                                variant="ghost" size="icon"
+                                onClick={() => setBillToDelete(bill)}
+                                className="text-destructive hover:text-destructive"
+                                title="Delete Bill"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

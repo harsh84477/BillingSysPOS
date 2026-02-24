@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-type AppRole = 'admin' | 'manager' | 'cashier';
+type AppRole = 'admin' | 'manager' | 'cashier' | 'salesman';
 
 interface BusinessInfo {
   id: string;
@@ -38,6 +38,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   joinBusiness: (joinCode: string, role: AppRole) => Promise<{ error: string | null }>;
+  error: string | null;
   refreshBusinessInfo: () => Promise<void>;
   refreshSubscription: () => Promise<void>;
   superAdminLogin: (username: string, password: string) => Promise<{ error: string | null }>;
@@ -45,6 +46,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isManager: boolean;
   isCashier: boolean;
+  isSalesman: boolean;
   isStaff: boolean; // backwards compat: true for manager (replaces old staff role)
   isViewer: boolean; // backwards compat: true for cashier
 }
@@ -142,12 +144,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const pendingRole = localStorage.getItem('pos_pending_role');
       if (pendingRole === 'owner') {
         setNeedsBusinessSetup(true);
-      } else if (pendingRole === 'manager' || pendingRole === 'cashier') {
+      } else if (pendingRole === 'manager' || pendingRole === 'cashier' || pendingRole === 'salesman') {
         // Try to join with pending code
         const pendingCode = localStorage.getItem('pos_pending_join_code');
         if (pendingCode) {
-          const dbRole = pendingRole === 'manager' ? 'manager' : 'cashier';
-          await joinBusinessInternal(pendingCode, dbRole as AppRole, userId);
+          const dbRole = pendingRole as AppRole;
+          await joinBusinessInternal(pendingCode, dbRole, userId);
         }
       } else {
         // No pending role, no business - they need to pick a role
@@ -212,7 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.rpc('join_business', {
         _join_code: joinCode,
         _user_id: userId,
-        _role: role,
+        _role: role as any,
       });
 
       // Clean up localStorage
@@ -431,8 +433,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin: userRole === 'admin',
     isManager: userRole === 'manager',
     isCashier: userRole === 'cashier',
+    isSalesman: userRole === 'salesman',
     isStaff: userRole === 'manager', // backwards compat
     isViewer: userRole === 'cashier', // backwards compat
+    error: null,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
