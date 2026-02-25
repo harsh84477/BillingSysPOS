@@ -1,6 +1,6 @@
 -- Create a table for Super Admin credentials
 CREATE TABLE IF NOT EXISTS super_admin_credentials (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     display_name TEXT,
