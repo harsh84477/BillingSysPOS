@@ -9,11 +9,6 @@
 -- 01. TYPES & ENUMS
 -- ============================================================
 
--- Add new bill statuses
-CREATE TYPE public.bill_status_extended AS ENUM ('draft', 'completed', 'cancelled', 'due', 'overdue');
-DROP TYPE IF EXISTS public.bill_status CASCADE;
-ALTER TYPE public.bill_status_extended RENAME TO bill_status;
-
 -- Payment modes enum
 CREATE TYPE public.payment_mode AS ENUM ('cash', 'upi', 'card', 'credit');
 
@@ -261,17 +256,7 @@ CREATE INDEX IF NOT EXISTS idx_sync_conflicts_business_id ON public.sync_conflic
 CREATE INDEX IF NOT EXISTS idx_sync_conflicts_conflict_type ON public.sync_conflicts(conflict_type);
 
 -- ============================================================
--- 05. UPDATED BILL STATUS ENUM MIGRATION
--- ============================================================
-
--- Update bills table to use new status enum
-BEGIN;
-  ALTER TABLE public.bills 
-  ALTER COLUMN status SET DEFAULT 'draft';
-COMMIT;
-
--- ============================================================
--- 06. CORE FUNCTIONS FOR SPLIT PAYMENT
+-- 05. CORE FUNCTIONS FOR SPLIT PAYMENT
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.add_bill_payment(
@@ -344,7 +329,7 @@ END;
 $$;
 
 -- ============================================================
--- 07. CORE FUNCTIONS FOR CUSTOMER CREDIT
+-- 06. CORE FUNCTIONS FOR CUSTOMER CREDIT
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.get_customer_credit_status(_customer_id UUID, _business_id UUID)
@@ -486,8 +471,9 @@ END;
 $$;
 
 -- ============================================================
--- 08. CORE FUNCTIONS FOR EXPENSES
+-- 07. CORE FUNCTIONS FOR EXPENSES
 -- ============================================================
+
 
 CREATE OR REPLACE FUNCTION public.calculate_profit_summary(_business_id UUID, _start_date DATE DEFAULT NULL, _end_date DATE DEFAULT NULL)
 RETURNS JSON
@@ -541,7 +527,7 @@ END;
 $$;
 
 -- ============================================================
--- 09. CORE FUNCTIONS FOR ACTIVITY LOGGING
+-- 08. CORE FUNCTIONS FOR ACTIVITY LOGGING
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.log_activity(
@@ -577,7 +563,7 @@ END;
 $$;
 
 -- ============================================================
--- 10. CORE FUNCTIONS FOR OFFLINE SYNC
+-- 09. CORE FUNCTIONS FOR OFFLINE SYNC
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.enqueue_offline_operation(
@@ -656,7 +642,7 @@ END;
 $$;
 
 -- ============================================================
--- 11. RLS POLICIES FOR NEW TABLES
+-- 10. RLS POLICIES FOR NEW TABLES
 -- ============================================================
 
 ALTER TABLE public.bill_payments ENABLE ROW LEVEL SECURITY;
@@ -721,8 +707,9 @@ CREATE POLICY "System can manage conflicts" ON public.sync_conflicts
   USING (business_id = public.get_user_business_id(auth.uid()));
 
 -- ============================================================
--- 12. INITIALIZATION DATA
+-- 11. INITIALIZATION DATA
 -- ============================================================
+
 
 -- Enable required settings for new businesses (run on business creation in future transactions)
 -- This will be handled by triggers/functions when new businesses are created
