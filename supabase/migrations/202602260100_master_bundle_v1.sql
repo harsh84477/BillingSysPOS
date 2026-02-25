@@ -3,7 +3,7 @@
 -- ============================================================
 
 -- TYPES
-CREATE TYPE public.app_role AS ENUM ('admin', 'manager', 'cashier', 'salesman');
+CREATE TYPE public.app_role AS ENUM ('owner', 'manager', 'cashier', 'salesman');
 CREATE TYPE public.bill_status AS ENUM ('draft', 'completed', 'cancelled');
 
 -- TABLES
@@ -342,7 +342,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.user_roles
     WHERE user_id = _user_id 
-    AND role IN ('admin', 'manager')
+    AND role IN ('owner', 'manager')
     AND business_id = public.get_user_business_id(_user_id)
   )
 $$;
@@ -357,7 +357,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.user_roles
     WHERE user_id = _user_id 
-    AND role IN ('admin', 'manager', 'cashier')
+    AND role IN ('owner', 'manager', 'cashier')
     AND business_id = public.get_user_business_id(_user_id)
   )
 $$;
@@ -386,7 +386,7 @@ SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.user_roles
-    WHERE user_id = _user_id AND role IN ('admin', 'manager')
+    WHERE user_id = _user_id AND role IN ('owner', 'manager')
   )
 $$;
 
@@ -434,10 +434,10 @@ BEGIN
   VALUES (_business_name, _user_id, _mobile_number, _join_code)
   RETURNING id INTO _business_id;
 
-  -- CRITICAL: Ensure Admin role is set
+  -- CRITICAL: Ensure Owner role is set
   INSERT INTO public.user_roles (user_id, business_id, role)
-  VALUES (_user_id, _business_id, 'admin')
-  ON CONFLICT (user_id, business_id) DO UPDATE SET role = 'admin';
+  VALUES (_user_id, _business_id, 'owner')
+  ON CONFLICT (user_id, business_id) DO UPDATE SET role = 'owner';
 
   UPDATE public.profiles
   SET business_id = _business_id, mobile_number = _mobile_number
@@ -489,7 +489,7 @@ BEGIN
     RETURN json_build_object('success', false, 'error', 'You are already a member.');
   END IF;
 
-  IF _role = 'admin' THEN _role := 'cashier'; END IF;
+  IF _role = 'owner' THEN _role := 'cashier'; END IF;
 
   INSERT INTO public.user_roles (user_id, business_id, role)
   VALUES (_user_id, _business.id, _role);
@@ -804,11 +804,11 @@ CREATE POLICY "Authenticated users can create business" ON public.businesses FOR
 
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view roles in their business" ON public.user_roles FOR SELECT TO authenticated USING (business_id = public.get_user_business_id(auth.uid()) OR user_id = auth.uid());
-CREATE POLICY "Admins can manage roles" ON public.user_roles FOR ALL TO authenticated USING (business_id = public.get_user_business_id(auth.uid()) AND public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins can manage roles" ON public.user_roles FOR ALL TO authenticated USING (business_id = public.get_user_business_id(auth.uid()) AND public.has_role(auth.uid(), 'owner'));
 
 ALTER TABLE public.business_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view settings" ON public.business_settings FOR SELECT TO authenticated USING (business_id = public.get_user_business_id(auth.uid()));
-CREATE POLICY "Admins can manage settings" ON public.business_settings FOR ALL TO authenticated USING (business_id = public.get_user_business_id(auth.uid()) AND public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Admins can manage settings" ON public.business_settings FOR ALL TO authenticated USING (business_id = public.get_user_business_id(auth.uid()) AND public.has_role(auth.uid(), 'owner'));
 
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view categories" ON public.categories FOR SELECT TO authenticated USING (business_id = public.get_user_business_id(auth.uid()));
@@ -838,7 +838,7 @@ CREATE POLICY "Auth staff can insert logs" ON public.inventory_logs FOR INSERT T
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Everyone view plans" ON public.subscription_plans FOR SELECT USING (true);
-CREATE POLICY "Owners view sub" ON public.subscriptions FOR SELECT USING (business_id = public.get_user_business_id(auth.uid()) AND public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "Owners view sub" ON public.subscriptions FOR SELECT USING (business_id = public.get_user_business_id(auth.uid()) AND public.has_role(auth.uid(), 'owner'));
 
 ALTER TABLE public.super_admins ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Super admins only" ON public.super_admins FOR ALL USING (auth.uid() IN (SELECT user_id FROM public.super_admins));

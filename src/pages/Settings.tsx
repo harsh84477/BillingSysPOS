@@ -1303,7 +1303,7 @@ export default function Settings() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
               {[
                 { label: 'Total Users', count: userRoles.length, color: 'bg-primary/10 text-primary' },
-                { label: 'Admins', count: userRoles.filter((ur: any) => ur.role === 'admin').length, color: 'bg-amber-500/10 text-amber-600' },
+                { label: 'Owners', count: userRoles.filter((ur: any) => ur.role === 'owner').length, color: 'bg-amber-500/10 text-amber-600' },
                 { label: 'Managers', count: userRoles.filter((ur: any) => ur.role === 'manager').length, color: 'bg-blue-500/10 text-blue-600' },
                 { label: 'Cashiers', count: userRoles.filter((ur: any) => ur.role === 'cashier').length, color: 'bg-emerald-500/10 text-emerald-600' },
               ].map(({ label, count, color }) => (
@@ -1346,7 +1346,7 @@ export default function Settings() {
                           <TableCell>
                             <Badge
                               variant={
-                                ur.role === 'admin'
+                                ur.role === 'owner'
                                   ? 'default'
                                   : ur.role === 'manager'
                                     ? 'secondary'
@@ -1355,7 +1355,7 @@ export default function Settings() {
                                       : 'outline'
                               }
                             >
-                              {ur.role === 'admin' ? '👑 Admin' : ur.role === 'manager' ? '🔧 Manager' : ur.role === 'salesman' ? '💼 Salesman' : '💵 Cashier'}
+                              {ur.role === 'owner' ? '👑 Owner' : ur.role === 'manager' ? '🔧 Manager' : ur.role === 'salesman' ? '💼 Salesman' : '💵 Cashier'}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -1380,7 +1380,7 @@ export default function Settings() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            {ur.role !== 'admin' && ur.user_id !== user?.id && (
+                            {ur.role !== 'owner' && ur.user_id !== user?.id && (
                               <Button
                                 variant="ghost"
                                 size="sm"

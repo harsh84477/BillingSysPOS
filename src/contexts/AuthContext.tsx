@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
-type AppRole = 'admin' | 'manager' | 'cashier' | 'salesman';
+type AppRole = 'owner' | 'manager' | 'cashier' | 'salesman';
 
 interface BusinessInfo {
   id: string;
@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (ownedBusiness) {
         setBusinessInfo(ownedBusiness);
         setBusinessId(ownedBusiness.id);
-        setUserRole('admin'); // Owner is always admin
+        setUserRole('owner'); // Owner is always owner
         setNeedsBusinessSetup(false);
         localStorage.removeItem('pos_pending_role');
         localStorage.removeItem('pos_pending_join_code');
@@ -444,7 +444,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     joinBusiness,
     refreshBusinessInfo,
     refreshSubscription,
-    isAdmin: userRole === 'admin',
+    isAdmin: userRole === 'owner',
     isManager: userRole === 'manager',
     isCashier: userRole === 'cashier',
     isSalesman: userRole === 'salesman',

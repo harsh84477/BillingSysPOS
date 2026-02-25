@@ -59,7 +59,7 @@ export default function UsersTab() {
 
     const getRoleBadge = (role: string) => {
         switch (role) {
-            case 'admin': return <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100 gap-1"><Shield className="h-3 w-3" />Admin</Badge>;
+            case 'owner': return <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100 gap-1"><Shield className="h-3 w-3" />Owner</Badge>;
             case 'manager': return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 gap-1"><Users className="h-3 w-3" />Manager</Badge>;
             case 'cashier': return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 gap-1"><User className="h-3 w-3" />Cashier</Badge>;
             default: return <Badge variant="secondary">{role}</Badge>;
@@ -84,7 +84,7 @@ export default function UsersTab() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Roles</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="owner">Owner</SelectItem>
                         <SelectItem value="manager">Manager</SelectItem>
                         <SelectItem value="cashier">Cashier</SelectItem>
                     </SelectContent>

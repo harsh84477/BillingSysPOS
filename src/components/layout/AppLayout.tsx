@@ -45,22 +45,22 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
 const allNavigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'cashier', 'salesman'] },
-  { name: 'New Bill', href: '/billing', icon: ShoppingCart, roles: ['admin', 'manager', 'cashier', 'salesman'] },
-  { name: 'Bills History', href: '/bills-history', icon: FileText, roles: ['admin', 'manager', 'cashier', 'salesman'] },
-  { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['admin', 'manager', 'cashier'] },
-  { name: 'Products', href: '/products', icon: Package, roles: ['admin', 'manager'] },
-  { name: 'Categories', href: '/categories', icon: FolderOpen, roles: ['admin', 'manager'] },
-  { name: 'Customers', href: '/customers', icon: Users, roles: ['admin', 'manager'] },
-  { name: 'Settings', href: '/settings', icon: Settings, roles: ['admin', 'manager'] },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+  { name: 'New Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+  { name: 'Bills History', href: '/bills-history', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+  { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'] },
+  { name: 'Products', href: '/products', icon: Package, roles: ['owner', 'manager'] },
+  { name: 'Categories', href: '/categories', icon: FolderOpen, roles: ['owner', 'manager'] },
+  { name: 'Customers', href: '/customers', icon: Users, roles: ['owner', 'manager'] },
+  { name: 'Settings', href: '/settings', icon: Settings, roles: ['owner', 'manager'] },
 ];
 
 const allMobileNavItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'manager', 'cashier', 'salesman'] },
-  { name: 'Bill', href: '/billing', icon: ShoppingCart, roles: ['admin', 'manager', 'cashier', 'salesman'] },
-  { name: 'Due', href: '/due-bills', icon: AlertCircle, roles: ['admin', 'manager', 'cashier'] },
-  { name: 'History', href: '/bills-history', icon: FileText, roles: ['admin', 'manager', 'cashier', 'salesman'] },
-  { name: 'More', href: '/settings', icon: Settings, roles: ['admin', 'manager'] },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+  { name: 'Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+  { name: 'Due', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'] },
+  { name: 'History', href: '/bills-history', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+  { name: 'More', href: '/settings', icon: Settings, roles: ['owner', 'manager'] },
 ];
 
 const themeOptions: { name: string; value: ThemeName }[] = [
@@ -120,7 +120,7 @@ export default function AppLayout() {
     navigate('/auth');
   };
 
-  const roleLabel = isSuperAdmin ? 'Super Admin' : (userRole || 'user');
+  const roleLabel = isSuperAdmin ? 'Super Admin' : (userRole === 'owner' ? 'Owner' : (userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'User'));
   const displayName = user?.email?.split('@')[0] || (isSuperAdmin ? 'Admin' : 'User');
 
   // Filter nav items by role
