@@ -70,10 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
     try {
+      // Get the most recent role for this user
       const { data, error } = await supabase
         .from('user_roles')
         .select('role, business_id, bill_prefix')
         .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error) {
@@ -105,6 +108,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from('user_roles')
         .select('business_id, role')
         .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (roleData?.business_id) {
@@ -118,15 +123,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (biz) {
           setBusinessInfo(biz);
           setBusinessId(biz.id);
+          // If we found a business through user_roles, ensure we have the role set
+          if (roleData.role) {
+            setUserRole(roleData.role as AppRole);
+          }
           setNeedsBusinessSetup(false);
-          // Clean up pending data
           localStorage.removeItem('pos_pending_role');
           localStorage.removeItem('pos_pending_join_code');
           return;
         }
       }
 
-      // Also check if user owns a business directly (in case user_roles is missing)
+      // Also check if user owns a business directly (fallback for missing role record)
       const { data: ownedBusiness } = await supabase
         .from('businesses')
         .select('id, business_name, join_code, mobile_number, owner_id')
@@ -136,6 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (ownedBusiness) {
         setBusinessInfo(ownedBusiness);
         setBusinessId(ownedBusiness.id);
+        setUserRole('admin'); // Owner is always admin
         setNeedsBusinessSetup(false);
         localStorage.removeItem('pos_pending_role');
         localStorage.removeItem('pos_pending_join_code');
@@ -154,7 +163,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await joinBusinessInternal(pendingCode, dbRole, userId);
         }
       } else {
-        // No pending role, no business - they need to pick a role
         setNeedsBusinessSetup(false);
       }
     } catch (error) {
