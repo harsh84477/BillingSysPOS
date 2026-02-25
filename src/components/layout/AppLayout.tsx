@@ -40,16 +40,22 @@ import {
   BarChart2,
   Building2,
   ChevronsUpDown,
+  Activity,
+  Receipt,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { OfflineSyncStatus, SubscriptionBanner } from '@/components/sync/SyncAndSubscriptionStatus';
 
 const allNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier', 'salesman'] },
-  { name: 'New Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+  { name: 'New Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier'] },
+  { name: 'Quick Bill', href: '/salesman-billing', icon: ShoppingCart, roles: ['salesman'] },
   { name: 'Bills History', href: '/bills-history', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'] },
   { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'] },
   { name: 'Products', href: '/products', icon: Package, roles: ['owner', 'manager'] },
+  { name: 'Expenses', href: '/expenses', icon: Receipt, roles: ['owner', 'manager'] },
+  { name: 'Activity Log', href: '/activity-logs', icon: Activity, roles: ['owner', 'manager'] },
   { name: 'Categories', href: '/categories', icon: FolderOpen, roles: ['owner', 'manager'] },
   { name: 'Customers', href: '/customers', icon: Users, roles: ['owner', 'manager'] },
   { name: 'Settings', href: '/settings', icon: Settings, roles: ['owner', 'manager'] },
@@ -57,9 +63,12 @@ const allNavigation = [
 
 const allMobileNavItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier', 'salesman'] },
-  { name: 'Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+  { name: 'Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier'] },
+  { name: 'Bill', href: '/salesman-billing', icon: ShoppingCart, roles: ['salesman'] },
   { name: 'Due', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'] },
   { name: 'History', href: '/bills-history', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+  { name: 'Exp', href: '/expenses', icon: Receipt, roles: ['owner', 'manager'] },
+  { name: 'Logs', href: '/activity-logs', icon: Activity, roles: ['owner', 'manager'] },
   { name: 'More', href: '/settings', icon: Settings, roles: ['owner', 'manager'] },
 ];
 
@@ -331,7 +340,11 @@ export default function AppLayout() {
             ? 'overflow-hidden p-0'
             : 'overflow-y-auto p-4 lg:p-6 pb-20 sm:pb-6 bg-muted/20 custom-scrollbar'
         )}>
+          <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4">
+            <SubscriptionBanner businessId={businessId || ''} />
+          </div>
           <Outlet />
+          <OfflineSyncStatus businessId={businessId || ''} userId={user?.id || ''} />
         </main>
 
         {/* Mobile Bottom Navigation */}

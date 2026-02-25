@@ -19,6 +19,9 @@ import Settings from "./pages/Settings";
 import SuperAdmin from "./pages/SuperAdmin";
 import SuperAdminLogin from "./pages/SuperAdminLogin";
 import DueBills from "./pages/DueBills";
+import Expenses from "./pages/Expenses";
+import ActivityLogs from "./pages/ActivityLogs";
+import SalesmanBilling from "./pages/SalesmanBilling";
 
 import NotFound from "./pages/NotFound";
 
@@ -59,6 +62,9 @@ const App = () => (
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/due-bills" element={<DueBills />} />
+                <Route path="/expenses" element={<Expenses />} />
+                <Route path="/activity-logs" element={<ActivityLogs />} />
+                <Route path="/salesman-billing" element={<SalesmanBilling />} />
               </Route>
 
               <Route

@@ -291,22 +291,53 @@ class OfflineSyncManager {
 
   private async processSyncItem(item: any) {
     if (!this.db) throw new Error('DB not initialized');
+    const { supabase } = await import('@/integrations/supabase/client');
 
     try {
       // Mark as syncing
       await this.db.put('sync_queue', { ...item, status: 'syncing', attemptedAt: Date.now() });
 
-      // Call server API to sync
-      const response = await fetch('/api/offline-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          businessId: this.businessId,
-          operation: item,
-        }),
-      });
+      let error = null;
+      let success = false;
 
-      if (response.ok) {
+      // Call Supabase RPCs or client methods
+      if (item.operationType === 'create_bill') {
+        const { data, error: rpcError } = await supabase.rpc('create_draft_bill', {
+          _business_id: this.businessId,
+          _bill_number: item.data.bill_number,
+          _customer_id: item.data.customer_id,
+          _salesman_name: item.data.salesmanName || 'Offline User',
+          _subtotal: item.data.total_amount, // Simplified
+          _items: item.data.items.map((i: any) => ({
+            product_id: i.product_id,
+            quantity: i.quantity,
+            unit_price: i.unit_price,
+            cost_price: i.cost_price,
+            total_price: i.unit_price * i.quantity
+          })),
+          _total_amount: item.data.total_amount
+        } as any);
+        if (rpcError) error = rpcError;
+        else success = true;
+      } else if (item.operationType === 'create_customer') {
+        const { error: insertError } = await (supabase.from as any)('customers').insert({
+          id: item.recordId,
+          business_id: this.businessId,
+          ...item.data
+        });
+        if (insertError) error = insertError;
+        else success = true;
+      } else if (item.operationType === 'create_expense') {
+        const { error: insertError } = await (supabase.from as any)('expenses').insert({
+          id: item.recordId,
+          business_id: this.businessId,
+          ...item.data
+        });
+        if (insertError) error = insertError;
+        else success = true;
+      }
+
+      if (success) {
         await this.db.put('sync_queue', { ...item, status: 'synced' });
 
         // Update local records to mark as synced
@@ -322,18 +353,17 @@ class OfflineSyncManager {
           }
         }
       } else {
-        const error = await response.text();
         await this.db.put('sync_queue', {
           ...item,
           status: 'failed',
-          errorMessage: error,
+          errorMessage: error?.message || 'Unknown error',
         });
       }
-    } catch (error) {
+    } catch (e) {
       await this.db.put('sync_queue', {
         ...item,
         status: 'failed',
-        errorMessage: (error as Error).message,
+        errorMessage: (e as Error).message,
       });
     }
   }
