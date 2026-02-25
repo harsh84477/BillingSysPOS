@@ -32,21 +32,17 @@ export default function PlansTab() {
 
     const savePlanMutation = useMutation({
         mutationFn: async (values: typeof form & { id?: string }) => {
-            const payload = {
-                name: values.name,
-                description: values.description,
-                price: Number(values.price),
-                billing_period: values.billing_period,
-                is_active: values.is_active,
-                features: { history_days: Number(values.history_days), can_export: values.can_export },
-            };
-            if (values.id) {
-                const { error } = await supabase.from('subscription_plans').update(payload).eq('id', values.id);
-                if (error) throw error;
-            } else {
-                const { error } = await supabase.from('subscription_plans').insert(payload);
-                if (error) throw error;
-            }
+            const { error } = await (supabase.rpc as any)('manage_subscription_plan', {
+                p_id: values.id || null,
+                p_name: values.name,
+                p_description: values.description,
+                p_price: Number(values.price),
+                p_billing_period: values.billing_period,
+                p_is_active: values.is_active,
+                p_features: { history_days: Number(values.history_days), can_export: values.can_export },
+            });
+            if (error) throw error;
+
             await (supabase.rpc as any)('log_admin_action', {
                 p_admin_id: user?.id || 'super-admin',
                 p_action: values.id ? 'edit_plan' : 'create_plan',
@@ -68,7 +64,10 @@ export default function PlansTab() {
 
     const toggleActiveMutation = useMutation({
         mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-            const { error } = await supabase.from('subscription_plans').update({ is_active }).eq('id', id);
+            const { error } = await (supabase.rpc as any)('manage_subscription_plan', {
+                p_id: id,
+                p_is_active: is_active,
+            });
             if (error) throw error;
         },
         onSuccess: () => {
