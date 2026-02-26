@@ -72,8 +72,15 @@ interface ExpenseTrackerProps {
 }
 
 export function ExpenseTracker({ businessId }: ExpenseTrackerProps) {
-  const { profitSummary, createExpense, isCreating, deleteExpense, isDeleting } =
-    useExpenseTracking(businessId);
+  const {
+    profitSummary,
+    createExpense,
+    isCreating,
+    deleteExpense,
+    isDeleting,
+    expenses,
+    isExpensesLoading
+  } = useExpenseTracking(businessId);
   const [category, setCategory] = useState('Other exp');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -108,6 +115,33 @@ export function ExpenseTracker({ businessId }: ExpenseTrackerProps) {
     }
     if (val === '.' && amount.includes('.')) return;
     setAmount(prev => prev + val);
+  };
+
+  const exportExpensesCSV = () => {
+    if (!expenses || expenses.length === 0) {
+      toast.error('No expenses to export');
+      return;
+    }
+
+    const csvContent = [
+      ['Date', 'Category', 'Description', 'Amount'].join(','),
+      ...expenses.map((exp: any) => [
+        exp.expense_date,
+        exp.category,
+        `"${exp.description}"`,
+        exp.amount
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `expenses_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   if (!profitSummary) {
@@ -282,7 +316,13 @@ export function ExpenseTracker({ businessId }: ExpenseTrackerProps) {
               <p className="text-sm text-muted-foreground mt-2 max-w-[200px]">
                 All expenses recorded here are encrypted and ready for tax reporting.
               </p>
-              <Button variant="link" className="mt-4 text-primary font-bold">Download Full Report</Button>
+              <Button
+                variant="link"
+                className="mt-4 text-primary font-bold"
+                onClick={exportExpensesCSV}
+              >
+                Download Full Report
+              </Button>
             </Card>
           </div>
 
@@ -308,12 +348,53 @@ export function ExpenseTracker({ businessId }: ExpenseTrackerProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* We would normally map through real data from a 'expenses' query here */}
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-12 text-center text-muted-foreground h-32 italic">
-                      Fetching real-time logs from Supabase...
-                    </TableCell>
-                  </TableRow>
+                  {isExpensesLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-12 text-center text-muted-foreground h-32 italic">
+                        Fetching real-time logs from Supabase...
+                      </TableCell>
+                    </TableRow>
+                  ) : expenses?.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="py-12 text-center text-muted-foreground h-32 italic">
+                        No expenses recorded yet.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    expenses?.map((exp: any) => (
+                      <TableRow key={exp.id}>
+                        <TableCell className="font-medium text-xs">
+                          {new Date(exp.expense_date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            style={{
+                              backgroundColor: `${CATEGORY_COLORS[exp.category]}33`,
+                              color: CATEGORY_COLORS[exp.category],
+                              borderColor: CATEGORY_COLORS[exp.category]
+                            }}
+                            className="text-[10px] font-bold"
+                          >
+                            {exp.category}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs truncate max-w-[200px]">{exp.description}</TableCell>
+                        <TableCell className="text-right font-bold">₹{exp.amount.toFixed(2)}</TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-rose-500 hover:text-rose-700 hover:bg-rose-50"
+                            onClick={() => deleteExpense(exp.id)}
+                            disabled={isDeleting}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>

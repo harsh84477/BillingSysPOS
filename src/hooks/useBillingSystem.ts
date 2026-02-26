@@ -21,10 +21,10 @@ export function useSplitPayment(billId: string | null) {
     queryKey: ['bill-payments', billId],
     queryFn: async () => {
       if (!billId) return [];
-      const { data, error } = await supabase
-        .from('bill_payments')
+      const { data, error } = await (supabase
+        .from('bill_payments' as any)
         .select('*')
-        .eq('bill_id', billId);
+        .eq('bill_id', billId) as any);
 
       if (error) throw error;
       return data || [];
@@ -42,7 +42,7 @@ export function useSplitPayment(billId: string | null) {
     }) => {
       if (!billId) throw new Error('Bill ID is required');
 
-      const { data, error } = await supabase.rpc('add_bill_payment', {
+      const { data, error } = await (supabase.rpc as any)('add_bill_payment', {
         _bill_id: billId,
         _payment_mode: paymentData.payment_mode,
         _amount: paymentData.amount,
@@ -100,7 +100,7 @@ export function useCustomerCredit(customerId: string | null, businessId: string 
     queryFn: async () => {
       if (!customerId || !businessId) return null;
 
-      const { data, error } = await supabase.rpc(
+      const { data, error } = await (supabase.rpc as any)(
         'get_customer_credit_status',
         {
           _customer_id: customerId,
@@ -126,7 +126,7 @@ export function useCustomerCredit(customerId: string | null, businessId: string 
     }) => {
       if (!customerId || !businessId) throw new Error('Customer and business IDs required');
 
-      const { data, error } = await supabase.rpc('create_credit_sale_bill', {
+      const { data, error } = await (supabase.rpc as any)('create_credit_sale_bill', {
         _business_id: businessId,
         _bill_number: billData.bill_number,
         _customer_id: customerId,
@@ -160,7 +160,7 @@ export function useCustomerCredit(customerId: string | null, businessId: string 
   useEffect(() => {
     if (status) {
       setCreditStatus(status);
-      
+
       // Show warning if credit is above threshold
       if (status.is_warning) {
         toast({
@@ -180,8 +180,6 @@ export function useCustomerCredit(customerId: string | null, businessId: string 
   };
 }
 
-// ========== EXPENSE TRACKING HOOK ==========
-
 export function useExpenseTracking(businessId: string | null) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -192,7 +190,7 @@ export function useExpenseTracking(businessId: string | null) {
     queryFn: async () => {
       if (!businessId) return null;
 
-      const { data, error } = await supabase.rpc(
+      const { data, error } = await (supabase.rpc as any)(
         'calculate_profit_summary',
         {
           _business_id: businessId,
@@ -201,6 +199,24 @@ export function useExpenseTracking(businessId: string | null) {
 
       if (error) throw error;
       return data;
+    },
+    enabled: !!businessId,
+  });
+
+  // Fetch all expenses
+  const { data: expenses, isLoading: isExpensesLoading } = useQuery({
+    queryKey: ['expenses', businessId],
+    queryFn: async () => {
+      if (!businessId) return [];
+      const { data, error } = await (supabase
+        .from('expenses' as any)
+        .select('*')
+        .eq('business_id', businessId)
+        .order('expense_date', { ascending: false })
+        .order('created_at', { ascending: false }) as any);
+
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!businessId,
   });
@@ -216,8 +232,8 @@ export function useExpenseTracking(businessId: string | null) {
     }) => {
       if (!businessId) throw new Error('Business ID required');
 
-      const { data, error } = await supabase
-        .from('expenses')
+      const { data, error } = await (supabase
+        .from('expenses' as any)
         .insert([
           {
             business_id: businessId,
@@ -225,7 +241,7 @@ export function useExpenseTracking(businessId: string | null) {
           },
         ])
         .select()
-        .single();
+        .single() as any);
 
       if (error) throw error;
       return data;
@@ -236,6 +252,7 @@ export function useExpenseTracking(businessId: string | null) {
         description: 'Expense has been added successfully',
       });
       queryClient.invalidateQueries({ queryKey: ['profit-summary', businessId] });
+      queryClient.invalidateQueries({ queryKey: ['expenses', businessId] });
     },
     onError: (error: any) => {
       toast({
@@ -249,10 +266,10 @@ export function useExpenseTracking(businessId: string | null) {
   // Delete expense mutation
   const deleteExpenseMutation = useMutation({
     mutationFn: async (expenseId: string) => {
-      const { error } = await supabase
-        .from('expenses')
+      const { error } = await (supabase
+        .from('expenses' as any)
         .delete()
-        .eq('id', expenseId);
+        .eq('id', expenseId) as any);
 
       if (error) throw error;
     },
@@ -262,6 +279,7 @@ export function useExpenseTracking(businessId: string | null) {
         description: 'Expense has been removed successfully',
       });
       queryClient.invalidateQueries({ queryKey: ['profit-summary', businessId] });
+      queryClient.invalidateQueries({ queryKey: ['expenses', businessId] });
     },
     onError: (error: any) => {
       toast({
@@ -279,6 +297,8 @@ export function useExpenseTracking(businessId: string | null) {
     isCreating: createExpenseMutation.isPending,
     deleteExpense: deleteExpenseMutation.mutate,
     isDeleting: deleteExpenseMutation.isPending,
+    expenses,
+    isExpensesLoading,
   };
 }
 
@@ -291,12 +311,12 @@ export function useActivityLogs(businessId: string | null) {
     queryFn: async () => {
       if (!businessId) return [];
 
-      const { data, error } = await supabase
-        .from('activity_logs')
+      const { data, error } = await (supabase
+        .from('activity_logs' as any)
         .select('*')
         .eq('business_id', businessId)
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(500) as any);
 
       if (error) throw error;
       return data || [];

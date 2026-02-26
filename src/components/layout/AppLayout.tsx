@@ -11,6 +11,13 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -116,6 +123,7 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [infoModal, setInfoModal] = useState<{ open: boolean; title: string; content: React.ReactNode } | null>(null);
 
   const businessName = (subscription as any)?.plan?.name
     ? undefined
@@ -241,11 +249,53 @@ export default function AppLayout() {
                   <p className="text-sm font-semibold truncate">{displayName}</p>
                   <p className="text-[11px] text-muted-foreground capitalize">{roleLabel}</p>
                 </div>
-                <DropdownMenuItem onClick={() => toast.info("Technical Support: support@smartpos.com")}>
+                <DropdownMenuItem onClick={() => setInfoModal({
+                  open: true,
+                  title: "Technical Support",
+                  content: (
+                    <div className="space-y-4 pt-4">
+                      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                        <AlertCircle className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-sm font-bold">Email Support</p>
+                          <p className="text-xs text-muted-foreground">support@smartpos.com</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                        <Activity className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-sm font-bold">Priority Whatsapp</p>
+                          <p className="text-xs text-muted-foreground">+91 98765 43210</p>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-center text-muted-foreground">Available 24/7 for Premium Subscribers</p>
+                    </div>
+                  )
+                })}>
                   <AlertCircle className="mr-2 h-4 w-4" />
                   Technical Support
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info("Version 2.1.0 - Eleanor Pro")}>
+                <DropdownMenuItem onClick={() => setInfoModal({
+                  open: true,
+                  title: "Eleanor Say",
+                  content: (
+                    <div className="space-y-4 pt-4">
+                      <div className="text-center">
+                        <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Building2 className="h-8 w-8" />
+                        </div>
+                        <h3 className="text-lg font-black tracking-tight">Eleanor Pro Edition</h3>
+                        <p className="text-xs text-muted-foreground">Version 2.5.4 (Build 2026.02)</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mt-4 text-[10px]">
+                        <div className="p-2 border rounded text-center">Multi-Tenant Core</div>
+                        <div className="p-2 border rounded text-center">Advanced Stock v2</div>
+                        <div className="p-2 border rounded text-center">Credit Engine</div>
+                        <div className="p-2 border rounded text-center">Offline Sync Pro</div>
+                      </div>
+                    </div>
+                  )
+                })}>
                   <Building2 className="mr-2 h-4 w-4" />
                   Eleanor Say
                 </DropdownMenuItem>
@@ -270,11 +320,53 @@ export default function AppLayout() {
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => toast.info("Technical Support: support@smartpos.com")}>
+                <DropdownMenuItem onClick={() => setInfoModal({
+                  open: true,
+                  title: "Technical Support",
+                  content: (
+                    <div className="space-y-4 pt-4">
+                      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                        <AlertCircle className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-sm font-bold">Email Support</p>
+                          <p className="text-xs text-muted-foreground">support@smartpos.com</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                        <Activity className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-sm font-bold">Priority Whatsapp</p>
+                          <p className="text-xs text-muted-foreground">+91 98765 43210</p>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-center text-muted-foreground">Available 24/7 for Premium Subscribers</p>
+                    </div>
+                  )
+                })}>
                   <AlertCircle className="mr-2 h-4 w-4" />
                   Technical Support
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast.info("Version 2.1.0 - Eleanor Pro")}>
+                <DropdownMenuItem onClick={() => setInfoModal({
+                  open: true,
+                  title: "Eleanor Say",
+                  content: (
+                    <div className="space-y-4 pt-4">
+                      <div className="text-center">
+                        <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Building2 className="h-8 w-8" />
+                        </div>
+                        <h3 className="text-lg font-black tracking-tight">Eleanor Pro Edition</h3>
+                        <p className="text-xs text-muted-foreground">Version 2.5.4 (Build 2026.02)</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mt-4 text-[10px]">
+                        <div className="p-2 border rounded text-center">Multi-Tenant Core</div>
+                        <div className="p-2 border rounded text-center">Advanced Stock v2</div>
+                        <div className="p-2 border rounded text-center">Credit Engine</div>
+                        <div className="p-2 border rounded text-center">Offline Sync Pro</div>
+                      </div>
+                    </div>
+                  )
+                })}>
                   <Building2 className="mr-2 h-4 w-4" />
                   Eleanor Say
                 </DropdownMenuItem>
@@ -395,6 +487,18 @@ export default function AppLayout() {
             })}
           </div>
         </nav>
+        {/* Info Dialog */}
+        <Dialog open={!!infoModal} onOpenChange={(open) => !open && setInfoModal(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{infoModal?.title}</DialogTitle>
+              <DialogDescription>
+                System Information & Support
+              </DialogDescription>
+            </DialogHeader>
+            {infoModal?.content}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

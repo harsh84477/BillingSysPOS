@@ -14,9 +14,10 @@ CREATE TYPE public.payment_mode AS ENUM ('cash', 'upi', 'card', 'credit');
 
 -- Expense categories enum
 CREATE TYPE public.expense_category AS ENUM (
-  'rent', 
-  'salary', 
-  'electricity', 
+  'Rent', 
+  'Electricity bill', 
+  'Salary', 
+  'Other exp',
   'transport', 
   'maintenance', 
   'internet', 
