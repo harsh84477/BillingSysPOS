@@ -218,8 +218,8 @@ export default function Dashboard() {
   const { data: dueStats, isLoading: loadingDue } = useQuery({
     queryKey: ['dueStats'],
     queryFn: async () => {
-      const { data, error } = await (supabase
-        .from('bills')
+      const { data, error } = await ((supabase
+        .from('bills') as any)
         .select('due_amount, due_date, payment_status')
         .in('payment_status', ['unpaid', 'partial'])
         .eq('status', 'completed') as any);
@@ -375,13 +375,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Welcome back! Here's what's happening with your business.
-        </p>
-      </div>
+    <div className="space-y-4 -mt-4 sm:-mt-6">
 
       {/* Stats Grid */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">

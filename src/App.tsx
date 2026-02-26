@@ -22,6 +22,7 @@ import DueBills from "./pages/DueBills";
 import Expenses from "./pages/Expenses";
 import ActivityLogs from "./pages/ActivityLogs";
 import SalesmanBilling from "./pages/SalesmanBilling";
+import DraftBills from "./pages/DraftBills";
 
 import NotFound from "./pages/NotFound";
 
@@ -64,6 +65,7 @@ const App = () => (
                 <Route path="/due-bills" element={<DueBills />} />
                 <Route path="/expenses" element={<Expenses />} />
                 <Route path="/activity-logs" element={<ActivityLogs />} />
+                <Route path="/draft-bills" element={<DraftBills />} />
                 <Route path="/salesman-billing" element={<SalesmanBilling />} />
               </Route>
 

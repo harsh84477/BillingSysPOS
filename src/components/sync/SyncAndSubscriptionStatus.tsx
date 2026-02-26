@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useOfflineSync } from '@/hooks/useBillingSystem';
-import { Wifi, WifiOff, Clock, CheckCircle2, AlertCircle, Download } from 'lucide-react';
+import { Wifi, WifiOff, Clock, CheckCircle2, AlertCircle, Download, AlertTriangle, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface OfflineSyncStatusProps {
@@ -143,7 +143,6 @@ export function OfflineSyncStatus({ businessId, userId }: OfflineSyncStatusProps
 // Location: src/components/subscription/SubscriptionBanner.tsx
 
 import { useSubscriptionStatus } from '@/hooks/useBillingSystem';
-import { AlertTriangle, Clock, Lock } from 'lucide-react';
 
 interface SubscriptionBannerProps {
   businessId: string;
@@ -159,14 +158,11 @@ export function SubscriptionBanner({ businessId }: SubscriptionBannerProps) {
 
   if (isExpired) {
     return (
-      <Alert className="border-red-200 bg-red-50 mb-4">
-        <Lock className="h-4 w-4 text-red-600" />
-        <AlertDescription className="text-red-800">
-          <strong>Subscription Expired</strong> - Your subscription has expired. Analytics and
-          exports are disabled. Please renew your subscription to continue.
-          <Button variant="link" className="text-red-700 underline ml-2 p-0 h-auto">
-            Renew Now
-          </Button>
+      <Alert className="border-red-200 bg-red-50 py-2 px-3 mb-2">
+        <Lock className="h-4 w-4 text-red-600 mr-2" />
+        <AlertDescription className="text-red-800 text-xs flex items-center justify-between w-full">
+          <span><strong>Expired</strong> - Renew to enable all features.</span>
+          <Button variant="link" className="text-red-700 underline text-xs p-0 h-auto ml-2">Renew</Button>
         </AlertDescription>
       </Alert>
     );

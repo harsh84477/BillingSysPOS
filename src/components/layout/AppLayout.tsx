@@ -45,16 +45,18 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 import { OfflineSyncStatus, SubscriptionBanner } from '@/components/sync/SyncAndSubscriptionStatus';
 
 const allNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier', 'salesman'] },
   { name: 'New Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier'] },
   { name: 'Quick Bill', href: '/salesman-billing', icon: ShoppingCart, roles: ['salesman'] },
-  { name: 'Bills History', href: '/bills-history', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+  { name: 'Draft Bills', href: '/draft-bills', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+  { name: 'Bills History', href: '/bills-history', icon: Receipt, roles: ['owner', 'manager', 'cashier', 'salesman'] },
   { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'] },
   { name: 'Products', href: '/products', icon: Package, roles: ['owner', 'manager'] },
-  { name: 'Expenses', href: '/expenses', icon: Receipt, roles: ['owner', 'manager'] },
+  { name: 'Expenses', href: '/expenses', icon: BarChart2, roles: ['owner', 'manager'] },
   { name: 'Activity Log', href: '/activity-logs', icon: Activity, roles: ['owner', 'manager'] },
   { name: 'Categories', href: '/categories', icon: FolderOpen, roles: ['owner', 'manager'] },
   { name: 'Customers', href: '/customers', icon: Users, roles: ['owner', 'manager'] },
@@ -145,7 +147,7 @@ export default function AppLayout() {
       )}>
         {/* Brand + collapse */}
         <div className={cn(
-          'flex items-center h-14 border-b border-border transition-all',
+          'flex items-center h-12 border-b border-border transition-all',
           sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-4'
         )}>
           {!sidebarCollapsed && (
@@ -224,40 +226,64 @@ export default function AppLayout() {
 
           {/* User Profile Block */}
           {sidebarCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <button
-                  onClick={handleSignOut}
                   className="w-full flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                 >
                   <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold uppercase">
                     {displayName[0]}
                   </div>
                 </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{displayName} · {roleLabel}</TooltipContent>
-            </Tooltip>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="right" className="w-56">
+                <div className="px-3 py-2 border-b">
+                  <p className="text-sm font-semibold truncate">{displayName}</p>
+                  <p className="text-[11px] text-muted-foreground capitalize">{roleLabel}</p>
+                </div>
+                <DropdownMenuItem onClick={() => toast.info("Technical Support: support@smartpos.com")}>
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  Technical Support
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.info("Version 2.1.0 - Eleanor Pro")}>
+                  <Building2 className="mr-2 h-4 w-4" />
+                  Eleanor Say
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/40 border border-border">
-              <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold uppercase flex-shrink-0">
-                {displayName[0]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{displayName}</p>
-                <p className="text-[11px] text-muted-foreground capitalize">{roleLabel}</p>
-              </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={handleSignOut}
-                    className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Sign out</TooltipContent>
-              </Tooltip>
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/40 border border-border cursor-pointer hover:bg-muted/60 transition-colors">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold uppercase flex-shrink-0">
+                    {displayName[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{displayName}</p>
+                    <p className="text-[11px] text-muted-foreground capitalize">{roleLabel}</p>
+                  </div>
+                  <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => toast.info("Technical Support: support@smartpos.com")}>
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  Technical Support
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast.info("Version 2.1.0 - Eleanor Pro")}>
+                  <Building2 className="mr-2 h-4 w-4" />
+                  Eleanor Say
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
       </aside>
@@ -265,7 +291,7 @@ export default function AppLayout() {
       {/* ── Main Area ── */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden relative">
         {/* Header — minimal, no user button */}
-        <header className="sticky top-0 z-40 flex h-14 flex-shrink-0 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 lg:px-6 shadow-sm">
+        <header className="sticky top-0 z-40 flex h-12 flex-shrink-0 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 lg:px-6 shadow-sm">
           {/* Mobile menu */}
           <Sheet>
             <SheetTrigger asChild>
@@ -340,7 +366,7 @@ export default function AppLayout() {
             ? 'overflow-hidden p-0'
             : 'overflow-y-auto p-4 lg:p-6 pb-20 sm:pb-6 bg-muted/20 custom-scrollbar'
         )}>
-          <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
             <SubscriptionBanner businessId={businessId || ''} />
           </div>
           <Outlet />
