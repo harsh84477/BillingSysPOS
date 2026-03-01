@@ -127,10 +127,13 @@ export default function Billing() {
   const [discountValue, setDiscountValue] = useState(0);
   const [applyGst, setApplyGst] = useState(true);
 
-  // Payment type: 'cash' (paid immediately) | 'due' (unpaid/partial)
-  const [paymentType, setPaymentType] = useState<'cash' | 'due'>('cash');
+  // Payment type: 'cash' | 'online' | 'split' | 'due'
+  const [paymentType, setPaymentType] = useState<'cash' | 'online' | 'split' | 'due'>('cash');
+  const [cashAmount, setCashAmount] = useState<number | ''>('');
+  const [onlineAmount, setOnlineAmount] = useState<number | ''>('');
   const [paidAmount, setPaidAmount] = useState<number | ''>('');
   const [dueDate, setDueDate] = useState<string>('');
+  const { finalizeBill, isFinalizing } = useBilling();
 
   // Sync applyGst with settings once settings load
   React.useEffect(() => {
@@ -610,55 +613,8 @@ export default function Billing() {
           return { bill: result, billNumber: result.bill_number || billNumber, shouldPrint, isDraft };
         }
 
-        // ─── COMPLETED BILL PATH: existing client-side logic ───
-        const billProfit = cart.reduce(
-          (sum, item) => sum + (item.unitPrice - item.costPrice) * item.quantity, 0
-        );
-
-        const resolvedPaidAmount = paymentType === 'cash'
-          ? cartCalculations.total
-          : (typeof paidAmount === 'number' ? paidAmount : 0);
-        const resolvedDueAmount = Math.max(0, cartCalculations.total - resolvedPaidAmount);
-        const resolvedPaymentStatus = paymentType === 'cash' ? 'paid'
-          : resolvedDueAmount <= 0 ? 'paid'
-            : resolvedPaidAmount > 0 ? 'partial'
-              : 'unpaid';
-
-        const { data: bill, error: billError } = await supabase
-          .from('bills')
-          .insert({
-            bill_number: billNumber,
-            customer_id: finalCustomerId,
-            created_by: user?.id,
-            business_id: businessId,
-            status: 'completed' as any,
-            subtotal: cartCalculations.subtotal,
-            discount_type: 'flat',
-            discount_value: discountValue,
-            discount_amount: cartCalculations.discountAmount,
-            tax_amount: cartCalculations.taxAmount,
-            total_amount: cartCalculations.total,
-            completed_at: new Date().toISOString(),
-            payment_type: paymentType,
-            payment_status: resolvedPaymentStatus,
-            paid_amount: resolvedPaidAmount,
-            due_amount: resolvedDueAmount,
-            due_date: (paymentType === 'due' && dueDate) ? dueDate : null,
-            profit: billProfit,
-          } as any)
-          .select()
-          .single();
-
-        if (billError) {
-          if (billError.code === '23505' && retryCount < maxRetries - 1) {
-            retryCount++;
-            continue;
-          }
-          throw billError;
-        }
-
-        const billItems = cart.map((item) => ({
-          bill_id: bill.id,
+        // ─── COMPLETED BILL PATH: Unified Split Payment RPC ───
+        const items = cart.map(item => ({
           product_id: item.productId,
           product_name: item.name,
           quantity: item.quantity,
@@ -667,25 +623,63 @@ export default function Billing() {
           total_price: item.unitPrice * item.quantity,
         }));
 
-        const { error: itemsError } = await supabase
-          .from('bill_items')
-          .insert(billItems);
+        // 1. Create a draft bill first (atomically reserves stock)
+        const { data: draftData, error: draftError } = await (supabase.rpc as any)('create_draft_bill', {
+          _business_id: businessId,
+          _bill_number: billNumber,
+          _customer_id: finalCustomerId || null,
+          _salesman_name: user?.user_metadata?.display_name || 'Admin',
+          _subtotal: cartCalculations.subtotal,
+          _discount_amount: cartCalculations.discountAmount,
+          _tax_amount: cartCalculations.taxAmount,
+          _total_amount: cartCalculations.total,
+          _items: items,
+        });
 
-        if (itemsError) throw itemsError;
-
-        // Reduce actual stock for completed bills
-        for (const item of cart) {
-          const product = products.find((p) => p.id === item.productId);
-          if (product) {
-            const newQuantity = product.stock_quantity - item.quantity;
-            await supabase
-              .from('products')
-              .update({ stock_quantity: newQuantity })
-              .eq('id', item.productId);
+        if (draftError) {
+          if (draftError.code === '23505' && retryCount < maxRetries - 1) {
+            retryCount++;
+            continue;
           }
+          throw draftError;
         }
 
-        return { bill, billNumber, shouldPrint, isDraft: false };
+        const draftBill = draftData as any;
+        if (!draftBill.success) throw new Error(draftBill.error || 'Failed to create draft');
+
+        const billId = draftBill.bill_id;
+
+        // 2. Prepare payments array based on selected type
+        let payments: any[] = [];
+        let resolvedDueAmount = 0;
+
+        if (paymentType === 'cash') {
+          payments = [{ mode: 'cash', amount: cartCalculations.total }];
+        } else if (paymentType === 'online') {
+          payments = [{ mode: 'upi', amount: cartCalculations.total }];
+        } else if (paymentType === 'split') {
+          const cAmt = typeof cashAmount === 'number' ? cashAmount : 0;
+          const oAmt = typeof onlineAmount === 'number' ? onlineAmount : 0;
+          if (cAmt > 0) payments.push({ mode: 'cash', amount: cAmt });
+          if (oAmt > 0) payments.push({ mode: 'upi', amount: oAmt });
+          resolvedDueAmount = Math.max(0, cartCalculations.total - (cAmt + oAmt));
+        } else if (paymentType === 'due') {
+          const pAmt = typeof paidAmount === 'number' ? paidAmount : 0;
+          if (pAmt > 0) payments.push({ mode: 'cash', amount: pAmt });
+          resolvedDueAmount = Math.max(0, cartCalculations.total - pAmt);
+        }
+
+        // 3. Finalize the bill (atomic status update + stock deduction)
+        const { data: finalizeData, error: finalizeError } = await (supabase.rpc as any)('finalize_bill_with_split_payments', {
+          _bill_id: billId,
+          _payments: payments,
+          _due_amount: resolvedDueAmount,
+          _due_date: (paymentType === 'due' && dueDate) ? dueDate : null,
+        });
+
+        if (finalizeError) throw finalizeError;
+
+        return { bill: finalizeData, billNumber, shouldPrint, isDraft: false };
       }
 
       throw new Error('Failed to generate unique bill number after multiple attempts');
@@ -697,6 +691,7 @@ export default function Billing() {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
       queryClient.invalidateQueries({ queryKey: ['draftBills'] });
+      queryClient.invalidateQueries({ queryKey: ['profit-summary'] });
       setCart([]);
       setCustomerName('');
       setSelectedCustomerId(null);
@@ -1178,59 +1173,114 @@ export default function Billing() {
 
               {/* ── Payment Type Selector (hidden for salesman) ── */}
               {!isSalesman && (
-                <div className="pt-2 border-t">
-                  <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Payment Type</p>
-                  <div className="grid grid-cols-2 gap-1 p-1 bg-muted rounded-lg">
-                    {(['cash', 'due'] as const).map((type) => (
+                <div className="pt-2 border-t text-left">
+                  <p className="text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">Payment Method</p>
+                  <div className="grid grid-cols-4 gap-1 p-0.5 bg-muted/50 rounded-lg border border-border">
+                    {(['cash', 'online', 'split', 'due'] as const).map((type) => (
                       <button
                         key={type}
                         onClick={() => {
                           setPaymentType(type);
+                          setCashAmount('');
+                          setOnlineAmount('');
                           setPaidAmount('');
-                          setDueDate('');
                         }}
                         className={cn(
-                          'py-1.5 rounded-md text-sm font-semibold transition-all',
+                          'py-1.5 rounded-md text-[10px] font-bold transition-all uppercase',
                           paymentType === type
-                            ? type === 'cash'
-                              ? 'bg-primary text-primary-foreground shadow-sm'
-                              : 'bg-destructive text-destructive-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
+                            ? 'bg-primary text-primary-foreground shadow-md'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                         )}
                       >
-                        {type === 'cash' ? '💵 Cash / Online' : '⏳ Due / Credit'}
+                        {type === 'online' ? 'UPI' : type}
                       </button>
                     ))}
                   </div>
 
+                  {/* Split payment fields */}
+                  {paymentType === 'split' && (
+                    <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1 text-left">
+                          <Label className="text-[10px] uppercase text-muted-foreground">Cash Amount</Label>
+                          <div className="relative">
+                            <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={cashAmount}
+                              onChange={(e) => setCashAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                              className="h-8 pl-5 text-sm font-bold bg-emerald-50/30 border-emerald-100 focus-visible:ring-emerald-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1 text-left">
+                          <Label className="text-[10px] uppercase text-muted-foreground">Online Amount</Label>
+                          <div className="relative">
+                            <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={onlineAmount}
+                              onChange={(e) => setOnlineAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                              className="h-8 pl-5 text-sm font-bold bg-blue-50/30 border-blue-100 focus-visible:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/10">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground">Total Entered</span>
+                        <span className={cn(
+                          "text-sm font-black",
+                          (Number(cashAmount || 0) + Number(onlineAmount || 0)) === cartCalculations.total ? "text-emerald-600" : "text-amber-600"
+                        )}>
+                          {currencySymbol}{(Number(cashAmount || 0) + Number(onlineAmount || 0)).toFixed(2)} / {cartCalculations.total.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Online payment info */}
+                  {paymentType === 'online' && (
+                    <div className="mt-3 p-3 rounded-lg bg-blue-50/50 border border-blue-100 flex items-center gap-3 animate-in fade-in duration-200 text-left">
+                      <Smartphone className="h-5 w-5 text-blue-500" />
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-blue-700">Online Payment (UPI/Card)</p>
+                        <p className="text-xs text-blue-600/80">Full amount ₹{cartCalculations.total.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Due-specific fields */}
                   {paymentType === 'due' && (
-                    <div className="mt-2 space-y-2">
+                    <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-muted-foreground">Paid Now ({currencySymbol})</span>
-                        <Input
-                          type="number"
-                          placeholder="0"
-                          value={paidAmount}
-                          onChange={(e) => setPaidAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                          className="w-28 h-8 text-right"
-                          min={0}
-                          max={cartCalculations.total}
-                        />
+                        <Label className="text-[10px] uppercase text-muted-foreground">Paid Now</Label>
+                        <div className="relative">
+                          <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
+                          <Input
+                            type="number"
+                            placeholder="0"
+                            value={paidAmount}
+                            onChange={(e) => setPaidAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                            className="w-32 h-8 pl-5 text-right text-sm font-bold"
+                            max={cartCalculations.total}
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-muted-foreground">Due Amount</span>
-                        <span className="font-bold text-destructive text-sm">
-                          {currencySymbol}{Math.max(0, cartCalculations.total - (typeof paidAmount === 'number' ? paidAmount : 0)).toFixed(2)}
+                      <div className="flex items-center justify-between p-2 rounded-lg bg-destructive/5 border border-destructive/10">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground">Due Amount</span>
+                        <span className="text-sm font-black text-destructive">
+                          {currencySymbol}{(cartCalculations.total - Number(paidAmount || 0)).toFixed(2)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-muted-foreground">Due Date</span>
+                        <Label className="text-[10px] uppercase text-muted-foreground">Due Date</Label>
                         <Input
                           type="date"
                           value={dueDate}
                           onChange={(e) => setDueDate(e.target.value)}
-                          className="w-36 h-8 text-sm"
+                          className="w-36 h-8 text-[10px]"
                           min={new Date().toISOString().split('T')[0]}
                         />
                       </div>

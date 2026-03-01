@@ -193,6 +193,22 @@ export function ExpenseTracker({ businessId }: ExpenseTrackerProps) {
               </p>
             </div>
           </div>
+
+          {/* Collection Breakdown */}
+          <div className="flex flex-wrap items-center bg-muted/20 px-4 py-2 gap-4 text-[10px] font-bold uppercase tracking-wider border-b border-border">
+            <div className="flex items-center gap-1.5 text-emerald-600">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Cash: ₹{(summary.cash_collection || 0).toFixed(2)}
+            </div>
+            <div className="flex items-center gap-1.5 text-blue-600">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              Online: ₹{(summary.online_collection || 0).toFixed(2)}
+            </div>
+            <div className="flex items-center gap-1.5 text-amber-600">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              Credit (Due): ₹{(summary.credit_collection || 0).toFixed(2)}
+            </div>
+          </div>
         </CardContent>
       </Card>
 

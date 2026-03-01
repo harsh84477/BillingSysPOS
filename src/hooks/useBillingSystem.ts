@@ -185,7 +185,7 @@ export function useExpenseTracking(businessId: string | null) {
   const { toast } = useToast();
 
   // Fetch profit summary
-  const { data: profitSummary, isLoading: isSummaryLoading } = useQuery({
+  const { data: profitSummary, isLoading: isSummaryLoading, refetch: refetchSummary } = useQuery({
     queryKey: ['profit-summary', businessId],
     queryFn: async () => {
       if (!businessId) return null;
@@ -463,5 +463,50 @@ export function useSubscriptionStatus(businessId: string | null) {
     isActive: isActive(),
     isExpired: isExpired(),
     daysUntilExpiration: daysUntilExpiration(),
+  };
+}
+
+// ========== BILLING FINALIZATION HOOK ==========
+
+export function useBilling() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const finalizeBillMutation = useMutation({
+    mutationFn: async (data: {
+      bill_id: string;
+      payments: Array<{
+        mode: 'cash' | 'upi' | 'card' | 'credit';
+        amount: number;
+        reference?: string;
+        notes?: string;
+      }>;
+      due_amount: number;
+      due_date?: string | null;
+    }) => {
+      const { data: result, error } = await (supabase.rpc as any)('finalize_bill_with_split_payments', {
+        _bill_id: data.bill_id,
+        _payments: data.payments,
+        _due_amount: data.due_amount,
+        _due_date: data.due_date,
+      });
+
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      toast({ title: 'Bill Finalized', description: 'Bill has been completed successfully.' });
+      queryClient.invalidateQueries({ queryKey: ['bills'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['profit-summary'] });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Finalization Failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  return {
+    finalizeBill: finalizeBillMutation.mutateAsync,
+    isFinalizing: finalizeBillMutation.isPending,
   };
 }

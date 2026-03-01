@@ -29,6 +29,8 @@ import { toast } from 'sonner';
 import { exportToExcel } from '@/lib/exportToExcel';
 import { cn } from '@/lib/utils';
 import DraftBillModal from '@/components/bills/DraftBillModal';
+import { useExpenseTracking } from '@/hooks/useBillingSystem';
+import { Wallet, Smartphone, CreditCard } from 'lucide-react';
 
 function StatCard({
   title,
@@ -66,9 +68,10 @@ function StatCard({
 }
 
 export default function Dashboard() {
-  const { user, isSuperAdmin, isSalesman, userRole, isAdmin, isManager } = useAuth();
+  const { user, isSuperAdmin, isSalesman, userRole, isAdmin, isManager, businessId } = useAuth();
   const navigate = useNavigate();
   const [selectedDraftBillId, setSelectedDraftBillId] = useState<string | null>(null);
+  const { profitSummary, isSummaryLoading } = useExpenseTracking(businessId);
 
   React.useEffect(() => {
     if (!user && isSuperAdmin) {
@@ -399,6 +402,20 @@ export default function Dashboard() {
           icon={TrendingUp}
           description="Revenue minus cost"
           isLoading={loadingTodayProfit}
+        />
+        <StatCard
+          title="Cash Collection"
+          value={`${currencySymbol}${(profitSummary?.cash_collection || 0).toFixed(2)}`}
+          icon={Wallet}
+          description="This month (Cash)"
+          isLoading={isSummaryLoading}
+        />
+        <StatCard
+          title="Online Collection"
+          value={`${currencySymbol}${(profitSummary?.online_collection || 0).toFixed(2)}`}
+          icon={Smartphone}
+          description="This month (UPI/Card)"
+          isLoading={isSummaryLoading}
         />
         <StatCard
           title="Draft Bills"
