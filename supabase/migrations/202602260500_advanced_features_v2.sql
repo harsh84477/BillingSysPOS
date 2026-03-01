@@ -547,15 +547,29 @@ SET search_path = public
 AS $$
 DECLARE
   _log_id UUID;
+  _ip TEXT;
+  _ua TEXT;
 BEGIN
+  -- Try to get IP and UA from PostgREST headers, fallback to builtin or defaults
+  BEGIN
+    _ip := COALESCE(
+      (NULLIF(current_setting('request.headers', true), '')::JSONB)->>'x-forwarded-for',
+      inet_client_addr()::TEXT,
+      '0.0.0.0'
+    );
+    _ua := (NULLIF(current_setting('request.headers', true), '')::JSONB)->>'user-agent';
+  EXCEPTION WHEN OTHERS THEN
+    _ip := COALESCE(inet_client_addr()::TEXT, '0.0.0.0');
+    _ua := NULL;
+  END;
+
   INSERT INTO public.activity_logs (
     business_id, user_id, action, target_type, target_id,
-    old_value, new_value, description, ip_address
+    old_value, new_value, description, ip_address, user_agent
   )
   VALUES (
     _business_id, auth.uid(), _action, _target_type, _target_id,
-    _old_value, _new_value, _description, 
-    current_setting('app.client_ip')::TEXT
+    _old_value, _new_value, _description, _ip, _ua
   )
   RETURNING id INTO _log_id;
 
