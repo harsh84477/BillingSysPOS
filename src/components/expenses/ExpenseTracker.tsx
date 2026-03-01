@@ -148,16 +148,18 @@ export function ExpenseTracker({ businessId }: ExpenseTrackerProps) {
     return <div className="flex items-center justify-center py-12">Loading...</div>;
   }
 
-  const summary = profitSummary as any;
+  // Robust summary parsing
+  const rawSummary = profitSummary as any;
+  const summary = Array.isArray(rawSummary) ? (rawSummary[0] || {}) : (rawSummary || {});
 
   const chartData = [
-    { name: 'Income', value: summary.sales },
-    { name: 'Expenses', value: (summary.purchase_cost + summary.expenses) },
+    { name: 'Income', value: Number(summary.sales || 0) },
+    { name: 'Expenses', value: (Number(summary.purchase_cost || 0) + Number(summary.expenses || 0)) },
   ];
 
-  const totalEarnings = summary.sales;
-  const totalDeductions = summary.purchase_cost + summary.expenses;
-  const netProfit = summary.net_profit;
+  const totalEarnings = Number(summary.sales || 0);
+  const totalDeductions = Number(summary.purchase_cost || 0) + Number(summary.expenses || 0);
+  const netProfit = Number(summary.net_profit || 0);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
