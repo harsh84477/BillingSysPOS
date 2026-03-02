@@ -127,9 +127,9 @@ export function BillDetailsDialog({ bill, open, onOpenChange }: BillDetailsDialo
             </div>
           </div>
 
-          <div className="rounded-md border">
+          <div className="rounded-md border max-h-[50vh] overflow-y-auto">
             <Table>
-              <TableHeader className="bg-muted/50">
+              <TableHeader className="bg-muted/50 sticky top-0 z-10 shadow-sm">
                 <TableRow>
                   <TableHead className="py-2">Item</TableHead>
                   <TableHead className="py-2 text-right">Price</TableHead>

@@ -487,71 +487,73 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                                     ) : (
                                         <div className="space-y-1">
                                             {/* Table header */}
-                                            <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-2 py-1">
+                                            <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-2 py-1 sticky top-0 bg-background z-10 border-b mb-1">
                                                 <div className="col-span-5">Product</div>
                                                 <div className="col-span-2 text-right">Price</div>
                                                 <div className="col-span-3 text-center">Qty</div>
                                                 <div className="col-span-2 text-right">Total</div>
                                             </div>
 
-                                            {items.map((item, index) => (
-                                                <div
-                                                    key={item.product_id + index}
-                                                    className="grid grid-cols-12 gap-2 items-center px-2 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
-                                                >
-                                                    <div className="col-span-5 flex items-center gap-2 min-w-0">
-                                                        <Package className="h-4 w-4 text-primary shrink-0" />
-                                                        <span className="text-sm font-medium truncate">{item.product_name}</span>
-                                                    </div>
+                                            <div className="max-h-[35vh] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                                                {items.map((item, index) => (
+                                                    <div
+                                                        key={item.product_id + index}
+                                                        className="grid grid-cols-12 gap-2 items-center px-2 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
+                                                    >
+                                                        <div className="col-span-5 flex items-center gap-2 min-w-0">
+                                                            <Package className="h-4 w-4 text-primary shrink-0" />
+                                                            <span className="text-sm font-medium truncate">{item.product_name}</span>
+                                                        </div>
 
-                                                    <div className="col-span-2 text-right text-sm text-muted-foreground">
-                                                        {currencySymbol}{item.unit_price.toFixed(2)}
-                                                    </div>
+                                                        <div className="col-span-2 text-right text-sm text-muted-foreground">
+                                                            {currencySymbol}{item.unit_price.toFixed(2)}
+                                                        </div>
 
-                                                    <div className="col-span-3 flex items-center justify-center gap-1">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-6 w-6"
-                                                            onClick={() => updateQuantity(index, -1)}
-                                                            disabled={item.quantity <= 1 || isBusy}
-                                                        >
-                                                            <Minus className="h-3 w-3" />
-                                                        </Button>
-                                                        <Input
-                                                            type="number"
-                                                            value={item.quantity}
-                                                            onChange={(e) => setExactQuantity(index, parseInt(e.target.value) || 1)}
-                                                            className="h-7 w-12 text-center text-sm font-bold px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                                            disabled={isBusy}
-                                                        />
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-6 w-6"
-                                                            onClick={() => updateQuantity(index, 1)}
-                                                            disabled={isBusy}
-                                                        >
-                                                            <Plus className="h-3 w-3" />
-                                                        </Button>
-                                                    </div>
+                                                        <div className="col-span-3 flex items-center justify-center gap-1">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6"
+                                                                onClick={() => updateQuantity(index, -1)}
+                                                                disabled={item.quantity <= 1 || isBusy}
+                                                            >
+                                                                <Minus className="h-3 w-3" />
+                                                            </Button>
+                                                            <Input
+                                                                type="number"
+                                                                value={item.quantity}
+                                                                onChange={(e) => setExactQuantity(index, parseInt(e.target.value) || 1)}
+                                                                className="h-7 w-12 text-center text-sm font-bold px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                                disabled={isBusy}
+                                                            />
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6"
+                                                                onClick={() => updateQuantity(index, 1)}
+                                                                disabled={isBusy}
+                                                            >
+                                                                <Plus className="h-3 w-3" />
+                                                            </Button>
+                                                        </div>
 
-                                                    <div className="col-span-2 flex items-center justify-end gap-1">
-                                                        <span className="text-sm font-semibold">
-                                                            {currencySymbol}{(item.unit_price * item.quantity).toFixed(2)}
-                                                        </span>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive"
-                                                            onClick={() => removeItem(index)}
-                                                            disabled={isBusy}
-                                                        >
-                                                            <Trash2 className="h-3 w-3" />
-                                                        </Button>
+                                                        <div className="col-span-2 flex items-center justify-end gap-1">
+                                                            <span className="text-sm font-semibold">
+                                                                {currencySymbol}{(item.unit_price * item.quantity).toFixed(2)}
+                                                            </span>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive"
+                                                                onClick={() => removeItem(index)}
+                                                                disabled={isBusy}
+                                                            >
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
 

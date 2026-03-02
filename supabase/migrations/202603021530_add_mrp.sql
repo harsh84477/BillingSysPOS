@@ -18,12 +18,17 @@ WHERE mrp_price = 0;
 
 
 -- Update create_draft_bill to support mrp_price
+DROP FUNCTION IF EXISTS public.create_draft_bill(uuid, text, uuid, text, numeric, numeric, numeric, numeric, jsonb);
+DROP FUNCTION IF EXISTS public.create_draft_bill(uuid, text, uuid, text, numeric, text, numeric, numeric, numeric, numeric, jsonb);
+
 CREATE OR REPLACE FUNCTION public.create_draft_bill(
   _business_id UUID,
   _bill_number TEXT,
   _customer_id UUID DEFAULT NULL,
   _salesman_name TEXT DEFAULT NULL,
   _subtotal NUMERIC DEFAULT 0,
+  _discount_type TEXT DEFAULT 'flat',
+  _discount_value NUMERIC DEFAULT 0,
   _discount_amount NUMERIC DEFAULT 0,
   _tax_amount NUMERIC DEFAULT 0,
   _total_amount NUMERIC DEFAULT 0,
@@ -46,26 +51,26 @@ BEGIN
   -- Create bill record
   INSERT INTO public.bills (
     business_id, bill_number, customer_id, salesman_name,
-    subtotal, discount_amount, tax_amount, total_amount,
+    subtotal, discount_type, discount_value, discount_amount, tax_amount, total_amount,
     status, created_at, updated_at
   )
   VALUES (
     _business_id, _bill_number, _customer_id, _salesman_name,
-    _subtotal, _discount_amount, _tax_amount, _total_amount,
+    _subtotal, _discount_type, _discount_value, _discount_amount, _tax_amount, _total_amount,
     'draft', now(), now()
   )
   RETURNING id INTO _bill_id;
 
   -- Process items and reserve stock
   FOR _item IN SELECT * FROM jsonb_to_recordset(_items) 
-    AS x(product_id UUID, quantity INTEGER, unit_price NUMERIC, cost_price NUMERIC, mrp_price NUMERIC, total_price NUMERIC)
+    AS x(product_id UUID, product_name TEXT, quantity INTEGER, unit_price NUMERIC, cost_price NUMERIC, mrp_price NUMERIC, total_price NUMERIC)
   LOOP
     -- Insert bill item
     INSERT INTO public.bill_items (
-      bill_id, product_id, quantity, unit_price, cost_price, mrp_price, total_price
+      bill_id, product_id, product_name, quantity, unit_price, cost_price, mrp_price, total_price
     )
     VALUES (
-      _bill_id, _item.product_id, _item.quantity, _item.unit_price, _item.cost_price, COALESCE(_item.mrp_price, _item.unit_price), _item.total_price
+      _bill_id, _item.product_id, _item.product_name, _item.quantity, _item.unit_price, _item.cost_price, COALESCE(_item.mrp_price, _item.unit_price), _item.total_price
     );
 
     -- Update reserved quantity if enabled
@@ -144,10 +149,11 @@ BEGIN
   -- Delete old items
   DELETE FROM public.bill_items WHERE bill_id = _bill_id;
 
-  -- Update bill
   UPDATE public.bills SET
     customer_id = _customer_id,
     subtotal = _subtotal,
+    discount_type = _discount_type,
+    discount_value = _discount_value,
     discount_amount = _discount_amount,
     tax_amount = _tax_amount,
     total_amount = _total_amount,
@@ -156,13 +162,13 @@ BEGIN
 
   -- Insert new items and reserve stock
   FOR _item IN SELECT * FROM jsonb_to_recordset(_items) 
-    AS x(product_id UUID, quantity INTEGER, unit_price NUMERIC, cost_price NUMERIC, mrp_price NUMERIC, total_price NUMERIC)
+    AS x(product_id UUID, product_name TEXT, quantity INTEGER, unit_price NUMERIC, cost_price NUMERIC, mrp_price NUMERIC, total_price NUMERIC)
   LOOP
     INSERT INTO public.bill_items (
-      bill_id, product_id, quantity, unit_price, cost_price, mrp_price, total_price
+      bill_id, product_id, product_name, quantity, unit_price, cost_price, mrp_price, total_price
     )
     VALUES (
-      _bill_id, _item.product_id, _item.quantity, _item.unit_price, _item.cost_price, COALESCE(_item.mrp_price, _item.unit_price), _item.total_price
+      _bill_id, _item.product_id, _item.product_name, _item.quantity, _item.unit_price, _item.cost_price, COALESCE(_item.mrp_price, _item.unit_price), _item.total_price
     );
 
     IF _reservation_enabled THEN
