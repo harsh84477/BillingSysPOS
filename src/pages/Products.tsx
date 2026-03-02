@@ -43,6 +43,7 @@ interface Product {
   id: string;
   name: string;
   description: string | null;
+  mrp_price: number;
   selling_price: number;
   cost_price: number;
   stock_quantity: number;
@@ -101,7 +102,7 @@ export default function Products() {
       if (businessId) query = query.eq('business_id', businessId);
       const { data, error } = await query.order('name');
       if (error) throw error;
-      return data as Product[];
+      return data as unknown as Product[];
     },
     enabled: !!businessId,
   });
@@ -158,6 +159,7 @@ export default function Products() {
     saveMutation.mutate({
       name: formData.get('name') as string,
       description: formData.get('description') as string || null,
+      mrp_price: Number(formData.get('mrp_price')) || Number(formData.get('selling_price')),
       selling_price: Number(formData.get('selling_price')),
       cost_price: Number(formData.get('cost_price')),
       stock_quantity: Number(formData.get('stock_quantity')),
@@ -343,9 +345,20 @@ export default function Products() {
                       rows={2}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="selling_price">Selling Price *</Label>
+                      <Label htmlFor="mrp_price">MRP</Label>
+                      <Input
+                        id="mrp_price"
+                        name="mrp_price"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        defaultValue={editingProduct?.mrp_price || 0}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="selling_price">Rate (Sell) *</Label>
                       <Input
                         id="selling_price"
                         name="selling_price"

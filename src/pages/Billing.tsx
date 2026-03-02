@@ -111,6 +111,7 @@ interface CartItem {
   name: string;
   unitPrice: number;
   costPrice: number;
+  mrpPrice: number;
   quantity: number;
 }
 
@@ -268,6 +269,7 @@ export default function Billing() {
           name: product.name,
           unitPrice: Number(product.selling_price),
           costPrice: Number(product.cost_price),
+          mrpPrice: Number((product as any).mrp_price || product.selling_price),
           quantity: 1,
         },
       ];
@@ -581,6 +583,7 @@ export default function Billing() {
             quantity: item.quantity,
             unit_price: item.unitPrice,
             cost_price: item.costPrice,
+            mrp_price: item.mrpPrice,
             total_price: item.unitPrice * item.quantity,
           }));
 
@@ -621,6 +624,7 @@ export default function Billing() {
           quantity: item.quantity,
           unit_price: item.unitPrice,
           cost_price: item.costPrice,
+          mrp_price: item.mrpPrice,
           total_price: item.unitPrice * item.quantity,
         }));
 

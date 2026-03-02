@@ -864,6 +864,7 @@ export default function Settings() {
                       {[
                         { id: '58mm', label: '58mm' },
                         { id: '80mm', label: '80mm' },
+                        { id: 'A5', label: 'A5' },
                         { id: 'A4', label: 'A4' },
                       ].map((p) => (
                         <Button

@@ -8,6 +8,7 @@ interface BillItem {
   unit_price: number;
   total_price: number;
   cost_price: number;
+  mrp_price?: number;
 }
 
 interface Bill {
@@ -43,7 +44,7 @@ interface BusinessSettings {
   invoice_show_business_email?: boolean;
   invoice_show_business_address?: boolean;
   invoice_terms_conditions?: string | null;
-  invoice_paper_width?: '58mm' | '80mm' | 'A4';
+  invoice_paper_width?: '58mm' | '80mm' | 'A4' | 'A5';
   invoice_show_qr_code?: boolean;
   upi_id?: string | null;
   gst_number?: string | null;
@@ -72,9 +73,10 @@ export function printBillReceipt(
   const headerAlign = settings?.invoice_header_align || 'center';
   const footerFontSize = settings?.invoice_footer_font_size || 10;
 
-  const widthStyle = paperWidth === '58mm' ? '240px' : paperWidth === 'A4' ? '100%' : '380px';
-  const maxWidthStyle = paperWidth === 'A4' ? '800px' : widthStyle;
+  const widthStyle = paperWidth === '58mm' ? '240px' : (paperWidth === 'A4' || paperWidth === 'A5') ? '100%' : '380px';
+  const maxWidthStyle = paperWidth === 'A4' ? '800px' : paperWidth === 'A5' ? '560px' : widthStyle;
   const qrSize = paperWidth === '58mm' ? 100 : 120;
+  const isA5 = paperWidth === 'A5';
 
   const receiptHTML = `
     <!DOCTYPE html>
@@ -177,6 +179,23 @@ export function printBillReceipt(
           text-align: center;
         }
 
+        .a5-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 15px;
+          margin-bottom: 15px;
+          font-size: ${fontSize - 1}px;
+        }
+        .a5-table th, .a5-table td {
+          border: 1px solid #000;
+          padding: 6px 4px;
+        }
+        .a5-table th {
+          font-weight: bold;
+          text-align: center;
+          background-color: #f9fafb;
+        }
+
         @media print {
           body { width: 100%; border: none; padding: 0; margin: 0; }
           @page { margin: 0; }
@@ -217,29 +236,76 @@ export function printBillReceipt(
       </script>
     </head>
     <body>
-      <div class="header">
-        <div class="business-name">${settings?.business_name || 'Business'}</div>
-        ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info">${settings.address}</div>` : ''}
-        ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<div class="business-info">Tel: ${settings.phone}</div>` : ''}
-        ${settings?.invoice_show_business_email !== false && settings?.email ? `<div class="business-info">${settings.email}</div>` : ''}
-        ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info">GST: ${settings.gst_number}</div>` : ''}
-      </div>
+      ${isA5 ? `
+        <div class="header">
+          <div class="business-name" style="text-align: center; font-size: ${fontSize + 8}px; text-transform: uppercase;">ESTIMATE</div>
+          ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<div class="business-info" style="text-align: center;">Phone : ${settings.phone}</div>` : ''}
+        </div>
+        <div style="display: flex; justify-content: space-between; border: 1px solid #000; padding: 10px; margin-bottom: -1px; border-bottom: none;">
+          <div>
+            <strong>M/s ${bill.customers?.name || 'CASH'}</strong>
+            <br/>ADD. ${settings?.address || ''}
+            <br/>MOB: 
+          </div>
+          <div style="text-align: right;">
+            <div>Invoice No.: <strong>${bill.bill_number}</strong></div>
+            <br/>
+            <div>Date : ${format(new Date(bill.created_at), 'dd/MM/yyyy')}</div>
+          </div>
+        </div>
+      ` : `
+        <div class="header">
+          <div class="business-name">${settings?.business_name || 'Business'}</div>
+          ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info">${settings.address}</div>` : ''}
+          ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<div class="business-info">Tel: ${settings.phone}</div>` : ''}
+          ${settings?.invoice_show_business_email !== false && settings?.email ? `<div class="business-info">${settings.email}</div>` : ''}
+          ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info">GST: ${settings.gst_number}</div>` : ''}
+        </div>
 
-      <div class="bill-info">
-        <div class="bill-info-row">
-          <span>Bill #:</span>
-          <strong>${bill.bill_number}</strong>
+        <div class="bill-info">
+          <div class="bill-info-row">
+            <span>Bill #:</span>
+            <strong>${bill.bill_number}</strong>
+          </div>
+          <div class="bill-info-row">
+            <span>Date:</span>
+            <span>${format(new Date(bill.created_at), 'dd/MM/yyyy HH:mm')}</span>
+          </div>
+          <div class="bill-info-row">
+            <span>Customer:</span>
+            <span>${bill.customers?.name || 'Walk-in'}</span>
+          </div>
         </div>
-        <div class="bill-info-row">
-          <span>Date:</span>
-          <span>${format(new Date(bill.created_at), 'dd/MM/yyyy HH:mm')}</span>
-        </div>
-        <div class="bill-info-row">
-          <span>Customer:</span>
-          <span>${bill.customers?.name || 'Walk-in'}</span>
-        </div>
-      </div>
+      `}
 
+      ${isA5 ? `
+      <table class="a5-table" style="margin-top: 0;">
+        <thead>
+          <tr>
+            <th style="width: 5%">S.</th>
+            <th style="width: 8%">CASE</th>
+            <th style="width: 8%">PCS</th>
+            <th style="text-align: left; width: 43%">ITEM DESCRIPTION</th>
+            <th style="width: 12%">M.R.P</th>
+            <th style="width: 12%">RATE</th>
+            <th style="width: 12%">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map((item, idx) => `
+            <tr>
+              <td style="text-align: center;">${idx + 1}</td>
+              <td style="text-align: center;">0.00</td>
+              <td style="text-align: center;">${Number(item.quantity).toFixed(2)}</td>
+              <td>${item.product_name}</td>
+              <td style="text-align: center;">${Number(item.mrp_price || item.unit_price).toFixed(2)}</td>
+              <td style="text-align: center;">${Number(item.unit_price).toFixed(2)}</td>
+              <td style="text-align: right;">${Number(item.total_price).toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      ` : `
       <div class="items-header">
         <span style="flex: ${settings?.invoice_show_unit_price !== false ? '2' : '2.8'};">ITEM</span>
         ${settings?.invoice_show_unit_price !== false ? '<span style="flex: 0.8; text-align: right;">PRICE</span>' : ''}
@@ -264,6 +330,7 @@ export function printBillReceipt(
           </div>
         `).join('')}
       </div>
+      `}
 
       <div class="totals">
         <div class="total-row">

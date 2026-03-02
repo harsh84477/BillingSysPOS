@@ -32,7 +32,7 @@ export interface BusinessSettings {
   invoice_show_business_email?: boolean;
   invoice_show_business_address?: boolean;
   invoice_terms_conditions?: string | null;
-  invoice_paper_width?: '58mm' | '80mm' | 'A4';
+  invoice_paper_width?: '58mm' | '80mm' | 'A4' | 'A5';
   invoice_show_qr_code?: boolean;
   upi_id?: string | null;
   gst_number?: string | null;
