@@ -454,31 +454,30 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                         </div>
                     ) : (
                         <>
-                            {/* Items List */}
-                            <ScrollArea className="flex-1 min-h-0 px-4 sm:px-6">
-                                <div className="py-4 space-y-2">
-                                    {/* Customer selector */}
-                                    {canFinalize && (
-                                        <div className="mb-4">
-                                            <Label className="text-xs text-muted-foreground mb-1 block">Customer</Label>
-                                            <Select
-                                                value={customerId || 'walk-in'}
-                                                onValueChange={(val) => setCustomerId(val === 'walk-in' ? null : val)}
-                                            >
-                                                <SelectTrigger className="h-9">
-                                                    <SelectValue placeholder="Walk-in Customer" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="walk-in">Walk-in Customer</SelectItem>
-                                                    {customers.map(c => (
-                                                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                    )}
+                            {/* Customer selector — always visible at top */}
+                            {canFinalize && (
+                                <div className="px-4 sm:px-6 pt-3 pb-1">
+                                    <Label className="text-xs text-muted-foreground mb-1 block">Customer</Label>
+                                    <Select
+                                        value={customerId || 'walk-in'}
+                                        onValueChange={(val) => setCustomerId(val === 'walk-in' ? null : val)}
+                                    >
+                                        <SelectTrigger className="h-9">
+                                            <SelectValue placeholder="Walk-in Customer" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="walk-in">Walk-in Customer</SelectItem>
+                                            {customers.map(c => (
+                                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
 
-                                    {/* Items */}
+                            {/* Scrollable items list */}
+                            <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 custom-scrollbar">
+                                <div className="py-2 space-y-1">
                                     {items.length === 0 ? (
                                         <div className="text-center py-12 text-muted-foreground">
                                             <ShoppingCart className="mx-auto h-10 w-10 mb-3 opacity-40" />
@@ -494,7 +493,7 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                                                 <div className="col-span-2 text-right">Total</div>
                                             </div>
 
-                                            <div className="max-h-[35vh] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                                            <div className="space-y-1 pr-1">
                                                 {items.map((item, index) => (
                                                     <div
                                                         key={item.product_id + index}
@@ -556,82 +555,84 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                                             </div>
                                         </div>
                                     )}
-
-                                    {/* Add product button */}
-                                    {!showAddProduct ? (
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="w-full mt-3 text-xs border-dashed"
-                                            onClick={() => setShowAddProduct(true)}
-                                            disabled={isBusy}
-                                        >
-                                            <Plus className="h-3 w-3 mr-1" /> Add Product
-                                        </Button>
-                                    ) : (
-                                        <div className="mt-3 border rounded-lg p-3 space-y-2 bg-muted/20">
-                                            <div className="relative">
-                                                <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
-                                                <Input
-                                                    placeholder="Search products..."
-                                                    value={searchQuery}
-                                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                                    className="pl-8 h-8 text-sm"
-                                                    autoFocus
-                                                />
-                                            </div>
-                                            <div className="max-h-[400px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-                                                {filteredProducts.map(product => {
-                                                    const avail = product.stock_quantity - (product.reserved_quantity || 0);
-                                                    return (
-                                                        <button
-                                                            key={product.id}
-                                                            onClick={() => addProduct(product)}
-                                                            disabled={avail <= 0}
-                                                            className={cn(
-                                                                'w-full flex items-center justify-between px-3 py-2.5 rounded-md text-left text-sm transition-colors border border-transparent hover:border-primary/20',
-                                                                avail <= 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'
-                                                            )}
-                                                        >
-                                                            <div className="flex flex-col min-w-0">
-                                                                <span className="truncate font-semibold">{product.name}</span>
-                                                                {product.sku && (
-                                                                    <span className="text-[10px] text-muted-foreground font-mono">SKU: {product.sku}</span>
-                                                                )}
-                                                            </div>
-                                                            <div className="flex items-center gap-3 shrink-0 ml-2">
-                                                                <div className="text-right">
-                                                                    <div className="text-xs font-bold">{currencySymbol}{Number(product.selling_price).toFixed(2)}</div>
-                                                                    <div className={cn(
-                                                                        'text-[10px] font-medium',
-                                                                        avail <= product.low_stock_threshold ? 'text-destructive' : 'text-green-600'
-                                                                    )}>
-                                                                        {avail} in stock
-                                                                    </div>
-                                                                </div>
-                                                                <Plus className="h-4 w-4 text-primary" />
-                                                            </div>
-                                                        </button>
-                                                    );
-                                                })}
-                                                {filteredProducts.length === 0 && (
-                                                    <div className="py-8 text-center text-muted-foreground text-xs italic">
-                                                        No products found matching "{searchQuery}"
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="w-full text-xs"
-                                                onClick={() => { setShowAddProduct(false); setSearchQuery(''); }}
-                                            >
-                                                Cancel
-                                            </Button>
-                                        </div>
-                                    )}
                                 </div>
-                            </ScrollArea>
+                            </div>
+
+                            {/* Add product — always visible, pinned between items and footer */}
+                            <div className="px-4 sm:px-6 py-2 border-t bg-background">
+                                {!showAddProduct ? (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full text-xs border-dashed"
+                                        onClick={() => setShowAddProduct(true)}
+                                        disabled={isBusy}
+                                    >
+                                        <Plus className="h-3 w-3 mr-1" /> Add Product
+                                    </Button>
+                                ) : (
+                                    <div className="border rounded-lg p-3 space-y-2 bg-muted/20">
+                                        <div className="relative">
+                                            <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                placeholder="Search products..."
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                className="pl-8 h-8 text-sm"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div className="max-h-[200px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                                            {filteredProducts.map(product => {
+                                                const avail = product.stock_quantity - (product.reserved_quantity || 0);
+                                                return (
+                                                    <button
+                                                        key={product.id}
+                                                        onClick={() => addProduct(product)}
+                                                        disabled={avail <= 0}
+                                                        className={cn(
+                                                            'w-full flex items-center justify-between px-3 py-2.5 rounded-md text-left text-sm transition-colors border border-transparent hover:border-primary/20',
+                                                            avail <= 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-accent'
+                                                        )}
+                                                    >
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="truncate font-semibold">{product.name}</span>
+                                                            {product.sku && (
+                                                                <span className="text-[10px] text-muted-foreground font-mono">SKU: {product.sku}</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-3 shrink-0 ml-2">
+                                                            <div className="text-right">
+                                                                <div className="text-xs font-bold">{currencySymbol}{Number(product.selling_price).toFixed(2)}</div>
+                                                                <div className={cn(
+                                                                    'text-[10px] font-medium',
+                                                                    avail <= product.low_stock_threshold ? 'text-destructive' : 'text-green-600'
+                                                                )}>
+                                                                    {avail} in stock
+                                                                </div>
+                                                            </div>
+                                                            <Plus className="h-4 w-4 text-primary" />
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                            {filteredProducts.length === 0 && (
+                                                <div className="py-6 text-center text-muted-foreground text-xs italic">
+                                                    No products found matching "{searchQuery}"
+                                                </div>
+                                            )}
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="w-full text-xs"
+                                            onClick={() => { setShowAddProduct(false); setSearchQuery(''); }}
+                                        >
+                                            Cancel
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
 
                             {/* Footer: Totals + Actions */}
                             <div className="border-t bg-card px-4 sm:px-6 py-3 space-y-3">
