@@ -122,6 +122,24 @@ export function printBillReceipt(
     </div>
   ` : '');
 
+  const sharedHeader = `
+    <div class="header" style="text-align: ${headerAlign}; position: relative; min-height: ${(qrPosition === 'top-right' || qrPosition === 'top-left') && generatedQR ? qrSize + 20 : 0}px; border-bottom: none; padding-bottom: 5px;">
+      ${(qrPosition === 'top-left' && generatedQR) ? `<div style="position: absolute; left: 0; top: 0;">${generatedQR}</div>` : ''}
+      ${(qrPosition === 'top-right' && generatedQR) ? `<div style="position: absolute; right: 0; top: 0;">${generatedQR}</div>` : ''}
+      <div style="${(qrPosition === 'top-left' && generatedQR) ? `padding-left: ${qrSize + 20}px;` : ''} ${(qrPosition === 'top-right' && generatedQR) ? `padding-right: ${qrSize + 20}px;` : ''}">
+        ${invoiceTitle ? `<div class="business-name" style="font-size: ${isGridFormat ? fontSize + 8 : fontSize + 4}px; text-transform: uppercase; text-decoration: ${isGridFormat ? 'underline' : 'none'}; margin-bottom: ${isGridFormat ? '15px' : '8px'};">${invoiceTitle}</div>` : ''}
+        <div class="business-name" style="font-size: ${fontSize + 6}px;">${settings?.business_name || 'Business'}</div>
+        ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''}">${settings.address}</div>` : ''}
+        <div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''}">
+          ${settings?.invoice_show_business_phone !== false && settings?.phone ? `${isGridFormat ? 'Mobile' : 'Tel'}: ${settings.phone}` : ''}
+          ${settings?.invoice_show_business_phone !== false && settings?.phone && settings?.invoice_show_business_email !== false && settings?.email ? (isGridFormat ? ' | ' : '<br/>') : ''}
+          ${settings?.invoice_show_business_email !== false && settings?.email ? `${isGridFormat ? 'Email' : 'Email'}: ${settings.email}` : ''}
+        </div>
+        ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''}">GSTIN: ${settings.gst_number}</div>` : ''}
+      </div>
+    </div>
+  `;
+
   const receiptHTML = `
     <!DOCTYPE html>
     <html>
@@ -201,7 +219,7 @@ export function printBillReceipt(
         }
         
         .footer { 
-          text-align: center; 
+          text-align: ${headerAlign}; 
           margin-top: 30px; 
           padding-top: 15px; 
           border-top: ${showBorders ? '1px dashed #ccc' : 'none'}; 
@@ -302,20 +320,8 @@ export function printBillReceipt(
     </head>
     <body>
       <div class="receipt-outer-wrapper">
+      ${sharedHeader}
       ${isGridFormat ? `
-        <div class="header" style="text-align: center; border-bottom: none; padding-bottom: 5px; position: relative;">
-          ${(qrPosition === 'top-left' && generatedQR) ? `<div style="position: absolute; left: 0; top: 0;">${generatedQR}</div>` : ''}
-          ${(qrPosition === 'top-right' && generatedQR) ? `<div style="position: absolute; right: 0; top: 0;">${generatedQR}</div>` : ''}
-          ${invoiceTitle ? `<div class="business-name" style="font-size: ${fontSize + 8}px; text-transform: uppercase; text-decoration: underline; margin-bottom: 15px;">${invoiceTitle}</div>` : ''}
-          <div class="business-name" style="font-size: ${fontSize + 6}px;">${settings?.business_name || 'Business'}</div>
-          ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info" style="text-align: center; margin-top: 4px;">${settings.address}</div>` : ''}
-          <div class="business-info" style="text-align: center; margin-top: 4px;">
-            ${settings?.invoice_show_business_phone !== false && settings?.phone ? `Mobile: ${settings.phone}` : ''}
-            ${settings?.invoice_show_business_phone !== false && settings?.phone && settings?.invoice_show_business_email !== false && settings?.email ? ' | ' : ''}
-            ${settings?.invoice_show_business_email !== false && settings?.email ? `Email: ${settings.email}` : ''}
-          </div>
-          ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info" style="text-align: center; margin-top: 4px;">GSTIN: ${settings.gst_number}</div>` : ''}
-        </div>
         <div style="display: flex; justify-content: space-between; border: 1px solid #000; padding: 10px; margin-bottom: 0; border-bottom: none;">
           <div>
             <strong>M/s ${bill.customers?.name || 'Walk-in Customer'}</strong>
@@ -329,18 +335,6 @@ export function printBillReceipt(
           </div>
         </div>
       ` : `
-        <div class="header" style="position: relative; min-height: ${(qrPosition === 'top-right' || qrPosition === 'top-left') && generatedQR ? qrSize + 20 : 0}px;">
-          ${(qrPosition === 'top-right' && generatedQR) ? `<div style="position: absolute; right: 0; top: 0;">${generatedQR}</div>` : ''}
-          ${(qrPosition === 'top-left' && generatedQR) ? `<div style="position: absolute; left: 0; top: 0;">${generatedQR}</div>` : ''}
-          <div style="${(qrPosition === 'top-left' && generatedQR) ? `padding-left: ${qrSize + 20}px;` : ''} ${(qrPosition === 'top-right' && generatedQR) ? `padding-right: ${qrSize + 20}px;` : ''}">
-            <div class="business-name">${settings?.business_name || 'Business'}</div>
-            ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info">${settings.address}</div>` : ''}
-            ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<div class="business-info">Tel: ${settings.phone}</div>` : ''}
-            ${settings?.invoice_show_business_email !== false && settings?.email ? `<div class="business-info">${settings.email}</div>` : ''}
-            ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info">GST: ${settings.gst_number}</div>` : ''}
-          </div>
-        </div>
-
         <div class="bill-info">
           <div class="bill-info-row">
             <span>Bill #:</span>
