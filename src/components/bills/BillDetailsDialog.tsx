@@ -34,7 +34,7 @@ interface Bill {
   created_at: string;
   completed_at?: string | null;
   customer_id?: string | null;
-  customers?: { name: string } | null;
+  customers?: { name: string; phone?: string; address?: string; } | null;
 }
 
 interface BillItem {

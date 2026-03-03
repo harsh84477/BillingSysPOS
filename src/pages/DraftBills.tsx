@@ -28,7 +28,7 @@ export default function DraftBills() {
         queryFn: async () => {
             let query = supabase
                 .from('bills')
-                .select('*, customers(name, phone)')
+                .select('*, customers(name, phone, address)')
                 .eq('business_id', businessId)
                 .eq('status', 'draft')
                 .order('created_at', { ascending: false });

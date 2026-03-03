@@ -34,7 +34,7 @@ export default function DueBills() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('bills')
-                .select('*, customers(name)')
+                .select('*, customers(name, phone, address)')
                 .eq('business_id', businessId)
                 .in('payment_status', ['unpaid', 'partial'])
                 .eq('status', 'completed')

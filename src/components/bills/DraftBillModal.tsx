@@ -95,7 +95,7 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('bills')
-                .select('*, customers(id, name, phone)')
+                .select('*, customers(id, name, phone, address)')
                 .eq('id', billId!)
                 .single();
             if (error) throw error;

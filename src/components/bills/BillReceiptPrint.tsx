@@ -22,7 +22,7 @@ interface Bill {
   created_at: string;
   completed_at?: string | null;
   customer_id?: string | null;
-  customers?: { name: string } | null;
+  customers?: { name: string; phone?: string; address?: string } | null;
 }
 
 interface BusinessSettings {
@@ -74,9 +74,9 @@ export function printBillReceipt(
   const footerFontSize = settings?.invoice_footer_font_size || 10;
 
   const widthStyle = paperWidth === '58mm' ? '240px' : (paperWidth === 'A4' || paperWidth === 'A5') ? '100%' : '380px';
-  const maxWidthStyle = paperWidth === 'A4' ? '800px' : paperWidth === 'A5' ? '560px' : widthStyle;
+  const maxWidthStyle = paperWidth === 'A4' ? '794px' : paperWidth === 'A5' ? '560px' : widthStyle;
   const qrSize = paperWidth === '58mm' ? 100 : 120;
-  const isA5 = paperWidth === 'A5';
+  const isGridFormat = paperWidth === 'A5' || paperWidth === 'A4';
 
   const receiptHTML = `
     <!DOCTYPE html>
@@ -236,16 +236,23 @@ export function printBillReceipt(
       </script>
     </head>
     <body>
-      ${isA5 ? `
-        <div class="header">
-          <div class="business-name" style="text-align: center; font-size: ${fontSize + 8}px; text-transform: uppercase;">ESTIMATE</div>
-          ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<div class="business-info" style="text-align: center;">Phone : ${settings.phone}</div>` : ''}
+      ${isGridFormat ? `
+        <div class="header" style="text-align: center; border-bottom: none; padding-bottom: 5px;">
+          <div class="business-name" style="font-size: ${fontSize + 8}px; text-transform: uppercase; text-decoration: underline; margin-bottom: 15px;">ESTIMATE</div>
+          <div class="business-name" style="font-size: ${fontSize + 6}px;">${settings?.business_name || 'Business'}</div>
+          ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info" style="text-align: center; margin-top: 4px;">${settings.address}</div>` : ''}
+          <div class="business-info" style="text-align: center; margin-top: 4px;">
+            ${settings?.invoice_show_business_phone !== false && settings?.phone ? `Mobile: ${settings.phone}` : ''}
+            ${settings?.invoice_show_business_phone !== false && settings?.phone && settings?.invoice_show_business_email !== false && settings?.email ? ' | ' : ''}
+            ${settings?.invoice_show_business_email !== false && settings?.email ? `Email: ${settings.email}` : ''}
+          </div>
+          ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info" style="text-align: center; margin-top: 4px;">GSTIN: ${settings.gst_number}</div>` : ''}
         </div>
-        <div style="display: flex; justify-content: space-between; border: 1px solid #000; padding: 10px; margin-bottom: -1px; border-bottom: none;">
+        <div style="display: flex; justify-content: space-between; border: 1px solid #000; padding: 10px; margin-bottom: 0; border-bottom: none;">
           <div>
-            <strong>M/s ${bill.customers?.name || 'CASH'}</strong>
-            <br/>ADD. ${settings?.address || ''}
-            <br/>MOB: 
+            <strong>M/s ${bill.customers?.name || 'Walk-in Customer'}</strong>
+            <br/>ADD. ${bill.customers?.address || 'N/A'}
+            <br/>MOB: ${bill.customers?.phone || 'N/A'}
           </div>
           <div style="text-align: right;">
             <div>Invoice No.: <strong>${bill.bill_number}</strong></div>
@@ -273,12 +280,22 @@ export function printBillReceipt(
           </div>
           <div class="bill-info-row">
             <span>Customer:</span>
-            <span>${bill.customers?.name || 'Walk-in'}</span>
+            <span>${bill.customers?.name || 'Walk-in Customer'}</span>
           </div>
+          ${bill.customers?.phone ? `
+          <div class="bill-info-row">
+            <span>Phone:</span>
+            <span>${bill.customers.phone}</span>
+          </div>` : ''}
+          ${bill.customers?.address ? `
+          <div class="bill-info-row">
+            <span>Address:</span>
+            <span>${bill.customers.address}</span>
+          </div>` : ''}
         </div>
       `}
 
-      ${isA5 ? `
+      ${isGridFormat ? `
       <table class="a5-table" style="margin-top: 0;">
         <thead>
           <tr>
@@ -303,6 +320,30 @@ export function printBillReceipt(
               <td style="text-align: right;">${Number(item.total_price).toFixed(2)}</td>
             </tr>
           `).join('')}
+          <tr>
+            <td colspan="5" style="border-right: none; border-bottom: none;"></td>
+            <td style="text-align: right; border-left: none; padding-right: 10px;">Subtotal:</td>
+            <td style="text-align: right;">${currencySymbol}${Number(bill.subtotal).toFixed(2)}</td>
+          </tr>
+          ${Number(bill.discount_amount) > 0 ? `
+            <tr style="color: #dc2626;">
+              <td colspan="5" style="border-right: none; border-bottom: none; border-top: none;"></td>
+              <td style="text-align: right; border-left: none; padding-right: 10px;">Discount:</td>
+              <td style="text-align: right;">-${currencySymbol}${Number(bill.discount_amount).toFixed(2)}</td>
+            </tr>
+          ` : ''}
+          ${Number(bill.tax_amount) > 0 ? `
+            <tr>
+              <td colspan="5" style="border-right: none; border-bottom: none; border-top: none;"></td>
+              <td style="text-align: right; border-left: none; padding-right: 10px;">${settings?.tax_name || 'Tax'}:</td>
+              <td style="text-align: right;">${currencySymbol}${Number(bill.tax_amount).toFixed(2)}</td>
+            </tr>
+          ` : ''}
+          <tr>
+            <td colspan="5" style="border-right: none; border-top: none;"></td>
+            <td style="text-align: right; border-left: none; padding-right: 10px; font-weight: bold;">TOTAL:</td>
+            <td style="text-align: right; font-weight: bold; font-size: ${fontSize + 2}px;">${currencySymbol}${Number(bill.total_amount).toFixed(2)}</td>
+          </tr>
         </tbody>
       </table>
       ` : `
@@ -332,6 +373,7 @@ export function printBillReceipt(
       </div>
       `}
 
+      ${!isGridFormat ? `
       <div class="totals">
         <div class="total-row">
           <span>Subtotal:</span>
@@ -354,6 +396,7 @@ export function printBillReceipt(
           <span>${currencySymbol}${Number(bill.total_amount).toFixed(2)}</span>
         </div>
       </div>
+      ` : ''}
 
       <div class="footer">
         <div class="footer-msg">

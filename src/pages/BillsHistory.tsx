@@ -153,7 +153,7 @@ export default function BillsHistory() {
     queryFn: async () => {
       let query = supabase
         .from('bills')
-        .select('*, customers(name)');
+        .select('*, customers(name, phone, address)');
 
       if (businessId) query = query.eq('business_id', businessId);
 
@@ -179,7 +179,7 @@ export default function BillsHistory() {
   const uniqueCustomers = useMemo(() => {
     const customers = bills
       .filter(b => b.customers?.name)
-      .map(b => ({ id: b.customer_id!, name: b.customers!.name }));
+      .map(b => ({ id: b.customer_id!, name: b.customers!.name, phone: (b.customers as any)?.phone, address: (b.customers as any)?.address }));
     return Array.from(new Map(customers.map(c => [c.id, c])).values());
   }, [bills]);
 

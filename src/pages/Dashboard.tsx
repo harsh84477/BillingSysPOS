@@ -151,7 +151,7 @@ export default function Dashboard() {
     queryFn: async () => {
       let query = supabase
         .from('bills')
-        .select('id, bill_number, total_amount, salesman_name, created_by, created_at, customers(name)')
+        .select('id, bill_number, total_amount, salesman_name, created_by, created_at, customers(name, phone, address)')
         .eq('status', 'draft')
         .order('created_at', { ascending: false })
         .limit(20);
@@ -207,7 +207,7 @@ export default function Dashboard() {
           status,
           created_at,
           payment_status,
-          customers (name)
+          customers (name, phone, address)
         `)
         .order('created_at', { ascending: false })
         .limit(10) as any);
@@ -299,7 +299,7 @@ export default function Dashboard() {
           status,
           created_at,
           completed_at,
-          customers (name)
+          customers (name, phone, address)
         `)
         .eq('status', 'completed')
         .gte('completed_at', monthStart.toISOString())
