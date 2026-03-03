@@ -242,15 +242,16 @@ export function printBillReceipt(
         }
 
         .a5-table {
-          width: 100%;
+          width: ${borderWholeBill ? `calc(100% + ${outerBorderPadding * 2}px)` : '100%'};
           border-collapse: collapse;
           margin-top: 15px;
           margin-bottom: 15px;
+          margin-left: ${borderWholeBill ? `-${outerBorderPadding}px` : '0'};
           font-size: ${fontSize - 1}px;
           border-top: ${borderTop ? '1px solid #000' : 'none'};
           border-bottom: ${borderBottom ? '1px solid #000' : 'none'};
-          border-left: ${borderLeft ? '1px solid #000' : 'none'};
-          border-right: ${borderRight ? '1px solid #000' : 'none'};
+          border-left: ${borderLeft && !borderWholeBill ? '1px solid #000' : 'none'};
+          border-right: ${borderRight && !borderWholeBill ? '1px solid #000' : 'none'};
         }
         .a5-table th, .a5-table td {
           border: none;
@@ -259,8 +260,14 @@ export function printBillReceipt(
           padding: 6px 4px;
         }
         /* Reset outer borders so inner ones don't bleed */
-        .a5-table th:first-child, .a5-table td:first-child { border-left: none; }
-        .a5-table th:last-child, .a5-table td:last-child { border-right: none; }
+        .a5-table th:first-child, .a5-table td:first-child { 
+          border-left: none; 
+          padding-left: ${borderWholeBill ? outerBorderPadding + 4 : 4}px;
+        }
+        .a5-table th:last-child, .a5-table td:last-child { 
+          border-right: none; 
+          padding-right: ${borderWholeBill ? outerBorderPadding + 4 : 4}px;
+        }
         .a5-table tr:first-child th { border-top: none; }
         .a5-table tr:last-child td { border-bottom: none; }
         
@@ -322,7 +329,7 @@ export function printBillReceipt(
       <div class="receipt-outer-wrapper">
       ${sharedHeader}
       ${isGridFormat ? `
-        <div style="display: flex; justify-content: space-between; border: 1px solid #000; padding: 10px; margin-bottom: 0; border-bottom: none;">
+        <div style="display: flex; justify-content: space-between; border-top: ${borderTop ? '1px solid #000' : 'none'}; border-bottom: none; border-left: ${borderLeft && !borderWholeBill ? '1px solid #000' : 'none'}; border-right: ${borderRight && !borderWholeBill ? '1px solid #000' : 'none'}; padding: 10px ${borderWholeBill ? outerBorderPadding + 10 : 10}px; margin: 0 ${borderWholeBill ? -outerBorderPadding : 0}px; margin-bottom: 0;">
           <div>
             <strong>M/s ${bill.customers?.name || 'Walk-in Customer'}</strong>
             <br/>ADD. ${bill.customers?.address || 'N/A'}
