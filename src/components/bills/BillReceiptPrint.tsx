@@ -50,6 +50,13 @@ interface BusinessSettings {
   gst_number?: string | null;
   invoice_show_gst?: boolean;
   invoice_show_unit_price?: boolean;
+  invoice_title?: string;
+  invoice_border_top?: boolean;
+  invoice_border_bottom?: boolean;
+  invoice_border_left?: boolean;
+  invoice_border_right?: boolean;
+  invoice_border_inner_v?: boolean;
+  invoice_border_inner_h?: boolean;
 }
 
 interface BillReceiptPrintProps {
@@ -72,6 +79,14 @@ export function printBillReceipt(
   const paperWidth = settings?.invoice_paper_width || '80mm';
   const headerAlign = settings?.invoice_header_align || 'center';
   const footerFontSize = settings?.invoice_footer_font_size || 10;
+
+  const invoiceTitle = settings?.invoice_title !== undefined ? settings?.invoice_title : 'ESTIMATE';
+  const borderTop = settings?.invoice_border_top ?? true;
+  const borderBottom = settings?.invoice_border_bottom ?? true;
+  const borderLeft = settings?.invoice_border_left ?? true;
+  const borderRight = settings?.invoice_border_right ?? true;
+  const borderInnerV = settings?.invoice_border_inner_v ?? true;
+  const borderInnerH = settings?.invoice_border_inner_h ?? true;
 
   const widthStyle = paperWidth === '58mm' ? '240px' : (paperWidth === 'A4' || paperWidth === 'A5') ? '100%' : '380px';
   const maxWidthStyle = paperWidth === 'A4' ? '794px' : paperWidth === 'A5' ? '560px' : widthStyle;
@@ -185,11 +200,23 @@ export function printBillReceipt(
           margin-top: 15px;
           margin-bottom: 15px;
           font-size: ${fontSize - 1}px;
+          border-top: ${borderTop ? '1px solid #000' : 'none'};
+          border-bottom: ${borderBottom ? '1px solid #000' : 'none'};
+          border-left: ${borderLeft ? '1px solid #000' : 'none'};
+          border-right: ${borderRight ? '1px solid #000' : 'none'};
         }
         .a5-table th, .a5-table td {
-          border: 1px solid #000;
+          border: none;
+          ${borderInnerH ? 'border-top: 1px solid #000; border-bottom: 1px solid #000;' : ''}
+          ${borderInnerV ? 'border-left: 1px solid #000; border-right: 1px solid #000;' : ''}
           padding: 6px 4px;
         }
+        /* Reset outer borders so inner ones don't bleed */
+        .a5-table th:first-child, .a5-table td:first-child { border-left: none; }
+        .a5-table th:last-child, .a5-table td:last-child { border-right: none; }
+        .a5-table tr:first-child th { border-top: none; }
+        .a5-table tr:last-child td { border-bottom: none; }
+        
         .a5-table th {
           font-weight: bold;
           text-align: center;
@@ -238,7 +265,7 @@ export function printBillReceipt(
     <body>
       ${isGridFormat ? `
         <div class="header" style="text-align: center; border-bottom: none; padding-bottom: 5px;">
-          <div class="business-name" style="font-size: ${fontSize + 8}px; text-transform: uppercase; text-decoration: underline; margin-bottom: 15px;">ESTIMATE</div>
+          ${invoiceTitle ? `<div class="business-name" style="font-size: ${fontSize + 8}px; text-transform: uppercase; text-decoration: underline; margin-bottom: 15px;">${invoiceTitle}</div>` : ''}
           <div class="business-name" style="font-size: ${fontSize + 6}px;">${settings?.business_name || 'Business'}</div>
           ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info" style="text-align: center; margin-top: 4px;">${settings.address}</div>` : ''}
           <div class="business-info" style="text-align: center; margin-top: 4px;">

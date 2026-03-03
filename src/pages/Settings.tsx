@@ -892,6 +892,76 @@ export default function Settings() {
                       disabled={!isAdmin}
                     />
                   </div>
+
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label htmlFor="invoice_title">Document Title</Label>
+                    <Input
+                      id="invoice_title"
+                      placeholder="e.g., ESTIMATE or INVOICE (leave blank to hide)"
+                      defaultValue={settings?.invoice_title ?? 'ESTIMATE'}
+                      onBlur={(e) => isAdmin && updateSettings.mutate({ invoice_title: e.target.value })}
+                      disabled={!isAdmin}
+                      className="text-xs"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Grid Detail Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Monitor className="h-5 w-5" />
+                  Grid Borders & Lines
+                </CardTitle>
+                <CardDescription>Customizable grid format spacing for A4/A5</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Top Border</Label>
+                  <Switch
+                    checked={settings?.invoice_border_top ?? true}
+                    onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_border_top: checked })}
+                    disabled={!isAdmin}
+                    className="scale-75"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Bottom Border</Label>
+                  <Switch
+                    checked={settings?.invoice_border_bottom ?? true}
+                    onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_border_bottom: checked })}
+                    disabled={!isAdmin}
+                    className="scale-75"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Left & Right Borders</Label>
+                  <Switch
+                    checked={(settings?.invoice_border_left ?? true) && (settings?.invoice_border_right ?? true)}
+                    onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_border_left: checked, invoice_border_right: checked })}
+                    disabled={!isAdmin}
+                    className="scale-75"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Vertical Row Lines (Columns)</Label>
+                  <Switch
+                    checked={settings?.invoice_border_inner_v ?? true}
+                    onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_border_inner_v: checked })}
+                    disabled={!isAdmin}
+                    className="scale-75"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Horizontal Row Lines</Label>
+                  <Switch
+                    checked={settings?.invoice_border_inner_h ?? true}
+                    onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_border_inner_h: checked })}
+                    disabled={!isAdmin}
+                    className="scale-75"
+                  />
                 </div>
               </CardContent>
             </Card>
