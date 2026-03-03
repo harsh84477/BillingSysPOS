@@ -424,10 +424,7 @@ export default function AppLayout() {
 
           <div className="flex-1" />
 
-          {/* Right side — page context on desktop */}
-          <span className="hidden lg:block text-sm text-muted-foreground capitalize font-medium">
-            {navigation.find(n => n.href === location.pathname)?.name || ''}
-          </span>
+          {/* Right side spacer */}
 
           {/* Mobile/Tablet: user avatar + sign-out dropdown */}
           <div className="lg:hidden">

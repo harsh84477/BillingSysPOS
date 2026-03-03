@@ -142,19 +142,33 @@ export default function Settings() {
   const visibleTabs = isAdmin ? TABS : TABS.filter(t => t.id !== 'staff');
 
   return (
-    <div style={{ fontFamily: T.font }}>
-      {/* Page Header */}
-      <div style={{ background: '#ffffff', padding: '28px 32px 0', borderBottom: 'none' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.02em', color: '#0f172a', margin: 0 }}>Settings</h1>
-          <p style={{ fontSize: '13px', color: '#9ca3af', margin: '4px 0 20px' }}>Manage your business configuration</p>
+    <div style={{ fontFamily: T.font, margin: '-16px -16px 0', }}>
+      {/* Page Header — sticky inside main scroll */}
+      <div style={{
+        background: '#ffffff', padding: '24px 28px 0',
+        borderBottom: `1px solid ${T.color.border}`,
+        position: 'sticky', top: '-16px', zIndex: 10,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+      }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+            <div style={{
+              width: '38px', height: '38px', borderRadius: '10px', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', fontSize: '20px',
+              background: `${T.color.accent}10`,
+            }}>⚙️</div>
+            <div>
+              <h1 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.025em', color: '#0f172a', margin: 0, lineHeight: 1.2 }}>Settings</h1>
+              <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>Manage your business configuration</p>
+            </div>
+          </div>
           <TabBar tabs={visibleTabs} active={activeTab} onSelect={handleTabChange} />
         </div>
       </div>
 
       {/* Content */}
-      <div style={{ background: T.color.pageBg, padding: '28px 32px', minHeight: 'calc(100vh - 160px)' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ padding: '24px 28px 40px' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
 
           {/* ═══ BUSINESS ═══ */}
           {activeTab === 'business' && (
@@ -334,22 +348,41 @@ export default function Settings() {
           {/* ═══ APPEARANCE ═══ */}
           {activeTab === 'appearance' && (
             <SettingsCard title="Theme" subtitle="Choose a color theme that matches your brand" icon="🎨" accent="#10b981">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
                 {themeOptions.map(opt => {
                   const active = theme === opt.value;
                   return (
                     <button key={opt.value} onClick={() => setTheme(opt.value)}
                       style={{
-                        padding: '16px', borderRadius: '12px', textAlign: 'left', cursor: 'pointer', position: 'relative',
-                        border: `2px solid ${active ? opt.color : '#e5e7eb'}`, background: active ? opt.bg : '#fafafa',
-                        boxShadow: active ? `0 0 0 3px ${opt.color}20` : 'none', transition: 'all 0.2s', fontFamily: T.font,
-                      }}>
-                      {active && <span style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '16px', fontWeight: 700, color: opt.color }}>✓</span>}
+                        padding: '20px 18px', borderRadius: '14px', textAlign: 'left' as const, cursor: 'pointer',
+                        position: 'relative' as const, fontFamily: T.font,
+                        border: `2.5px solid ${active ? opt.color : '#e2e8f0'}`,
+                        background: active ? opt.bg : '#ffffff',
+                        boxShadow: active ? `0 0 0 4px ${opt.color}15, 0 4px 12px ${opt.color}10` : '0 1px 3px rgba(0,0,0,0.04)',
+                        transition: 'all 0.25s cubic-bezier(.4,0,.2,1)',
+                      }}
+                      onMouseEnter={e => { if (!active) e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                      onMouseLeave={e => { if (!active) e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'none'; }}
+                    >
+                      {active && (
+                        <div style={{
+                          position: 'absolute', top: '12px', right: '12px',
+                          width: '22px', height: '22px', borderRadius: '50%', background: opt.color,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: '#fff', fontSize: '12px', fontWeight: 700,
+                          boxShadow: `0 2px 6px ${opt.color}40`,
+                        }}>✓</div>
+                      )}
+                      {/* Color swatch preview bar */}
+                      <div style={{
+                        width: '100%', height: '6px', borderRadius: '3px', marginBottom: '14px',
+                        background: `linear-gradient(90deg, ${opt.color}, ${opt.color}60)`,
+                      }} />
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <span style={{ width: '14px', height: '14px', borderRadius: '50%', background: opt.color, display: 'inline-block' }} />
-                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{opt.name}</span>
+                        <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: opt.color, display: 'inline-block', boxShadow: `0 0 6px ${opt.color}40` }} />
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em' }}>{opt.name}</span>
                       </div>
-                      <p style={{ fontSize: '11px', color: '#9ca3af', margin: 0 }}>{opt.description}</p>
+                      <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0, lineHeight: 1.4 }}>{opt.description}</p>
                     </button>
                   );
                 })}
