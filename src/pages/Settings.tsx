@@ -963,6 +963,15 @@ export default function Settings() {
                     className="scale-75"
                   />
                 </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Outer Bill Border (Applies to Whole Bill)</Label>
+                  <Switch
+                    checked={settings?.invoice_border_whole_bill ?? false}
+                    onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_border_whole_bill: checked })}
+                    disabled={!isAdmin}
+                    className="scale-75"
+                  />
+                </div>
               </CardContent>
             </Card>
 

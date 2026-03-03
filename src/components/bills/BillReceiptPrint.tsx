@@ -87,6 +87,7 @@ export function printBillReceipt(
   const borderRight = settings?.invoice_border_right ?? true;
   const borderInnerV = settings?.invoice_border_inner_v ?? true;
   const borderInnerH = settings?.invoice_border_inner_h ?? true;
+  const borderWholeBill = (settings as any)?.invoice_border_whole_bill ?? false;
 
   const qrPosition = (settings as any)?.invoice_qr_position || 'bottom-center';
   const qrSizeSetting = (settings as any)?.invoice_qr_size || 'medium';
@@ -245,6 +246,14 @@ export function printBillReceipt(
           font-weight: bold;
           text-align: center;
           background-color: #f9fafb;
+          border-bottom: 2px solid #000 !important;
+        }
+
+        .receipt-outer-wrapper {
+          border: ${borderWholeBill ? '2px solid #000' : 'none'};
+          padding: ${borderWholeBill ? '20px' : '0'};
+          box-sizing: border-box;
+          min-height: 95vh;
         }
 
         @media print {
@@ -287,6 +296,7 @@ export function printBillReceipt(
       </script>
     </head>
     <body>
+      <div class="receipt-outer-wrapper">
       ${isGridFormat ? `
         <div class="header" style="text-align: center; border-bottom: none; padding-bottom: 5px; position: relative;">
           ${(qrPosition === 'top-left' && generatedQR) ? `<div style="position: absolute; left: 0; top: 0;">${generatedQR}</div>` : ''}
@@ -475,6 +485,7 @@ export function printBillReceipt(
         <div class="footer-print-date">
           Printed on ${format(new Date(), 'dd/MM/yyyy HH:mm')}
         </div>
+      </div>
       </div>
     </body>
     </html>
