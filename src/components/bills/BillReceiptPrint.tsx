@@ -88,10 +88,34 @@ export function printBillReceipt(
   const borderInnerV = settings?.invoice_border_inner_v ?? true;
   const borderInnerH = settings?.invoice_border_inner_h ?? true;
 
+  const qrPosition = (settings as any)?.invoice_qr_position || 'bottom-center';
+  const qrSizeSetting = (settings as any)?.invoice_qr_size || 'medium';
+
   const widthStyle = paperWidth === '58mm' ? '240px' : (paperWidth === 'A4' || paperWidth === 'A5') ? '100%' : '380px';
   const maxWidthStyle = paperWidth === 'A4' ? '794px' : paperWidth === 'A5' ? '560px' : widthStyle;
-  const qrSize = paperWidth === '58mm' ? 100 : 120;
+
   const isGridFormat = paperWidth === 'A5' || paperWidth === 'A4';
+
+  let qrSize = 100;
+  if (qrSizeSetting === 'small') qrSize = 60;
+  else if (qrSizeSetting === 'medium') qrSize = 80;
+  else if (qrSizeSetting === 'large') qrSize = 140;
+  if (!isGridFormat && qrSizeSetting === 'large') qrSize = 100; // Limit large size on small paper
+
+  const generatedQR = (settings?.invoice_show_qr_code && settings?.upi_id) ? `
+    <div class="qr-container" style="margin: 0 auto; text-align: center;">
+      <img 
+        src="https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`upi://pay?pa=${settings.upi_id}&pn=${settings.business_name || 'Business'}&am=${Number(bill.total_amount).toFixed(2)}&cu=INR`)}" 
+        alt="Payment QR"
+        style="width: ${qrSize}px; height: ${qrSize}px; border: 1px solid #ccc; padding: 3px; display: block; margin: 0 auto;"
+      />
+      <p style="font-size: 8px; color: #666; margin-top: 4px; line-height: 1;">Scan to Pay:<br/>${currencySymbol}${Number(bill.total_amount).toFixed(2)}</p>
+    </div>
+  ` : (settings?.invoice_show_qr_code ? `
+    <div class="qr-placeholder" style="margin: 0 auto; width: ${qrSize}px; height: ${qrSize}px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #999; text-align: center;">
+      UPI ID<br/>NOT SET
+    </div>
+  ` : '');
 
   const receiptHTML = `
     <!DOCTYPE html>
@@ -183,8 +207,8 @@ export function printBillReceipt(
         
         .qr-placeholder {
           margin: 15px auto;
-          width: 80px;
-          height: 80px;
+          width: ${qrSize}px;
+          height: ${qrSize}px;
           border: 1px dashed #ccc;
           display: flex;
           align-items: center;
@@ -264,7 +288,9 @@ export function printBillReceipt(
     </head>
     <body>
       ${isGridFormat ? `
-        <div class="header" style="text-align: center; border-bottom: none; padding-bottom: 5px;">
+        <div class="header" style="text-align: center; border-bottom: none; padding-bottom: 5px; position: relative;">
+          ${(qrPosition === 'top-left' && generatedQR) ? `<div style="position: absolute; left: 0; top: 0;">${generatedQR}</div>` : ''}
+          ${(qrPosition === 'top-right' && generatedQR) ? `<div style="position: absolute; right: 0; top: 0;">${generatedQR}</div>` : ''}
           ${invoiceTitle ? `<div class="business-name" style="font-size: ${fontSize + 8}px; text-transform: uppercase; text-decoration: underline; margin-bottom: 15px;">${invoiceTitle}</div>` : ''}
           <div class="business-name" style="font-size: ${fontSize + 6}px;">${settings?.business_name || 'Business'}</div>
           ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info" style="text-align: center; margin-top: 4px;">${settings.address}</div>` : ''}
@@ -288,12 +314,16 @@ export function printBillReceipt(
           </div>
         </div>
       ` : `
-        <div class="header">
-          <div class="business-name">${settings?.business_name || 'Business'}</div>
-          ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info">${settings.address}</div>` : ''}
-          ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<div class="business-info">Tel: ${settings.phone}</div>` : ''}
-          ${settings?.invoice_show_business_email !== false && settings?.email ? `<div class="business-info">${settings.email}</div>` : ''}
-          ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info">GST: ${settings.gst_number}</div>` : ''}
+        <div class="header" style="position: relative; min-height: ${(qrPosition === 'top-right' || qrPosition === 'top-left') && generatedQR ? qrSize + 20 : 0}px;">
+          ${(qrPosition === 'top-right' && generatedQR) ? `<div style="position: absolute; right: 0; top: 0;">${generatedQR}</div>` : ''}
+          ${(qrPosition === 'top-left' && generatedQR) ? `<div style="position: absolute; left: 0; top: 0;">${generatedQR}</div>` : ''}
+          <div style="${(qrPosition === 'top-left' && generatedQR) ? `padding-left: ${qrSize + 20}px;` : ''} ${(qrPosition === 'top-right' && generatedQR) ? `padding-right: ${qrSize + 20}px;` : ''}">
+            <div class="business-name">${settings?.business_name || 'Business'}</div>
+            ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info">${settings.address}</div>` : ''}
+            ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<div class="business-info">Tel: ${settings.phone}</div>` : ''}
+            ${settings?.invoice_show_business_email !== false && settings?.email ? `<div class="business-info">${settings.email}</div>` : ''}
+            ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info">GST: ${settings.gst_number}</div>` : ''}
+          </div>
         </div>
 
         <div class="bill-info">
@@ -348,28 +378,28 @@ export function printBillReceipt(
             </tr>
           `).join('')}
           <tr>
-            <td colspan="5" style="border-right: none; border-bottom: none;"></td>
-            <td style="text-align: right; border-left: none; padding-right: 10px;">Subtotal:</td>
-            <td style="text-align: right;">${currencySymbol}${Number(bill.subtotal).toFixed(2)}</td>
+            <td colspan="5" style="border-right: none; border-bottom: none; border-top: 1px solid #000;"></td>
+            <td style="text-align: right; border-left: none; padding-right: 10px; border-top: 1px solid #000;">Subtotal:</td>
+            <td style="text-align: right; border-top: 1px solid #000;">${currencySymbol}${Number(bill.subtotal).toFixed(2)}</td>
           </tr>
           ${Number(bill.discount_amount) > 0 ? `
             <tr style="color: #dc2626;">
               <td colspan="5" style="border-right: none; border-bottom: none; border-top: none;"></td>
-              <td style="text-align: right; border-left: none; padding-right: 10px;">Discount:</td>
-              <td style="text-align: right;">-${currencySymbol}${Number(bill.discount_amount).toFixed(2)}</td>
+              <td style="text-align: right; border-left: none; padding-right: 10px; border-top: none;">Discount:</td>
+              <td style="text-align: right; border-top: none;">-${currencySymbol}${Number(bill.discount_amount).toFixed(2)}</td>
             </tr>
           ` : ''}
           ${Number(bill.tax_amount) > 0 ? `
             <tr>
               <td colspan="5" style="border-right: none; border-bottom: none; border-top: none;"></td>
-              <td style="text-align: right; border-left: none; padding-right: 10px;">${settings?.tax_name || 'Tax'}:</td>
-              <td style="text-align: right;">${currencySymbol}${Number(bill.tax_amount).toFixed(2)}</td>
+              <td style="text-align: right; border-left: none; padding-right: 10px; border-top: none;">${settings?.tax_name || 'Tax'}:</td>
+              <td style="text-align: right; border-top: none;">${currencySymbol}${Number(bill.tax_amount).toFixed(2)}</td>
             </tr>
           ` : ''}
           <tr>
             <td colspan="5" style="border-right: none; border-top: none;"></td>
-            <td style="text-align: right; border-left: none; padding-right: 10px; font-weight: bold;">TOTAL:</td>
-            <td style="text-align: right; font-weight: bold; font-size: ${fontSize + 2}px;">${currencySymbol}${Number(bill.total_amount).toFixed(2)}</td>
+            <td style="text-align: right; border-left: none; padding-right: 10px; font-weight: bold; border-top: none;">TOTAL:</td>
+            <td style="text-align: right; font-weight: bold; font-size: ${fontSize + 2}px; border-top: none;">${currencySymbol}${Number(bill.total_amount).toFixed(2)}</td>
           </tr>
         </tbody>
       </table>
@@ -436,18 +466,9 @@ export function printBillReceipt(
           </div>
         ` : ''}
 
-        ${settings?.invoice_show_qr_code && settings?.upi_id ? `
-          <div class="qr-container" style="margin: 15px auto; text-align: center; min-height: ${qrSize}px;">
-            <img 
-              src="https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`upi://pay?pa=${settings.upi_id}&pn=${settings.business_name || 'Business'}&am=${Number(bill.total_amount).toFixed(2)}&cu=INR`)}" 
-              alt="Payment QR"
-              style="width: ${qrSize}px; height: ${qrSize}px; border: 1px solid #eee; padding: 5px; display: block; margin: 0 auto;"
-            />
-            <p style="font-size: 8px; color: #666; margin-top: 4px;">Scan to Pay: ${currencySymbol}${Number(bill.total_amount).toFixed(2)}</p>
-          </div>
-        ` : settings?.invoice_show_qr_code ? `
-          <div class="qr-placeholder" style="margin: 15px auto; width: 80px; height: 80px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #999; text-align: center;">
-            UPI ID NOT SET
+        ${(qrPosition === 'bottom-left' || qrPosition === 'bottom-center' || qrPosition === 'bottom-right') && generatedQR ? `
+          <div style="margin: 20px 0 10px 0; display: flex; justify-content: ${qrPosition === 'bottom-left' ? 'flex-start' : qrPosition === 'bottom-right' ? 'flex-end' : 'center'};">
+            ${generatedQR}
           </div>
         ` : ''}
 

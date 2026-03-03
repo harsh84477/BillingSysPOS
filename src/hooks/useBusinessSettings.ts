@@ -45,6 +45,8 @@ export interface BusinessSettings {
   invoice_border_right?: boolean;
   invoice_border_inner_v?: boolean;
   invoice_border_inner_h?: boolean;
+  invoice_qr_position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-center' | 'bottom-right';
+  invoice_qr_size?: 'small' | 'medium' | 'large';
   // Product grid display settings
   product_button_size?: 'small' | 'medium' | 'large' | 'xlarge';
   product_columns?: number;

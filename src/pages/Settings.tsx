@@ -1210,19 +1210,63 @@ export default function Settings() {
                 </div>
 
                 {settings?.invoice_show_qr_code && (
-                  <div className="space-y-2 pt-2 border-t animate-in fade-in slide-in-from-top-1">
-                    <Label htmlFor="upi_id" className="text-sm">UPI ID (VPA) for Payments</Label>
-                    <Input
-                      id="upi_id"
-                      placeholder="e.g., yourname@bank"
-                      defaultValue={settings?.upi_id || ''}
-                      onBlur={(e) => isAdmin && updateSettings.mutate({ upi_id: e.target.value })}
-                      disabled={!isAdmin}
-                      className="text-xs"
-                    />
-                    <p className="text-[10px] text-muted-foreground italic">
-                      Required for the dynamic QR code to work properly.
-                    </p>
+                  <div className="space-y-4 pt-2 border-t animate-in fade-in slide-in-from-top-1">
+                    <div className="space-y-2">
+                      <Label htmlFor="upi_id" className="text-sm">UPI ID (VPA) for Payments</Label>
+                      <Input
+                        id="upi_id"
+                        placeholder="e.g., yourname@bank"
+                        defaultValue={settings?.upi_id || ''}
+                        onBlur={(e) => isAdmin && updateSettings.mutate({ upi_id: e.target.value })}
+                        disabled={!isAdmin}
+                        className="text-xs"
+                      />
+                      <p className="text-[10px] text-muted-foreground italic">
+                        Required for the dynamic QR code to work properly.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="space-y-0.5 flex-1">
+                        <Label className="text-xs">QR Code Size</Label>
+                      </div>
+                      <Select
+                        value={settings?.invoice_qr_size ?? 'medium'}
+                        onValueChange={(val) => isAdmin && updateSettings.mutate({ invoice_qr_size: val as any })}
+                        disabled={!isAdmin}
+                      >
+                        <SelectTrigger className="w-32 h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="small">Small</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="large">Large</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="space-y-0.5 flex-1">
+                        <Label className="text-xs">QR Code Position</Label>
+                      </div>
+                      <Select
+                        value={settings?.invoice_qr_position ?? 'bottom-center'}
+                        onValueChange={(val) => isAdmin && updateSettings.mutate({ invoice_qr_position: val as any })}
+                        disabled={!isAdmin}
+                      >
+                        <SelectTrigger className="w-32 h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="top-left">Top Left</SelectItem>
+                          <SelectItem value="top-right">Top Right</SelectItem>
+                          <SelectItem value="bottom-left">Bottom Left</SelectItem>
+                          <SelectItem value="bottom-center">Bottom Center</SelectItem>
+                          <SelectItem value="bottom-right">Bottom Right</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 )}
               </CardContent>
