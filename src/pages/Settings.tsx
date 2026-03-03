@@ -972,6 +972,44 @@ export default function Settings() {
                     className="scale-75"
                   />
                 </div>
+
+                {settings?.invoice_border_whole_bill && (
+                  <div className="space-y-4 pt-3 border-t animate-in fade-in slide-in-from-top-1">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-xs">Border Padding</Label>
+                          <p className="text-[10px] text-muted-foreground">Space inside the border</p>
+                        </div>
+                        <span className="text-xs font-bold text-primary w-10 text-right">{settings?.invoice_padding ?? 20}px</span>
+                      </div>
+                      <input
+                        type="range" min={0} max={60} step={2}
+                        value={settings?.invoice_padding ?? 20}
+                        onChange={(e) => isAdmin && updateSettings.mutate({ invoice_padding: Number(e.target.value) })}
+                        disabled={!isAdmin}
+                        className="w-full h-2 rounded-lg appearance-none bg-accent cursor-pointer accent-primary disabled:opacity-50"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-xs">Border Margin</Label>
+                          <p className="text-[10px] text-muted-foreground">Space outside the border</p>
+                        </div>
+                        <span className="text-xs font-bold text-primary w-10 text-right">{settings?.invoice_margin ?? 0}px</span>
+                      </div>
+                      <input
+                        type="range" min={0} max={60} step={2}
+                        value={settings?.invoice_margin ?? 0}
+                        onChange={(e) => isAdmin && updateSettings.mutate({ invoice_margin: Number(e.target.value) })}
+                        disabled={!isAdmin}
+                        className="w-full h-2 rounded-lg appearance-none bg-accent cursor-pointer accent-primary disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

@@ -88,6 +88,8 @@ export function printBillReceipt(
   const borderInnerV = settings?.invoice_border_inner_v ?? true;
   const borderInnerH = settings?.invoice_border_inner_h ?? true;
   const borderWholeBill = (settings as any)?.invoice_border_whole_bill ?? false;
+  const outerBorderMargin = (settings as any)?.invoice_margin ?? 0;
+  const outerBorderPadding = (settings as any)?.invoice_padding ?? 20;
 
   const qrPosition = (settings as any)?.invoice_qr_position || 'bottom-center';
   const qrSizeSetting = (settings as any)?.invoice_qr_size || 'medium';
@@ -251,9 +253,10 @@ export function printBillReceipt(
 
         .receipt-outer-wrapper {
           border: ${borderWholeBill ? '2px solid #000' : 'none'};
-          padding: ${borderWholeBill ? '20px' : '0'};
+          padding: ${borderWholeBill ? outerBorderPadding + 'px' : '0'};
+          margin: ${borderWholeBill ? outerBorderMargin + 'px' : '0'};
           box-sizing: border-box;
-          min-height: 95vh;
+          min-height: calc(95vh - ${borderWholeBill ? outerBorderMargin * 2 : 0}px);
         }
 
         @media print {
