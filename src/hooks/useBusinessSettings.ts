@@ -38,6 +38,7 @@ export interface BusinessSettings {
   gst_number?: string | null;
   invoice_show_gst?: boolean;
   invoice_show_unit_price?: boolean;
+  invoice_show_case?: boolean;
   invoice_title?: string;
   invoice_border_top?: boolean;
   invoice_border_bottom?: boolean;

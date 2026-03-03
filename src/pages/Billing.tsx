@@ -112,6 +112,7 @@ interface CartItem {
   unitPrice: number;
   costPrice: number;
   mrpPrice: number;
+  itemsPerCase: number;
   quantity: number;
 }
 
@@ -270,6 +271,7 @@ export default function Billing() {
           unitPrice: Number(product.selling_price),
           costPrice: Number(product.cost_price),
           mrpPrice: Number((product as any).mrp_price || product.selling_price),
+          itemsPerCase: Number((product as any).items_per_case || 0),
           quantity: 1,
         },
       ];
@@ -539,7 +541,9 @@ export default function Billing() {
       quantity: item.quantity,
       unit_price: item.unitPrice,
       total_price: item.unitPrice * item.quantity,
-      cost_price: item.costPrice || 0
+      cost_price: item.costPrice || 0,
+      mrp_price: item.mrpPrice || item.unitPrice,
+      items_per_case: item.itemsPerCase || 0
     }));
 
     printBillReceipt(billData, itemsData, settings);
@@ -584,6 +588,7 @@ export default function Billing() {
             unit_price: item.unitPrice,
             cost_price: item.costPrice,
             mrp_price: item.mrpPrice,
+            items_per_case: item.itemsPerCase || 0,
             total_price: item.unitPrice * item.quantity,
           }));
 
@@ -625,6 +630,7 @@ export default function Billing() {
           unit_price: item.unitPrice,
           cost_price: item.costPrice,
           mrp_price: item.mrpPrice,
+          items_per_case: item.itemsPerCase || 0,
           total_price: item.unitPrice * item.quantity,
         }));
 

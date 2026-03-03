@@ -1179,6 +1179,18 @@ export default function Settings() {
                       disabled={!isAdmin}
                     />
                   </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm">Show CASE Column</Label>
+                      <p className="text-[10px] text-muted-foreground">Toggle CASE calculations based on PCS (A4/A5 grid)</p>
+                    </div>
+                    <Switch
+                      checked={settings?.invoice_show_case !== false}
+                      onCheckedChange={(checked) => isAdmin && updateSettings.mutate({ invoice_show_case: checked })}
+                      disabled={!isAdmin}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

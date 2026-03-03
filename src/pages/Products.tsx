@@ -48,6 +48,7 @@ interface Product {
   cost_price: number;
   stock_quantity: number;
   low_stock_threshold: number;
+  items_per_case: number;
   category_id: string | null;
   icon: string | null;
   is_active: boolean;
@@ -164,6 +165,7 @@ export default function Products() {
       cost_price: Number(formData.get('cost_price')),
       stock_quantity: Number(formData.get('stock_quantity')),
       low_stock_threshold: Number(formData.get('low_stock_threshold')),
+      items_per_case: Number(formData.get('items_per_case')) || 0,
       category_id: formData.get('category_id') as string || null,
       icon: selectedIcon,
     });
@@ -231,6 +233,7 @@ export default function Products() {
         { key: 'selling_price', header: 'Selling Price', format: (v) => Number(v).toFixed(2) },
         { key: 'cost_price', header: 'Cost Price', format: (v) => Number(v).toFixed(2) },
         { key: 'stock_quantity', header: 'Stock' },
+        { key: 'items_per_case', header: 'Items/Case' },
         { key: 'low_stock_threshold', header: 'Low Stock Alert' },
         { key: 'is_active', header: 'Status', format: (v) => v ? 'Active' : 'Inactive' },
       ],
@@ -381,15 +384,27 @@ export default function Products() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="stock_quantity">Stock Quantity</Label>
+                      <Label htmlFor="stock_quantity">Total Stock</Label>
                       <Input
                         id="stock_quantity"
                         name="stock_quantity"
                         type="number"
                         min="0"
                         defaultValue={editingProduct?.stock_quantity || 0}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="items_per_case">PCS per Case</Label>
+                      <Input
+                        id="items_per_case"
+                        name="items_per_case"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="e.g. 12"
+                        defaultValue={editingProduct?.items_per_case || 0}
                       />
                     </div>
                     <div className="space-y-2">

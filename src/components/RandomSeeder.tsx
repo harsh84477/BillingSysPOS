@@ -78,7 +78,9 @@ export function RandomSeeder() {
                     category_id: categoryId,
                     cost_price: costPrice,
                     selling_price: sellingPrice,
+                    mrp_price: sellingPrice + Math.floor(Math.random() * 50) + 10,
                     stock_quantity: stock,
+                    items_per_case: Math.floor(Math.random() * 20) + 1,
                     is_active: true,
                     low_stock_threshold: 10,
                     business_id: businessId

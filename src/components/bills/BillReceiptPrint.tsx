@@ -9,6 +9,7 @@ interface BillItem {
   total_price: number;
   cost_price: number;
   mrp_price?: number;
+  items_per_case?: number;
 }
 
 interface Bill {
@@ -90,6 +91,7 @@ export function printBillReceipt(
   const borderWholeBill = (settings as any)?.invoice_border_whole_bill ?? false;
   const outerBorderMargin = (settings as any)?.invoice_margin ?? 0;
   const outerBorderPadding = (settings as any)?.invoice_padding ?? 20;
+  const showCaseCol = (settings as any)?.invoice_show_case !== false;
 
   const qrPosition = (settings as any)?.invoice_qr_position || 'bottom-center';
   const qrSizeSetting = (settings as any)?.invoice_qr_size || 'medium';
@@ -370,9 +372,9 @@ export function printBillReceipt(
         <thead>
           <tr>
             <th style="width: 5%">S.</th>
-            <th style="width: 8%">CASE</th>
+            ${showCaseCol ? '<th style="width: 8%">CASE</th>' : ''}
             <th style="width: 8%">PCS</th>
-            <th style="text-align: left; width: 43%">ITEM DESCRIPTION</th>
+            <th style="text-align: left; width: ${showCaseCol ? '43' : '51'}%">ITEM DESCRIPTION</th>
             <th style="width: 12%">M.R.P</th>
             <th style="width: 12%">RATE</th>
             <th style="width: 12%">Amount</th>
@@ -382,7 +384,7 @@ export function printBillReceipt(
           ${items.map((item, idx) => `
             <tr>
               <td style="text-align: center;">${idx + 1}</td>
-              <td style="text-align: center;">0.00</td>
+              ${showCaseCol ? `<td style="text-align: center;">${(item.items_per_case && item.items_per_case > 0) ? Number(item.quantity / item.items_per_case).toFixed(2) : '0.00'}</td>` : ''}
               <td style="text-align: center;">${Number(item.quantity).toFixed(2)}</td>
               <td>${item.product_name}</td>
               <td style="text-align: center;">${Number(item.mrp_price || item.unit_price).toFixed(2)}</td>
@@ -391,26 +393,26 @@ export function printBillReceipt(
             </tr>
           `).join('')}
           <tr>
-            <td colspan="5" style="border-right: none; border-bottom: none; border-top: 1px solid #000;"></td>
+            <td colspan="${showCaseCol ? '5' : '4'}" style="border-right: none; border-bottom: none; border-top: 1px solid #000;"></td>
             <td style="text-align: right; border-left: none; padding-right: 10px; border-top: 1px solid #000;">Subtotal:</td>
             <td style="text-align: right; border-top: 1px solid #000;">${currencySymbol}${Number(bill.subtotal).toFixed(2)}</td>
           </tr>
           ${Number(bill.discount_amount) > 0 ? `
             <tr style="color: #dc2626;">
-              <td colspan="5" style="border-right: none; border-bottom: none; border-top: none;"></td>
+              <td colspan="${showCaseCol ? '5' : '4'}" style="border-right: none; border-bottom: none; border-top: none;"></td>
               <td style="text-align: right; border-left: none; padding-right: 10px; border-top: none;">Discount:</td>
               <td style="text-align: right; border-top: none;">-${currencySymbol}${Number(bill.discount_amount).toFixed(2)}</td>
             </tr>
           ` : ''}
           ${Number(bill.tax_amount) > 0 ? `
             <tr>
-              <td colspan="5" style="border-right: none; border-bottom: none; border-top: none;"></td>
+              <td colspan="${showCaseCol ? '5' : '4'}" style="border-right: none; border-bottom: none; border-top: none;"></td>
               <td style="text-align: right; border-left: none; padding-right: 10px; border-top: none;">${settings?.tax_name || 'Tax'}:</td>
               <td style="text-align: right; border-top: none;">${currencySymbol}${Number(bill.tax_amount).toFixed(2)}</td>
             </tr>
           ` : ''}
           <tr>
-            <td colspan="5" style="border-right: none; border-top: none;"></td>
+            <td colspan="${showCaseCol ? '5' : '4'}" style="border-right: none; border-top: none;"></td>
             <td style="text-align: right; border-left: none; padding-right: 10px; font-weight: bold; border-top: none;">TOTAL:</td>
             <td style="text-align: right; font-weight: bold; font-size: ${fontSize + 2}px; border-top: none;">${currencySymbol}${Number(bill.total_amount).toFixed(2)}</td>
           </tr>
