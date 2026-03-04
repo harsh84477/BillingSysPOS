@@ -29,12 +29,17 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2, RefreshCw, Copy, Check, Trash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const themeOptions: { name: string; value: ThemeName; description: string; color: string; bg: string; border: string }[] = [
+const themeOptions: { name: string; value: ThemeName; description: string; color: string; bg: string; border: string; isDark?: boolean }[] = [
   { name: 'Mint Pro', value: 'mint-pro', description: 'Fresh green tones for a modern look', color: '#10b981', bg: '#ecfdf5', border: '#6ee7b7' },
   { name: 'Sunset Orange', value: 'sunset-orange', description: 'Warm orange for energetic vibes', color: '#f97316', bg: '#fff7ed', border: '#fdba74' },
   { name: 'Royal Purple', value: 'royal-purple', description: 'Elegant purple for premium feel', color: '#8b5cf6', bg: '#f5f3ff', border: '#c4b5fd' },
   { name: 'Ocean Blue', value: 'ocean-blue', description: 'Calm blue for professional use', color: '#3b82f6', bg: '#eff6ff', border: '#93c5fd' },
-  { name: 'Dark Pro', value: 'dark-pro', description: 'Sleek dark mode for low-light', color: '#1e293b', bg: '#f8fafc', border: '#94a3b8' },
+  { name: 'Rose Gold', value: 'rose-gold', description: 'Warm pink tones for a luxurious feel', color: '#e11d48', bg: '#fff1f2', border: '#fda4af' },
+  { name: 'Slate Modern', value: 'slate-modern', description: 'Minimal neutral tones for clean design', color: '#475569', bg: '#f1f5f9', border: '#94a3b8' },
+  { name: 'Forest Deep', value: 'forest-deep', description: 'Rich deep greens for natural vibes', color: '#16a34a', bg: '#f0fdf4', border: '#86efac' },
+  { name: 'Dark Pro', value: 'dark-pro', description: 'Sleek dark mode for low-light', color: '#3b82f6', bg: '#0f172a', border: '#334155', isDark: true },
+  { name: 'Cyber Neon', value: 'cyber-neon', description: 'Neon green on dark for tech vibes', color: '#00e69d', bg: '#0a0f1a', border: '#1e3a3a', isDark: true },
+  { name: 'Midnight Blue', value: 'midnight-blue', description: 'Deep blue dark mode for night use', color: '#60a5fa', bg: '#0c1222', border: '#1e3050', isDark: true },
 ];
 
 const TABS = [
@@ -347,47 +352,92 @@ export default function Settings() {
 
           {/* ═══ APPEARANCE ═══ */}
           {activeTab === 'appearance' && (
-            <SettingsCard title="Theme" subtitle="Choose a color theme that matches your brand" icon="🎨" accent="#10b981">
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-                {themeOptions.map(opt => {
-                  const active = theme === opt.value;
-                  return (
-                    <button key={opt.value} onClick={() => setTheme(opt.value)}
-                      style={{
-                        padding: '20px 18px', borderRadius: '14px', textAlign: 'left' as const, cursor: 'pointer',
-                        position: 'relative' as const, fontFamily: T.font,
-                        border: `2.5px solid ${active ? opt.color : '#e2e8f0'}`,
-                        background: active ? opt.bg : '#ffffff',
-                        boxShadow: active ? `0 0 0 4px ${opt.color}15, 0 4px 12px ${opt.color}10` : '0 1px 3px rgba(0,0,0,0.04)',
-                        transition: 'all 0.25s cubic-bezier(.4,0,.2,1)',
-                      }}
-                      onMouseEnter={e => { if (!active) e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                      onMouseLeave={e => { if (!active) e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'none'; }}
-                    >
-                      {active && (
+            <ColStack gap="20px">
+              {/* Light Themes */}
+              <SettingsCard title="Light Themes" subtitle="Clean and bright themes for daytime use" icon="☀️" accent="#f59e0b">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+                  {themeOptions.filter(o => !o.isDark).map(opt => {
+                    const active = theme === opt.value;
+                    return (
+                      <button key={opt.value} onClick={() => setTheme(opt.value)}
+                        style={{
+                          padding: '20px 18px', borderRadius: '14px', textAlign: 'left' as const, cursor: 'pointer',
+                          position: 'relative' as const, fontFamily: T.font,
+                          border: `2.5px solid ${active ? opt.color : '#e2e8f0'}`,
+                          background: active ? opt.bg : '#ffffff',
+                          boxShadow: active ? `0 0 0 4px ${opt.color}15, 0 4px 12px ${opt.color}10` : '0 1px 3px rgba(0,0,0,0.04)',
+                          transition: 'all 0.25s cubic-bezier(.4,0,.2,1)',
+                        }}
+                        onMouseEnter={e => { if (!active) e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                        onMouseLeave={e => { if (!active) e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.transform = 'none'; }}
+                      >
+                        {active && (
+                          <div style={{
+                            position: 'absolute', top: '12px', right: '12px',
+                            width: '22px', height: '22px', borderRadius: '50%', background: opt.color,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: '#fff', fontSize: '12px', fontWeight: 700,
+                            boxShadow: `0 2px 6px ${opt.color}40`,
+                          }}>✓</div>
+                        )}
                         <div style={{
-                          position: 'absolute', top: '12px', right: '12px',
-                          width: '22px', height: '22px', borderRadius: '50%', background: opt.color,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: '#fff', fontSize: '12px', fontWeight: 700,
-                          boxShadow: `0 2px 6px ${opt.color}40`,
-                        }}>✓</div>
-                      )}
-                      {/* Color swatch preview bar */}
-                      <div style={{
-                        width: '100%', height: '6px', borderRadius: '3px', marginBottom: '14px',
-                        background: `linear-gradient(90deg, ${opt.color}, ${opt.color}60)`,
-                      }} />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: opt.color, display: 'inline-block', boxShadow: `0 0 6px ${opt.color}40` }} />
-                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em' }}>{opt.name}</span>
-                      </div>
-                      <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0, lineHeight: 1.4 }}>{opt.description}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </SettingsCard>
+                          width: '100%', height: '6px', borderRadius: '3px', marginBottom: '14px',
+                          background: `linear-gradient(90deg, ${opt.color}, ${opt.color}60)`,
+                        }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: opt.color, display: 'inline-block', boxShadow: `0 0 6px ${opt.color}40` }} />
+                          <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em' }}>{opt.name}</span>
+                        </div>
+                        <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0, lineHeight: 1.4 }}>{opt.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </SettingsCard>
+
+              {/* Dark Themes */}
+              <SettingsCard title="Dark Themes" subtitle="Easy on the eyes in low-light environments" icon="🌙" accent="#6366f1">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+                  {themeOptions.filter(o => o.isDark).map(opt => {
+                    const active = theme === opt.value;
+                    return (
+                      <button key={opt.value} onClick={() => setTheme(opt.value)}
+                        style={{
+                          padding: '20px 18px', borderRadius: '14px', textAlign: 'left' as const, cursor: 'pointer',
+                          position: 'relative' as const, fontFamily: T.font,
+                          border: `2.5px solid ${active ? opt.color : '#334155'}`,
+                          background: active ? opt.bg : '#1e293b',
+                          boxShadow: active ? `0 0 0 4px ${opt.color}20, 0 4px 16px ${opt.color}15` : '0 1px 3px rgba(0,0,0,0.2)',
+                          transition: 'all 0.25s cubic-bezier(.4,0,.2,1)',
+                        }}
+                        onMouseEnter={e => { if (!active) e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                        onMouseLeave={e => { if (!active) e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)'; e.currentTarget.style.transform = 'none'; }}
+                      >
+                        {active && (
+                          <div style={{
+                            position: 'absolute', top: '12px', right: '12px',
+                            width: '22px', height: '22px', borderRadius: '50%', background: opt.color,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: '#fff', fontSize: '12px', fontWeight: 700,
+                            boxShadow: `0 2px 8px ${opt.color}50`,
+                          }}>✓</div>
+                        )}
+                        <div style={{
+                          width: '100%', height: '6px', borderRadius: '3px', marginBottom: '14px',
+                          background: `linear-gradient(90deg, ${opt.color}, ${opt.color}40)`,
+                          boxShadow: `0 0 8px ${opt.color}30`,
+                        }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: opt.color, display: 'inline-block', boxShadow: `0 0 8px ${opt.color}50` }} />
+                          <span style={{ fontSize: '14px', fontWeight: 700, color: '#e2e8f0', letterSpacing: '-0.01em' }}>{opt.name}</span>
+                        </div>
+                        <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0, lineHeight: 1.4 }}>{opt.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </SettingsCard>
+            </ColStack>
           )}
         </div>
       </div>
