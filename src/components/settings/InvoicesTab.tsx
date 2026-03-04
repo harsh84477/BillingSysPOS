@@ -87,7 +87,7 @@ export default function InvoicesTab() {
                 {/* Header Settings */}
                 <SettingsCard title="Header Settings" subtitle="Business identity on invoice" icon="🏷️" accent="#f97316">
                     <div style={{ marginBottom: '12px' }}>
-                        <FieldLabel>Text Alignment</FieldLabel>
+                        <FieldLabel>Header Text Alignment</FieldLabel>
                         <ButtonGroup
                             options={[
                                 { id: 'left', label: '← Left' },
@@ -100,10 +100,25 @@ export default function InvoicesTab() {
                             accentColor="#f97316"
                         />
                     </div>
+                    <div style={{ marginBottom: '12px' }}>
+                        <FieldLabel>Document Title Alignment</FieldLabel>
+                        <ButtonGroup
+                            options={[
+                                { id: 'left', label: '← Left' },
+                                { id: 'center', label: '↔ Center' },
+                                { id: 'right', label: '→ Right' },
+                            ]}
+                            value={(settings as any)?.invoice_title_align || 'center'}
+                            onChange={(id) => u({ invoice_title_align: id })}
+                            disabled={!isAdmin}
+                            accentColor="#f97316"
+                        />
+                    </div>
                     <SectionLabel text="Show Details" />
                     <SettingRow label="Address" right={<Toggle on={settings?.invoice_show_business_address !== false} onChange={(v) => u({ invoice_show_business_address: v })} disabled={!isAdmin} />} />
                     <SettingRow label="Phone Number" right={<Toggle on={settings?.invoice_show_business_phone !== false} onChange={(v) => u({ invoice_show_business_phone: v })} disabled={!isAdmin} />} />
                     <SettingRow label="Email" right={<Toggle on={settings?.invoice_show_business_email !== false} onChange={(v) => u({ invoice_show_business_email: v })} disabled={!isAdmin} />} />
+                    <SettingRow label="Separate Contact Lines" desc="Show Phone & Email on new lines" right={<Toggle on={(settings as any)?.invoice_contact_separate_lines === true} onChange={(v) => u({ invoice_contact_separate_lines: v })} disabled={!isAdmin} />} />
                     <SettingRow label="GST Number" noBorder right={<Toggle on={settings?.invoice_show_gst !== false} onChange={(v) => u({ invoice_show_gst: v })} disabled={!isAdmin} />} />
                 </SettingsCard>
 

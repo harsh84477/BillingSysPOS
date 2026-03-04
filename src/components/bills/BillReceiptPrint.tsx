@@ -33,6 +33,7 @@ interface BusinessSettings {
   email?: string;
   currency_symbol?: string;
   tax_name?: string;
+  tax_rate?: number;
   invoice_style?: 'classic' | 'modern' | 'detailed';
   invoice_font_size?: number;
   invoice_spacing?: number;
@@ -122,17 +123,20 @@ export function printBillReceipt(
     </div>
   ` : '');
 
+  const titleAlign = (settings as any)?.invoice_title_align || 'center';
+  const contactSeparateLines = (settings as any)?.invoice_contact_separate_lines || false;
+
   const sharedHeader = `
     <div class="header" style="text-align: ${headerAlign}; position: relative; min-height: ${(qrPosition === 'top-right' || qrPosition === 'top-left') && generatedQR ? qrSize + 20 : 0}px; border-bottom: none; padding-bottom: 5px;">
       ${(qrPosition === 'top-left' && generatedQR) ? `<div style="position: absolute; left: 0; top: 0;">${generatedQR}</div>` : ''}
       ${(qrPosition === 'top-right' && generatedQR) ? `<div style="position: absolute; right: 0; top: 0;">${generatedQR}</div>` : ''}
       <div style="${(qrPosition === 'top-left' && generatedQR) ? `padding-left: ${qrSize + 20}px;` : ''} ${(qrPosition === 'top-right' && generatedQR) ? `padding-right: ${qrSize + 20}px;` : ''}">
-        ${invoiceTitle ? `<div class="business-name" style="font-size: ${isGridFormat ? fontSize + 8 : fontSize + 4}px; text-transform: uppercase; text-decoration: ${isGridFormat ? 'underline' : 'none'}; margin-bottom: ${isGridFormat ? '15px' : '8px'};">${invoiceTitle}</div>` : ''}
+        ${invoiceTitle ? `<div class="business-name" style="text-align: ${titleAlign}; font-size: ${isGridFormat ? fontSize + 8 : fontSize + 4}px; text-transform: uppercase; text-decoration: ${isGridFormat ? 'underline' : 'none'}; margin-bottom: ${isGridFormat ? '15px' : '8px'};">${invoiceTitle}</div>` : ''}
         <div class="business-name" style="font-size: ${fontSize + 6}px;">${settings?.business_name || 'Business'}</div>
         ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''}">${settings.address}</div>` : ''}
-        <div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''}">
+        <div class="business-info" style="${isGridFormat && !contactSeparateLines ? 'margin-top: 4px;' : 'margin-top: 4px; line-height: 1.6;'}">
           ${settings?.invoice_show_business_phone !== false && settings?.phone ? `${isGridFormat ? 'Mobile' : 'Tel'}: ${settings.phone}` : ''}
-          ${settings?.invoice_show_business_phone !== false && settings?.phone && settings?.invoice_show_business_email !== false && settings?.email ? (isGridFormat ? ' | ' : '<br/>') : ''}
+          ${settings?.invoice_show_business_phone !== false && settings?.phone && settings?.invoice_show_business_email !== false && settings?.email ? (contactSeparateLines ? '<br/>' : (isGridFormat ? ' | ' : '<br/>')) : ''}
           ${settings?.invoice_show_business_email !== false && settings?.email ? `${isGridFormat ? 'Email' : 'Email'}: ${settings.email}` : ''}
         </div>
         ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''}">GSTIN: ${settings.gst_number}</div>` : ''}
@@ -398,18 +402,18 @@ export function printBillReceipt(
             <td style="text-align: right; border-left: none; padding-right: 10px; border-top: 1px solid #000;">Subtotal:</td>
             <td style="text-align: right; border-top: 1px solid #000;">${currencySymbol}${Number(bill.subtotal).toFixed(2)}</td>
           </tr>
+          ${Number(bill.tax_amount) > 0 ? `
+            <tr>
+              <td colspan="${showCaseCol ? '5' : '4'}" style="border-right: none; border-bottom: none; border-top: none;"></td>
+              <td style="text-align: right; border-left: none; padding-right: 10px; border-top: none;">${settings?.tax_name || 'GST'} ${settings?.tax_rate || 0}%:</td>
+              <td style="text-align: right; border-top: none;">${currencySymbol}${Number(bill.tax_amount).toFixed(2)}</td>
+            </tr>
+          ` : ''}
           ${Number(bill.discount_amount) > 0 ? `
             <tr style="color: #dc2626;">
               <td colspan="${showCaseCol ? '5' : '4'}" style="border-right: none; border-bottom: none; border-top: none;"></td>
               <td style="text-align: right; border-left: none; padding-right: 10px; border-top: none;">Discount:</td>
               <td style="text-align: right; border-top: none;">-${currencySymbol}${Number(bill.discount_amount).toFixed(2)}</td>
-            </tr>
-          ` : ''}
-          ${Number(bill.tax_amount) > 0 ? `
-            <tr>
-              <td colspan="${showCaseCol ? '5' : '4'}" style="border-right: none; border-bottom: none; border-top: none;"></td>
-              <td style="text-align: right; border-left: none; padding-right: 10px; border-top: none;">${settings?.tax_name || 'Tax'}:</td>
-              <td style="text-align: right; border-top: none;">${currencySymbol}${Number(bill.tax_amount).toFixed(2)}</td>
             </tr>
           ` : ''}
           <tr>
@@ -452,16 +456,16 @@ export function printBillReceipt(
           <span>Subtotal:</span>
           <span>${currencySymbol}${Number(bill.subtotal).toFixed(2)}</span>
         </div>
+        ${Number(bill.tax_amount) > 0 ? `
+          <div class="total-row">
+            <span>${settings?.tax_name || 'GST'} ${settings?.tax_rate || 0}%:</span>
+            <span>${currencySymbol}${Number(bill.tax_amount).toFixed(2)}</span>
+          </div>
+        ` : ''}
         ${Number(bill.discount_amount) > 0 ? `
           <div class="total-row" style="color: #dc2626;">
             <span>Discount:</span>
             <span>-${currencySymbol}${Number(bill.discount_amount).toFixed(2)}</span>
-          </div>
-        ` : ''}
-        ${Number(bill.tax_amount) > 0 ? `
-          <div class="total-row">
-            <span>${settings?.tax_name || 'Tax'}:</span>
-            <span>${currencySymbol}${Number(bill.tax_amount).toFixed(2)}</span>
           </div>
         ` : ''}
         <div class="total-row grand-total">
