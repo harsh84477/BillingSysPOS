@@ -7,21 +7,21 @@ const T = {
     font: "'Inter', 'DM Sans', 'Segoe UI', system-ui, sans-serif",
     radius: { card: '14px', btn: '10px', input: '10px', toggle: '12px' },
     color: {
-        pageBg: '#f1f5f9',
-        cardBg: '#ffffff',
-        inputBg: '#f8fafc',
-        border: '#e2e8f0',
-        borderFocus: '#10b981',
-        textPri: '#0f172a',
-        textSec: '#334155',
-        textMuted: '#94a3b8',
-        textLabel: '#64748b',
-        accent: '#10b981',
-        saved: '#059669',
-        toggleOn: '#10b981',
-        toggleOff: '#cbd5e1',
-        danger: '#ef4444',
-        sectionLabel: '#10b981',
+        pageBg: 'hsl(var(--background))',
+        cardBg: 'hsl(var(--card))',
+        inputBg: 'hsl(var(--input))',
+        border: 'hsl(var(--border))',
+        borderFocus: 'hsl(var(--ring))',
+        textPri: 'hsl(var(--foreground))',
+        textSec: 'hsl(var(--muted-foreground))',
+        textMuted: 'hsl(var(--muted-foreground))',
+        textLabel: 'hsl(var(--muted-foreground))',
+        accent: 'hsl(var(--primary))',
+        saved: 'hsl(var(--primary))',
+        toggleOn: 'hsl(var(--primary))',
+        toggleOff: 'hsl(var(--muted))',
+        danger: 'hsl(var(--destructive))',
+        sectionLabel: 'hsl(var(--primary))',
     },
     shadow: {
         card: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
@@ -30,8 +30,11 @@ const T = {
     },
 };
 
+/* ═══ Helper for dynamic opacity with hex OR css variables ═══ */
+export const op = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
+
 /* ═══ SettingsCard ═══ */
-export function SettingsCard({ title, subtitle, icon, accent = '#10b981', children, footer, className }: {
+export function SettingsCard({ title, subtitle, icon, accent = 'hsl(var(--primary))', children, footer, className }: {
     title: string; subtitle?: string; icon: string; accent?: string;
     children: React.ReactNode; footer?: React.ReactNode; className?: string;
 }) {
@@ -51,7 +54,7 @@ export function SettingsCard({ title, subtitle, icon, accent = '#10b981', childr
             <div style={{
                 padding: '18px 22px 14px',
                 borderBottom: `1px solid ${T.color.border}`,
-                background: `linear-gradient(135deg, ${accent}06 0%, ${accent}02 50%, transparent 100%)`,
+                background: `linear-gradient(135deg, ${op(accent, 4)} 0%, ${op(accent, 1)} 50%, transparent 100%)`,
                 position: 'relative',
             }}>
                 <div style={{
@@ -61,7 +64,7 @@ export function SettingsCard({ title, subtitle, icon, accent = '#10b981', childr
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
                         width: '36px', height: '36px', borderRadius: '10px',
-                        background: `${accent}12`, display: 'flex', alignItems: 'center',
+                        background: op(accent, 7), display: 'flex', alignItems: 'center',
                         justifyContent: 'center', fontSize: '18px', flexShrink: 0,
                     }}>{icon}</div>
                     <div>
@@ -90,7 +93,7 @@ export function Toggle({ on, onChange, disabled }: { on: boolean; onChange: (v: 
         }}>
             <span style={{
                 position: 'absolute', top: '3px', left: on ? '23px' : '3px',
-                width: '18px', height: '18px', borderRadius: '50%', background: '#fff',
+                width: '18px', height: '18px', borderRadius: '50%', background: 'var(--card, #fff)',
                 transition: 'left 0.25s cubic-bezier(.4,0,.2,1)',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
             }} />
@@ -116,7 +119,7 @@ export function Counter({ value, min = 0, max = 99, onChange, disabled }: {
         }}>
             <button style={{ ...btn, borderRight: `1px solid ${T.color.border}` }}
                 onClick={() => !disabled && onChange(Math.max(min, value - 1))}
-                onMouseEnter={e => !disabled && (e.currentTarget.style.background = '#f1f5f9')}
+                onMouseEnter={e => !disabled && (e.currentTarget.style.background = op(T.color.textPri, 5))}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>−</button>
             <span style={{
                 minWidth: '36px', textAlign: 'center', fontSize: '13px', fontWeight: 700,
@@ -124,7 +127,7 @@ export function Counter({ value, min = 0, max = 99, onChange, disabled }: {
             }}>{value}</span>
             <button style={{ ...btn, borderLeft: `1px solid ${T.color.border}` }}
                 onClick={() => !disabled && onChange(Math.min(max, value + 1))}
-                onMouseEnter={e => !disabled && (e.currentTarget.style.background = '#f1f5f9')}
+                onMouseEnter={e => !disabled && (e.currentTarget.style.background = op(T.color.textPri, 5))}
                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>+</button>
         </div>
     );
@@ -137,7 +140,7 @@ export function SettingRow({ label, desc, right, noBorder }: {
     return (
         <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
-            padding: '13px 0', borderBottom: noBorder ? 'none' : '1px solid #f1f5f9',
+            padding: '13px 0', borderBottom: noBorder ? 'none' : `1px solid ${op(T.color.border, 50)}`,
         }}>
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '13.5px', fontWeight: 550, color: T.color.textPri, lineHeight: 1.3 }}>{label}</div>
@@ -157,7 +160,7 @@ export function SectionLabel({ text }: { text: string }) {
             padding: '18px 0 6px', display: 'flex', alignItems: 'center', gap: '10px',
         }}>
             <span>{text}</span>
-            <div style={{ flex: 1, height: '1px', background: `${T.color.sectionLabel}20` }} />
+            <div style={{ flex: 1, height: '1px', background: op(T.color.sectionLabel, 12) }} />
         </div>
     );
 }
@@ -180,10 +183,10 @@ export function TextInput({ value, defaultValue, placeholder, hint, onBlur, onCh
                 style={{
                     width: '100%', padding: '9px 13px', fontSize: '13px', borderRadius: T.radius.input,
                     border: `1.5px solid ${focused ? T.color.borderFocus : T.color.border}`,
-                    background: disabled ? '#f1f5f9' : T.color.inputBg, outline: 'none',
+                    background: disabled ? op(T.color.textPri, 5) : T.color.inputBg, outline: 'none',
                     transition: 'border-color 0.2s, box-shadow 0.2s', fontFamily: T.font,
                     color: T.color.textPri, boxSizing: 'border-box' as const,
-                    opacity: disabled ? 0.6 : 1, boxShadow: focused ? `0 0 0 3px ${T.color.borderFocus}15` : T.shadow.input,
+                    opacity: disabled ? 0.6 : 1, boxShadow: focused ? `0 0 0 3px ${op(T.color.borderFocus, 8)}` : T.shadow.input,
                     ...extraStyle,
                 }}
             />
@@ -205,11 +208,11 @@ export function TextArea({ defaultValue, placeholder, onBlur, disabled, id, name
             style={{
                 width: '100%', padding: '9px 13px', fontSize: '13px', borderRadius: T.radius.input,
                 border: `1.5px solid ${focused ? T.color.borderFocus : T.color.border}`,
-                background: disabled ? '#f1f5f9' : T.color.inputBg, outline: 'none',
+                background: disabled ? op(T.color.textPri, 5) : T.color.inputBg, outline: 'none',
                 transition: 'border-color 0.2s, box-shadow 0.2s', fontFamily: T.font,
                 color: T.color.textPri, resize: 'vertical' as const, boxSizing: 'border-box' as const,
                 opacity: disabled ? 0.6 : 1, minHeight: '70px',
-                boxShadow: focused ? `0 0 0 3px ${T.color.borderFocus}15` : T.shadow.input,
+                boxShadow: focused ? `0 0 0 3px ${op(T.color.borderFocus, 8)}` : T.shadow.input,
             }}
         />
     );
@@ -230,7 +233,7 @@ export function SaveBtn({ label = 'Save Changes', onClick, disabled, color = T.c
                 border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', letterSpacing: '-0.01em',
                 background: saved ? T.color.saved : color, color: '#fff',
                 transition: 'all 0.2s', opacity: disabled ? 0.5 : 1, fontFamily: T.font,
-                boxShadow: hovered && !disabled ? `0 4px 14px ${color}40` : `0 2px 8px ${color}25`,
+                boxShadow: hovered && !disabled ? `0 4px 14px ${op(color, 25)}` : `0 2px 8px ${op(color, 15)}`,
                 transform: hovered && !disabled ? 'translateY(-1px)' : 'none',
             }}
         >{saved ? '✓ Saved!' : label}</button>
@@ -253,8 +256,8 @@ export function ButtonGroup({ options, value, onChange, disabled, accentColor = 
                             flex: 1, minWidth: '72px', padding: '10px 10px', borderRadius: '10px',
                             cursor: disabled ? 'not-allowed' : 'pointer',
                             border: `2px solid ${active ? accentColor : T.color.border}`,
-                            background: active ? `${accentColor}0A` : '#fff',
-                            boxShadow: active ? `0 0 0 3px ${accentColor}12` : 'none',
+                            background: active ? op(accentColor, 4) : T.color.cardBg,
+                            boxShadow: active ? `0 0 0 3px ${op(accentColor, 7)}` : 'none',
                             transition: 'all 0.2s', textAlign: 'center' as const, fontFamily: T.font,
                         }}>
                         <div style={{ fontSize: '12.5px', fontWeight: active ? 700 : 500, color: active ? accentColor : T.color.textPri }}>{opt.label}</div>
@@ -324,7 +327,7 @@ export function TabBar({ tabs, active, onSelect }: {
                         display: 'flex', alignItems: 'center', gap: '7px', padding: '11px 18px',
                         fontSize: '13px', fontWeight: isActive ? 650 : 450,
                         color: isActive ? T.color.accent : T.color.textLabel,
-                        border: 'none', background: isActive ? `${T.color.accent}08` : 'transparent',
+                        border: 'none', background: isActive ? op(T.color.accent, 5) : 'transparent',
                         borderBottom: isActive ? `2.5px solid ${T.color.accent}` : '2.5px solid transparent',
                         marginBottom: '-2px', cursor: 'pointer',
                         transition: 'all 0.2s cubic-bezier(.4,0,.2,1)', whiteSpace: 'nowrap' as const,
@@ -371,7 +374,7 @@ export function ComingSoon({ icon, label }: { icon: string; label: string }) {
             <div style={{ fontSize: '18px', fontWeight: 700, color: T.color.textPri }}>{label}</div>
             <div style={{ fontSize: '13px', color: T.color.textMuted }}>This section is coming soon</div>
             <div style={{
-                padding: '6px 16px', borderRadius: '20px', background: `${T.color.accent}10`,
+                padding: '6px 16px', borderRadius: '20px', background: op(T.color.accent, 6),
                 color: T.color.accent, fontSize: '11px', fontWeight: 600, letterSpacing: '0.02em',
             }}>UNDER DEVELOPMENT</div>
         </div>
@@ -391,7 +394,7 @@ export function FormatGroup({ value = '', onChange, disabled, accentColor = T.co
     const btnStyle = (active: boolean): React.CSSProperties => ({
         width: '32px', height: '32px', borderRadius: '6px', cursor: disabled ? 'not-allowed' : 'pointer',
         border: `1.5px solid ${active ? accentColor : T.color.border}`,
-        background: active ? `${accentColor}15` : '#fff', fontSize: '15px',
+        background: active ? op(accentColor, 8) : T.color.cardBg, fontSize: '15px',
         color: active ? accentColor : T.color.textPri, transition: 'all 0.2s', flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center'
     });

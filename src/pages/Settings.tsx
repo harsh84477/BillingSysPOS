@@ -12,7 +12,7 @@ import InvoicesTab from '@/components/settings/InvoicesTab';
 import {
   SettingsCard, Toggle, Counter, SettingRow, SectionLabel, TextInput, TextArea,
   FieldLabel, ButtonGroup, SelectInput, SaveBtn, InfoBox, TabBar, TwoColGrid,
-  ColStack, ComingSoon, T,
+  ColStack, ComingSoon, T, op,
 } from '@/components/settings/SettingsUI';
 
 /* ─── shadcn that we still need for dialogs/tables ─── */
@@ -150,9 +150,8 @@ export default function Settings() {
     <div style={{ fontFamily: T.font, margin: '-16px -16px 0', }}>
       {/* Page Header — sticky inside main scroll */}
       <div style={{
-        background: '#ffffff', padding: '24px 28px 0',
-        borderBottom: `1px solid ${T.color.border}`,
-        position: 'sticky', top: '-16px', zIndex: 10,
+        background: T.color.cardBg, padding: '24px 28px 0',
+        borderBottom: `1px solid ${T.color.border}`, position: 'sticky', top: 0, zIndex: 10,
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
       }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
@@ -198,12 +197,12 @@ export default function Settings() {
 
               {isAdmin && businessInfo && (
                 <SettingsCard title="Team Join Code" subtitle="Share this code with your team to let them join" icon="🔑" accent="#8b5cf6">
-                  <div style={{ border: '2px dashed #c4b5fd', borderRadius: '12px', background: '#f5f3ff', padding: '28px', textAlign: 'center', marginBottom: '14px' }}>
+                  <div style={{ border: `2px dashed ${op('#8b5cf6', 40)}`, borderRadius: '12px', background: op('#8b5cf6', 8), padding: '28px', textAlign: 'center', marginBottom: '14px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
                       <span style={{ fontSize: '32px', fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.3em', color: '#8b5cf6' }}>{businessInfo.join_code}</span>
                       <button onClick={async () => { await navigator.clipboard.writeText(businessInfo.join_code); setCopied(true); toast.success('Code copied!'); setTimeout(() => setCopied(false), 2000); }}
-                        style={{ width: '36px', height: '36px', border: `1px solid ${T.color.border}`, borderRadius: '8px', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                        style={{ width: '36px', height: '36px', border: `1px solid ${T.color.border}`, borderRadius: '8px', background: T.color.cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4 text-muted-foreground" />}
                       </button>
                     </div>
                     <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '8px' }}>Max 8 members per business</p>
@@ -213,7 +212,7 @@ export default function Settings() {
                     setRegenerating(true);
                     try { const { data, error } = await supabase.rpc('regenerate_join_code', { _user_id: user!.id }); if (error) throw error; const result = data as any; if (result.success) { toast.success('Join code regenerated!'); await refreshBusinessInfo(); } else toast.error(result.error); } catch (err: any) { toast.error(err.message); } finally { setRegenerating(false); }
                   }} disabled={regenerating}
-                    style={{ width: '100%', padding: '10px', border: `1px solid ${T.color.border}`, borderRadius: '8px', background: '#fff', cursor: 'pointer', fontFamily: T.font, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    style={{ width: '100%', padding: '10px', border: `1px solid ${T.color.border}`, borderRadius: '8px', background: T.color.cardBg, color: T.color.textPri, cursor: 'pointer', fontFamily: T.font, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                     <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} /> Regenerate Code
                   </button>
                 </SettingsCard>
@@ -240,7 +239,7 @@ export default function Settings() {
                     <TextInput id="my_bill_prefix" defaultValue={userRoles.find((r: any) => r.user_id === user?.id)?.bill_prefix || ''} placeholder="e.g. UK" hint="Identifies you as the collector on bills."
                       style={{ width: '80px', textTransform: 'uppercase', textAlign: 'center', fontFamily: 'monospace', fontWeight: 700 }}
                       onBlur={async (e) => { const val = (e.target as HTMLInputElement).value.toUpperCase(); try { const { error } = await supabase.rpc('update_my_bill_prefix', { _prefix: val }); if (error) throw error; toast.success('Your personal code updated!'); await refreshBusinessInfo(); queryClient.invalidateQueries({ queryKey: ['allUserRoles'] }); } catch (err: any) { toast.error('Failed: ' + err.message); } }} /></div>
-                  <InfoBox bg="#f5f3ff" border="1px solid #e0d9ff" icon="📌" title="Bill Format Preview" titleColor="#7c3aed" value={`${settings?.bill_prefix || 'INV'} — CODE — 2024-01 — 001`} valueColor="#4c1d95" />
+                  <InfoBox bg={op('#8b5cf6', 10)} border={`1px solid ${op('#8b5cf6', 30)}`} icon="📌" title="Bill Format Preview" titleColor="#8b5cf6" value={`${settings?.bill_prefix || 'INV'} — CODE — 2024-01 — 001`} valueColor={T.color.textPri} />
                 </SettingsCard>
               </TwoColGrid>
 
@@ -321,11 +320,10 @@ export default function Settings() {
             <ColStack>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '14px' }}>
                 {[{ label: 'Total Users', count: userRoles.length, color: '#10b981' }, { label: 'Owners', count: userRoles.filter((ur: any) => ur.role === 'owner').length, color: '#f59e0b' },
-                { label: 'Managers', count: userRoles.filter((ur: any) => ur.role === 'manager').length, color: '#3b82f6' }, { label: 'Cashiers', count: userRoles.filter((ur: any) => ur.role === 'cashier').length, color: '#10b981' },
-                ].map(({ label, count, color }) => (
-                  <div key={label} style={{ background: '#fff', borderRadius: '12px', padding: '16px 20px', border: `1px solid ${T.color.border}`, borderLeft: `4px solid ${color}` }}>
-                    <div style={{ fontSize: '12px', color: '#9ca3af' }}>{label}</div>
-                    <div style={{ fontSize: '24px', fontWeight: 800, color, marginTop: '4px' }}>{count}</div>
+                { label: 'Managers', count: userRoles.filter((ur: any) => ur.role === 'manager').length, color: '#8b5cf6' }, { label: 'Salesmen', count: userRoles.filter((ur: any) => ur.role === 'salesman').length, color: '#3b82f6' }].map(({ label, count, color }) => (
+                  <div key={label} style={{ background: T.color.cardBg, borderRadius: '12px', padding: '16px 20px', border: `1px solid ${T.color.border}`, borderLeft: `4px solid ${color}` }}>
+                    <div style={{ fontSize: '12px', color: T.color.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+                    <div style={{ fontSize: '28px', fontWeight: 800, marginTop: '4px', color: T.color.textPri }}>{count}</div>
                   </div>
                 ))}
               </div>
@@ -341,7 +339,7 @@ export default function Settings() {
                 ) : <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
                   <div style={{ fontSize: '48px', marginBottom: '12px' }}>👥</div>
                   <p>No team members yet. Share your business code to invite people.</p>
-                  {businessInfo?.join_code && <p style={{ marginTop: '8px', fontFamily: 'monospace', background: '#f3f4f6', padding: '4px 12px', borderRadius: '6px', display: 'inline-block' }}>{businessInfo.join_code}</p>}
+                  {businessInfo?.join_code && <p style={{ marginTop: '8px', fontFamily: 'monospace', background: T.color.inputBg, border: `1px solid ${T.color.border}`, padding: '4px 12px', borderRadius: '6px', display: 'inline-block', color: T.color.textPri }}>{businessInfo.join_code}</p>}
                 </div>}
               </SettingsCard>
             </ColStack>

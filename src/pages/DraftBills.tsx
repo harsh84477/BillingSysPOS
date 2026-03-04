@@ -60,9 +60,9 @@ export default function DraftBills() {
 
             <Card>
                 <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
                         <CardTitle>Draft Orders</CardTitle>
-                        <div className="relative w-full max-w-sm">
+                        <div className="relative w-full sm:max-w-sm">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search draft number or customer..."
@@ -84,8 +84,8 @@ export default function DraftBills() {
                                     <TableHead>Bill No.</TableHead>
                                     <TableHead>Customer</TableHead>
                                     <TableHead>Amount</TableHead>
-                                    <TableHead>Created At</TableHead>
-                                    <TableHead>Salesman</TableHead>
+                                    <TableHead className="hidden md:table-cell">Created At</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Salesman</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -105,29 +105,30 @@ export default function DraftBills() {
                                 ) : (
                                     filteredBills.map((bill) => (
                                         <TableRow key={bill.id}>
-                                            <TableCell className="font-medium">
+                                            <TableCell className="font-medium text-xs sm:text-sm">
                                                 <div className="flex items-center gap-2">
-                                                    <ShoppingCart className="h-4 w-4 text-amber-500" />
+                                                    <ShoppingCart className="h-4 w-4 text-amber-500 hidden sm:block" />
                                                     {bill.bill_number}
                                                 </div>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="text-xs sm:text-sm truncate max-w-[80px] sm:max-w-none">
                                                 <div className="flex flex-col">
                                                     <span className="font-medium">{bill.customers?.name || 'Walk-in'}</span>
                                                     <span className="text-[10px] text-muted-foreground">{bill.customers?.phone || ''}</span>
                                                 </div>
                                             </TableCell>
-                                            <TableCell className="font-semibold text-primary">
+                                            <TableCell className="font-semibold text-primary text-xs sm:text-sm">
                                                 ₹{bill.total_amount.toFixed(2)}
                                             </TableCell>
-                                            <TableCell className="text-muted-foreground text-xs">
+                                            <TableCell className="hidden md:table-cell text-muted-foreground text-xs sm:text-sm">
                                                 <div className="flex items-center gap-1">
                                                     <Clock className="h-3 w-3" />
                                                     {format(new Date(bill.created_at), 'dd MMM, hh:mm a')}
                                                 </div>
                                             </TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className="font-normal text-[10px]">
+                                            <TableCell className="hidden sm:table-cell text-xs sm:text-sm">
+                                                <Badge variant="outline" className="font-normal text-[10px] bg-primary/5">
+                                                    <User className="mr-1 h-3 w-3" />
                                                     {(bill as any).salesman_name || 'System'}
                                                 </Badge>
                                             </TableCell>
@@ -137,8 +138,8 @@ export default function DraftBills() {
                                                     size="sm"
                                                     onClick={() => setSelectedBillId(bill.id)}
                                                 >
-                                                    <Eye className="h-4 w-4 mr-1" />
-                                                    Open
+                                                    <Eye className="h-4 w-4 sm:mr-1" />
+                                                    <span className="hidden sm:inline">Open</span>
                                                 </Button>
                                             </TableCell>
                                         </TableRow>
@@ -156,7 +157,8 @@ export default function DraftBills() {
                     open={!!selectedBillId}
                     onClose={() => setSelectedBillId(null)}
                 />
-            )}
-        </div>
+            )
+            }
+        </div >
     );
 }

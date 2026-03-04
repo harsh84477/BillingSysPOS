@@ -56,9 +56,9 @@ function StatCard({
           <Skeleton className="h-8 w-24" />
         ) : (
           <>
-            <div className="text-2xl font-bold">{value}</div>
+            <div className="text-xl sm:text-2xl font-bold truncate">{value}</div>
             {description && (
-              <p className="text-xs text-muted-foreground">{description}</p>
+              <p className="text-xs text-muted-foreground truncate">{description}</p>
             )}
           </>
         )}
@@ -381,7 +381,7 @@ export default function Dashboard() {
     <div className="space-y-4 -mt-4 sm:-mt-6">
 
       {/* Stats Grid */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
         <StatCard
           title="Today's Sales"
           value={`${currencySymbol}${todaySales?.toFixed(2) || '0.00'}`}
@@ -581,9 +581,9 @@ export default function Dashboard() {
                   <thead>
                     <tr className="border-b text-muted-foreground font-medium">
                       <th className="text-left py-2 px-1">Bill #</th>
-                      <th className="text-left py-2 px-1">Salesman</th>
+                      <th className="text-left py-2 px-1 hidden md:table-cell">Salesman</th>
                       <th className="text-left py-2 px-1">Customer</th>
-                      <th className="text-left py-2 px-1 hidden sm:table-cell">Last Updated</th>
+                      <th className="text-left py-2 px-1 hidden lg:table-cell">Last Updated</th>
                       <th className="text-right py-2 px-1">Total</th>
                       <th className="text-right py-2 px-1">Status</th>
                     </tr>
@@ -595,10 +595,10 @@ export default function Dashboard() {
                         className="hover:bg-muted/50 cursor-pointer transition-colors"
                         onClick={() => setSelectedDraftBillId(draft.id)}
                       >
-                        <td className="py-3 px-1 font-medium">{draft.bill_number}</td>
-                        <td className="py-3 px-1">{draft.salesman_name || 'N/A'}</td>
-                        <td className="py-3 px-1">{draft.customers?.name || 'Walk-in'}</td>
-                        <td className="py-3 px-1 hidden sm:table-cell text-xs text-muted-foreground">
+                        <td className="py-3 px-1 font-medium text-xs sm:text-sm">{draft.bill_number}</td>
+                        <td className="py-3 px-1 hidden md:table-cell text-xs sm:text-sm">{draft.salesman_name || 'N/A'}</td>
+                        <td className="py-3 px-1 text-xs sm:text-sm truncate max-w-[80px] sm:max-w-[120px]">{draft.customers?.name || 'Walk-in'}</td>
+                        <td className="py-3 px-1 hidden lg:table-cell text-xs text-muted-foreground">
                           {format(new Date(draft.created_at), 'dd/MM HH:mm')}
                         </td>
                         <td className="py-3 px-1 text-right font-bold">
@@ -619,7 +619,7 @@ export default function Dashboard() {
         </Card>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
         {/* Low Stock Alerts */}
         <Card>
           <CardHeader>
