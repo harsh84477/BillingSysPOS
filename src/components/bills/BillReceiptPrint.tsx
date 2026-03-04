@@ -99,6 +99,19 @@ export function printBillReceipt(
   const qrPosition = (settings as any)?.invoice_qr_position || 'bottom-center';
   const qrSizeSetting = (settings as any)?.invoice_qr_size || 'medium';
 
+  const getStyleObj = (settingStr: string = '') => {
+    return [
+      settingStr.includes('bold') ? 'font-weight: bold;' : '',
+      settingStr.includes('italic') ? 'font-style: italic;' : '',
+      settingStr.includes('underline') ? 'text-decoration: underline;' : ''
+    ].join(' ');
+  };
+
+  const itemDescStyle = getStyleObj((settings as any)?.invoice_item_desc_style);
+  const mrpStyle = getStyleObj((settings as any)?.invoice_mrp_style);
+  const discountStyle = getStyleObj((settings as any)?.invoice_discount_style);
+  const gstStyle = getStyleObj((settings as any)?.invoice_gst_style);
+
   const widthStyle = paperWidth === '58mm' ? '240px' : (paperWidth === 'A4' || paperWidth === 'A5') ? '100%' : '380px';
   const maxWidthStyle = paperWidth === 'A4' ? '794px' : paperWidth === 'A5' ? '560px' : widthStyle;
 
@@ -393,8 +406,8 @@ export function printBillReceipt(
               <td style="text-align: center;">${idx + 1}</td>
               ${showCaseCol ? `<td style="text-align: center;">${(item.items_per_case && item.items_per_case > 0) ? Number(item.quantity / item.items_per_case).toFixed(2) : '0.00'}</td>` : ''}
               <td style="text-align: center;">${Number(item.quantity).toFixed(2)}</td>
-              <td>${item.product_name}</td>
-              <td style="text-align: center;">${Number(item.mrp_price || item.unit_price).toFixed(2)}</td>
+              <td style="${itemDescStyle}">${item.product_name}</td>
+              <td style="text-align: center; ${mrpStyle}">${Number(item.mrp_price || item.unit_price).toFixed(2)}</td>
               <td style="text-align: center;">${Number(item.unit_price).toFixed(2)}</td>
               <td style="text-align: right;">${Number(item.total_price).toFixed(2)}</td>
             </tr>
@@ -407,15 +420,15 @@ export function printBillReceipt(
           ${Number(bill.tax_amount) > 0 ? `
             <tr>
               <td colspan="${showCaseCol ? '5' : '4'}" style="border-right: none; border-bottom: none; border-top: none;"></td>
-              <td style="text-align: right; border-left: none; padding-right: 10px; border-top: none;">${settings?.tax_name || 'GST'} ${settings?.tax_rate || 0}%:</td>
-              <td style="text-align: right; border-top: none;">${currencySymbol}${Number(bill.tax_amount).toFixed(2)}</td>
+              <td style="text-align: right; border-left: none; padding-right: 10px; border-top: none; ${gstStyle}">${settings?.tax_name || 'GST'} ${settings?.tax_rate || 0}%:</td>
+              <td style="text-align: right; border-top: none; ${gstStyle}">${currencySymbol}${Number(bill.tax_amount).toFixed(2)}</td>
             </tr>
           ` : ''}
           ${Number(bill.discount_amount) > 0 ? `
             <tr style="color: #dc2626;">
               <td colspan="${showCaseCol ? '5' : '4'}" style="border-right: none; border-bottom: none; border-top: none;"></td>
-              <td style="text-align: right; border-left: none; padding-right: 10px; border-top: none;">Discount:</td>
-              <td style="text-align: right; border-top: none;">-${currencySymbol}${Number(bill.discount_amount).toFixed(2)}</td>
+              <td style="text-align: right; border-left: none; padding-right: 10px; border-top: none; ${discountStyle}">Discount:</td>
+              <td style="text-align: right; border-top: none; ${discountStyle}">-${currencySymbol}${Number(bill.discount_amount).toFixed(2)}</td>
             </tr>
           ` : ''}
           <tr>
@@ -437,7 +450,7 @@ export function printBillReceipt(
         ${items.map(item => `
           <div class="item-row" style="display: flex; align-items: flex-start; padding: ${spacing}px 0; font-size: ${fontSize - 1}px;">
             <div style="flex: ${settings?.invoice_show_unit_price !== false ? '2' : '2.8'}; overflow-wrap: break-word;">
-              <div>${item.product_name}</div>
+              <div style="${itemDescStyle}">${item.product_name}</div>
               ${settings?.invoice_show_item_price === true ? `
                 <div style="font-size: ${fontSize - 3}px; color: #666;">
                   ${Number(item.unit_price).toFixed(0)} x ${item.quantity}
@@ -459,13 +472,13 @@ export function printBillReceipt(
           <span>${currencySymbol}${Number(bill.subtotal).toFixed(2)}</span>
         </div>
         ${Number(bill.tax_amount) > 0 ? `
-          <div class="total-row">
+          <div class="total-row" style="${gstStyle}">
             <span>${settings?.tax_name || 'GST'} ${settings?.tax_rate || 0}%:</span>
             <span>${currencySymbol}${Number(bill.tax_amount).toFixed(2)}</span>
           </div>
         ` : ''}
         ${Number(bill.discount_amount) > 0 ? `
-          <div class="total-row" style="color: #dc2626;">
+          <div class="total-row" style="color: #dc2626; ${discountStyle}">
             <span>Discount:</span>
             <span>-${currencySymbol}${Number(bill.discount_amount).toFixed(2)}</span>
           </div>

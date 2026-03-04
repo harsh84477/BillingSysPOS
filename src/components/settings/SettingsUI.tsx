@@ -378,4 +378,31 @@ export function ComingSoon({ icon, label }: { icon: string; label: string }) {
     );
 }
 
+/* ═══ FormatGroup ═══ */
+export function FormatGroup({ value = '', onChange, disabled, accentColor = T.color.accent }: {
+    value?: string; onChange: (v: string) => void; disabled?: boolean; accentColor?: string;
+}) {
+    const formats = value ? value.split(',') : [];
+    const toggle = (fmt: string) => {
+        if (formats.includes(fmt)) onChange(formats.filter(f => f !== fmt).join(','));
+        else onChange([...formats, fmt].join(','));
+    };
+
+    const btnStyle = (active: boolean): React.CSSProperties => ({
+        width: '32px', height: '32px', borderRadius: '6px', cursor: disabled ? 'not-allowed' : 'pointer',
+        border: `1.5px solid ${active ? accentColor : T.color.border}`,
+        background: active ? `${accentColor}15` : '#fff', fontSize: '15px',
+        color: active ? accentColor : T.color.textPri, transition: 'all 0.2s', flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
+    });
+
+    return (
+        <div style={{ display: 'flex', gap: '6px' }}>
+            <button type="button" disabled={disabled} onClick={() => toggle('bold')} style={{ ...btnStyle(formats.includes('bold')), fontWeight: 800 }}>B</button>
+            <button type="button" disabled={disabled} onClick={() => toggle('italic')} style={{ ...btnStyle(formats.includes('italic')), fontStyle: 'italic', fontFamily: 'serif' }}>I</button>
+            <button type="button" disabled={disabled} onClick={() => toggle('underline')} style={{ ...btnStyle(formats.includes('underline')), textDecoration: 'underline' }}>U</button>
+        </div>
+    );
+}
+
 export { T };

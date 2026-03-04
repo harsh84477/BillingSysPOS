@@ -44,6 +44,10 @@ export interface BusinessSettings {
   invoice_contact_separate_lines?: boolean;
   invoice_column_headers_bold?: boolean;
   invoice_grid_thickness?: number;
+  invoice_item_desc_style?: string;
+  invoice_mrp_style?: string;
+  invoice_discount_style?: string;
+  invoice_gst_style?: string;
   invoice_border_top?: boolean;
   invoice_border_bottom?: boolean;
   invoice_border_left?: boolean;

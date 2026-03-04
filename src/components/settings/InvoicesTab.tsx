@@ -4,6 +4,7 @@ import { useBusinessSettings, useUpdateBusinessSettings } from '@/hooks/useBusin
 import {
     SettingsCard, Toggle, Counter, SettingRow, SectionLabel,
     TextInput, TextArea, FieldLabel, ButtonGroup, SelectInput, TwoColGrid, ColStack,
+    FormatGroup,
 } from './SettingsUI';
 
 export default function InvoicesTab() {
@@ -133,6 +134,11 @@ export default function InvoicesTab() {
                     <SettingRow label="Line Spacing"
                         right={<Counter value={settings?.invoice_spacing || 4} min={1} max={8} onChange={(v) => u({ invoice_spacing: v })} disabled={!isAdmin} />}
                     />
+                    <SectionLabel text="Targeted Text Formats" />
+                    <SettingRow label="Item Description Format" right={<FormatGroup value={(settings as any)?.invoice_item_desc_style || ''} onChange={(v) => u({ invoice_item_desc_style: v })} disabled={!isAdmin} accentColor="#8b5cf6" />} />
+                    <SettingRow label="M.R.P Format" right={<FormatGroup value={(settings as any)?.invoice_mrp_style || ''} onChange={(v) => u({ invoice_mrp_style: v })} disabled={!isAdmin} accentColor="#8b5cf6" />} />
+                    <SettingRow label="Discount Format" right={<FormatGroup value={(settings as any)?.invoice_discount_style || ''} onChange={(v) => u({ invoice_discount_style: v })} disabled={!isAdmin} accentColor="#8b5cf6" />} />
+                    <SettingRow label="GST Label Format" right={<FormatGroup value={(settings as any)?.invoice_gst_style || ''} onChange={(v) => u({ invoice_gst_style: v })} disabled={!isAdmin} accentColor="#8b5cf6" />} />
                     <SectionLabel text="Column Visibility" />
                     <SettingRow label="Bold Column Headers" desc="Make headers like ITEM DESCRIPTION bold"
                         right={<Toggle on={(settings as any)?.invoice_column_headers_bold ?? true} onChange={(v) => u({ invoice_column_headers_bold: v })} disabled={!isAdmin} />}
