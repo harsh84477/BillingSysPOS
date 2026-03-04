@@ -93,6 +93,8 @@ export function printBillReceipt(
   const outerBorderMargin = (settings as any)?.invoice_margin ?? 0;
   const outerBorderPadding = (settings as any)?.invoice_padding ?? 20;
   const showCaseCol = (settings as any)?.invoice_show_case !== false;
+  const gridThickness = (settings as any)?.invoice_grid_thickness ?? 1;
+  const headerBold = (settings as any)?.invoice_column_headers_bold ?? true;
 
   const qrPosition = (settings as any)?.invoice_qr_position || 'bottom-center';
   const qrSizeSetting = (settings as any)?.invoice_qr_size || 'medium';
@@ -189,7 +191,7 @@ export function printBillReceipt(
         
         .items-header { 
           display: flex; 
-          font-weight: bold; 
+          font-weight: ${headerBold ? 'bold' : 'normal'}; 
           border-bottom: 2px solid #000; 
           padding: 8px 0; 
           margin-bottom: 8px;
@@ -252,15 +254,15 @@ export function printBillReceipt(
           margin-bottom: 15px;
           margin-left: ${borderWholeBill ? `-${outerBorderPadding}px` : '0'};
           font-size: ${fontSize - 1}px;
-          border-top: ${borderTop ? '1px solid #000' : 'none'};
-          border-bottom: ${borderBottom ? '1px solid #000' : 'none'};
-          border-left: ${borderLeft && !borderWholeBill ? '1px solid #000' : 'none'};
-          border-right: ${borderRight && !borderWholeBill ? '1px solid #000' : 'none'};
+          border-top: ${borderTop ? `${gridThickness}px solid #000` : 'none'};
+          border-bottom: ${borderBottom ? `${gridThickness}px solid #000` : 'none'};
+          border-left: ${borderLeft && !borderWholeBill ? `${gridThickness}px solid #000` : 'none'};
+          border-right: ${borderRight && !borderWholeBill ? `${gridThickness}px solid #000` : 'none'};
         }
         .a5-table th, .a5-table td {
           border: none;
-          ${borderInnerH ? 'border-top: 1px solid #000; border-bottom: 1px solid #000;' : ''}
-          ${borderInnerV ? 'border-left: 1px solid #000; border-right: 1px solid #000;' : ''}
+          ${borderInnerH ? `border-top: ${gridThickness}px solid #000; border-bottom: ${gridThickness}px solid #000;` : ''}
+          ${borderInnerV ? `border-left: ${gridThickness}px solid #000; border-right: ${gridThickness}px solid #000;` : ''}
           padding: 6px 4px;
         }
         /* Reset outer borders so inner ones don't bleed */
@@ -276,14 +278,14 @@ export function printBillReceipt(
         .a5-table tr:last-child td { border-bottom: none; }
         
         .a5-table th {
-          font-weight: bold;
+          font-weight: ${headerBold ? 'bold' : 'normal'};
           text-align: center;
           background-color: #f9fafb;
-          border-bottom: 2px solid #000 !important;
+          border-bottom: ${Math.max(2, gridThickness)}px solid #000 !important;
         }
 
         .receipt-outer-wrapper {
-          border: ${borderWholeBill ? '2px solid #000' : 'none'};
+          border: ${borderWholeBill ? `${gridThickness}px solid #000` : 'none'};
           padding: ${borderWholeBill ? outerBorderPadding + 'px' : '0'};
           margin: ${borderWholeBill ? outerBorderMargin + 'px' : '0'};
           box-sizing: border-box;
@@ -333,7 +335,7 @@ export function printBillReceipt(
       <div class="receipt-outer-wrapper">
       ${sharedHeader}
       ${isGridFormat ? `
-        <div style="display: flex; justify-content: space-between; border-top: ${borderTop ? '1px solid #000' : 'none'}; border-bottom: none; border-left: ${borderLeft && !borderWholeBill ? '1px solid #000' : 'none'}; border-right: ${borderRight && !borderWholeBill ? '1px solid #000' : 'none'}; padding: 10px ${borderWholeBill ? outerBorderPadding + 10 : 10}px; margin: 0 ${borderWholeBill ? -outerBorderPadding : 0}px; margin-bottom: 0;">
+        <div style="display: flex; justify-content: space-between; border-top: ${borderTop ? `${gridThickness}px solid #000` : 'none'}; border-bottom: none; border-left: ${borderLeft && !borderWholeBill ? `${gridThickness}px solid #000` : 'none'}; border-right: ${borderRight && !borderWholeBill ? `${gridThickness}px solid #000` : 'none'}; padding: 10px ${borderWholeBill ? outerBorderPadding + 10 : 10}px; margin: 0 ${borderWholeBill ? -outerBorderPadding : 0}px; margin-bottom: 0;">
           <div>
             <strong>M/s ${bill.customers?.name || 'Walk-in Customer'}</strong>
             <br/>ADD. ${bill.customers?.address || 'N/A'}
@@ -398,9 +400,9 @@ export function printBillReceipt(
             </tr>
           `).join('')}
           <tr>
-            <td colspan="${showCaseCol ? '5' : '4'}" style="border-right: none; border-bottom: none; border-top: 1px solid #000;"></td>
-            <td style="text-align: right; border-left: none; padding-right: 10px; border-top: 1px solid #000;">Subtotal:</td>
-            <td style="text-align: right; border-top: 1px solid #000;">${currencySymbol}${Number(bill.subtotal).toFixed(2)}</td>
+            <td colspan="${showCaseCol ? '5' : '4'}" style="border-right: none; border-bottom: none; border-top: ${gridThickness}px solid #000;"></td>
+            <td style="text-align: right; border-left: none; padding-right: 10px; border-top: ${gridThickness}px solid #000;">Subtotal:</td>
+            <td style="text-align: right; border-top: ${gridThickness}px solid #000;">${currencySymbol}${Number(bill.subtotal).toFixed(2)}</td>
           </tr>
           ${Number(bill.tax_amount) > 0 ? `
             <tr>

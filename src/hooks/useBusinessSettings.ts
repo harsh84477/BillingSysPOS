@@ -42,6 +42,8 @@ export interface BusinessSettings {
   invoice_title?: string;
   invoice_title_align?: 'left' | 'center' | 'right';
   invoice_contact_separate_lines?: boolean;
+  invoice_column_headers_bold?: boolean;
+  invoice_grid_thickness?: number;
   invoice_border_top?: boolean;
   invoice_border_bottom?: boolean;
   invoice_border_left?: boolean;

@@ -69,6 +69,9 @@ export default function InvoicesTab() {
                     <SettingRow label="Vertical Row Lines (Columns)" right={<Toggle on={settings?.invoice_border_inner_v ?? true} onChange={(v) => u({ invoice_border_inner_v: v })} disabled={!isAdmin} />} />
                     <SettingRow label="Horizontal Row Lines" right={<Toggle on={settings?.invoice_border_inner_h ?? true} onChange={(v) => u({ invoice_border_inner_h: v })} disabled={!isAdmin} />} />
                     <SettingRow label="Outer Bill Border" right={<Toggle on={settings?.invoice_border_whole_bill ?? false} onChange={(v) => u({ invoice_border_whole_bill: v })} disabled={!isAdmin} />} />
+                    <SettingRow label="Grid Lines Thickness" desc="Thickness in pixels"
+                        right={<Counter value={(settings as any)?.invoice_grid_thickness ?? 1} min={1} max={5} onChange={(v) => u({ invoice_grid_thickness: v })} disabled={!isAdmin} />}
+                    />
 
                     {settings?.invoice_border_whole_bill && <>
                         <SectionLabel text="Spacing" />
@@ -131,6 +134,9 @@ export default function InvoicesTab() {
                         right={<Counter value={settings?.invoice_spacing || 4} min={1} max={8} onChange={(v) => u({ invoice_spacing: v })} disabled={!isAdmin} />}
                     />
                     <SectionLabel text="Column Visibility" />
+                    <SettingRow label="Bold Column Headers" desc="Make headers like ITEM DESCRIPTION bold"
+                        right={<Toggle on={(settings as any)?.invoice_column_headers_bold ?? true} onChange={(v) => u({ invoice_column_headers_bold: v })} disabled={!isAdmin} />}
+                    />
                     <SettingRow label="Show Item Price Breakdown" desc="Show price × quantity line"
                         right={<Toggle on={settings?.invoice_show_item_price === true} onChange={(v) => u({ invoice_show_item_price: v })} disabled={!isAdmin} />}
                     />
