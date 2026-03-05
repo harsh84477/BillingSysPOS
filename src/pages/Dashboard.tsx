@@ -32,38 +32,46 @@ import DraftBillModal from '@/components/bills/DraftBillModal';
 import { useExpenseTracking } from '@/hooks/useBillingSystem';
 import { Wallet, Smartphone, CreditCard, Plus, UserPlus, Sun, Moon, Sunrise, Sunset } from 'lucide-react';
 
-function StatCard({
+type KPIColor = 'blue' | 'green' | 'amber' | 'red';
+
+function KPICard({
   title,
   value,
   icon: Icon,
   description,
   isLoading,
+  color = 'blue',
+  index = 0,
 }: {
   title: string;
   value: string | number;
   icon: React.ElementType;
   description?: string;
   isLoading?: boolean;
+  color?: KPIColor;
+  index?: number;
 }) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-8 w-24" />
-        ) : (
-          <>
-            <div className="text-xl sm:text-2xl font-bold truncate">{value}</div>
-            {description && (
-              <p className="text-xs text-muted-foreground truncate">{description}</p>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+    <div
+      className="spos-kpi"
+      style={{ animationDelay: `${index * 0.04}s` }}
+    >
+      <div className={`spos-kpi-bar spos-kpi-bar--${color}`} />
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div className="spos-kpi-label">{title}</div>
+        <div className={`spos-icon-wrap spos-icon-wrap--${color}`}>
+          <Icon style={{ width: 15, height: 15, strokeWidth: 2 }} />
+        </div>
+      </div>
+      {isLoading ? (
+        <Skeleton className="h-7 w-24 mt-1.5" />
+      ) : (
+        <>
+          <div className="spos-kpi-value">{value}</div>
+          {description && <div className="spos-kpi-footer">{description}</div>}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -389,16 +397,16 @@ export default function Dashboard() {
   const displayName = user?.email?.split('@')[0] || 'User';
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
       {/* Greeting Header + Quick Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
+          <h1 className="spos-page-heading" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>{greeting.emoji}</span>
-            {greeting.text}, <span className="text-primary capitalize">{displayName}</span>
+            {greeting.text}, <span style={{ color: 'var(--spos-accent)', textTransform: 'capitalize' }}>{displayName}</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="spos-page-subhead" style={{ marginBottom: 0 }}>
             Here's what's happening with your business today
           </p>
         </div>
@@ -420,93 +428,27 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
-        <StatCard
-          title="Today's Sales"
-          value={`${currencySymbol}${todaySales?.toFixed(2) || '0.00'}`}
-          icon={DollarSign}
-          description="Total sales today"
-          isLoading={loadingTodaySales}
-        />
-        <StatCard
-          title="Monthly Sales"
-          value={`${currencySymbol}${monthlyRevenue?.toFixed(2) || '0.00'}`}
-          icon={TrendingUp}
-          description={format(today, 'MMMM yyyy')}
-          isLoading={loadingMonthly}
-        />
-        <StatCard
-          title="Profit Today"
-          value={`${currencySymbol}${(todayProfit || 0).toFixed(2)}`}
-          icon={TrendingUp}
-          description="Revenue minus cost"
-          isLoading={loadingTodayProfit}
-        />
-        <StatCard
-          title="Cash Collection"
-          value={`${currencySymbol}${(profitSummary?.cash_collection || 0).toFixed(2)}`}
-          icon={Wallet}
-          description="This month (Cash)"
-          isLoading={isSummaryLoading}
-        />
-        <StatCard
-          title="Online Collection"
-          value={`${currencySymbol}${(profitSummary?.online_collection || 0).toFixed(2)}`}
-          icon={Smartphone}
-          description="This month (UPI/Card)"
-          isLoading={isSummaryLoading}
-        />
-        <StatCard
-          title="Draft Bills"
-          value={pendingBills}
-          icon={ShoppingCart}
-          description="Total pending drafts"
-          isLoading={loadingPending}
-        />
-        <StatCard
-          title="Reserved Units"
-          value={totalReserved}
-          icon={Package}
-          description="Locked in drafts"
-          isLoading={loadingReserved}
-        />
-        <StatCard
-          title="Total Due Amount"
-          value={`${currencySymbol}${(dueStats?.totalDue || 0).toFixed(2)}`}
-          icon={AlertTriangle}
-          description="Outstanding balance"
-          isLoading={loadingDue}
-        />
-        <StatCard
-          title="Unpaid Bills"
-          value={dueStats?.unpaidCount || 0}
-          icon={ShoppingCart}
-          description="Pending payment"
-          isLoading={loadingDue}
-        />
-        <StatCard
-          title="Overdue Bills"
-          value={dueStats?.overdueCount || 0}
-          icon={AlertTriangle}
-          description="Past due date"
-          isLoading={loadingDue}
-        />
-        <StatCard
-          title="Low Stock Items"
-          value={lowStockProducts?.length || 0}
-          icon={Package}
-          description="Products to restock"
-          isLoading={loadingLowStock}
-        />
-        <StatCard
-          title="Draft Orders"
-          value={draftBills.length}
-          icon={ShoppingCart}
-          description={isSalesman ? 'Your draft orders' : 'Pending salesman orders'}
-          isLoading={loadingDrafts}
-        />
+      {/* ── Today's Performance ── */}
+      <div className="spos-section-label">Today's Performance</div>
+      <div className="spos-kpi-grid">
+        <KPICard title="Today's Sales" value={`${currencySymbol}${todaySales?.toFixed(2) || '0.00'}`} icon={DollarSign} description="Total sales today" isLoading={loadingTodaySales} color="green" index={0} />
+        <KPICard title="Profit Today" value={`${currencySymbol}${(todayProfit || 0).toFixed(2)}`} icon={TrendingUp} description="Revenue minus cost" isLoading={loadingTodayProfit} color="green" index={1} />
+        <KPICard title="Cash Collection" value={`${currencySymbol}${(profitSummary?.cash_collection || 0).toFixed(2)}`} icon={Wallet} description="This month (Cash)" isLoading={isSummaryLoading} color="blue" index={2} />
+        <KPICard title="Online Collection" value={`${currencySymbol}${(profitSummary?.online_collection || 0).toFixed(2)}`} icon={Smartphone} description="This month (UPI/Card)" isLoading={isSummaryLoading} color="blue" index={3} />
+      </div>
 
+      {/* ── Operations ── */}
+      <div className="spos-section-label" style={{ marginTop: 20 }}>Operations</div>
+      <div className="spos-kpi-grid">
+        <KPICard title="Monthly Sales" value={`${currencySymbol}${monthlyRevenue?.toFixed(2) || '0.00'}`} icon={TrendingUp} description={format(today, 'MMMM yyyy')} isLoading={loadingMonthly} color="blue" index={4} />
+        <KPICard title="Total Due Amount" value={`${currencySymbol}${(dueStats?.totalDue || 0).toFixed(2)}`} icon={AlertTriangle} description="Outstanding balance" isLoading={loadingDue} color="amber" index={5} />
+        <KPICard title="Draft Bills" value={pendingBills} icon={ShoppingCart} description="Total pending drafts" isLoading={loadingPending} color="amber" index={6} />
+        {(dueStats?.overdueCount || 0) > 0 && (
+          <KPICard title="Overdue Bills" value={dueStats?.overdueCount || 0} icon={AlertTriangle} description="Past due date" isLoading={loadingDue} color="red" index={7} />
+        )}
+        {(lowStockProducts?.length || 0) > 0 && (
+          <KPICard title="Low Stock Items" value={lowStockProducts?.length || 0} icon={Package} description="Products to restock" isLoading={loadingLowStock} color="red" index={8} />
+        )}
       </div>
 
       {/* Monthly Expense Report */}

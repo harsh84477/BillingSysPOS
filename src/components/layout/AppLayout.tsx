@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTheme, ThemeName, themes } from '@/contexts/ThemeContext';
-import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
@@ -18,11 +16,6 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -36,99 +29,115 @@ import {
   Settings,
   LogOut,
   Menu,
-  ChevronDown,
-  Palette,
-  User,
   FileText,
   FolderOpen,
-  PanelLeftClose,
-  PanelLeft,
   AlertCircle,
   BarChart2,
-  Building2,
-  ChevronsUpDown,
   Activity,
   Receipt,
+  Search,
+  ChevronRight,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { OfflineSyncStatus, SubscriptionBanner } from '@/components/sync/SyncAndSubscriptionStatus';
 import { CommandPalette, CommandPaletteTrigger } from '@/components/ui/CommandPalette';
+import { format } from 'date-fns';
 
-const allNavigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier', 'salesman'] },
-  { name: 'New Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier'] },
-  { name: 'Quick Bill', href: '/salesman-billing', icon: ShoppingCart, roles: ['salesman'] },
-  { name: 'Draft Bills', href: '/draft-bills', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'] },
-  { name: 'Bills History', href: '/bills-history', icon: Receipt, roles: ['owner', 'manager', 'cashier', 'salesman'] },
-  { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'] },
-  { name: 'Products', href: '/products', icon: Package, roles: ['owner', 'manager'] },
-  { name: 'Expenses', href: '/expenses', icon: BarChart2, roles: ['owner', 'manager'] },
-  { name: 'Activity Log', href: '/activity-logs', icon: Activity, roles: ['owner', 'manager'] },
-  { name: 'Categories', href: '/categories', icon: FolderOpen, roles: ['owner', 'manager'] },
-  { name: 'Customers', href: '/customers', icon: Users, roles: ['owner', 'manager'] },
-  { name: 'Settings', href: '/settings', icon: Settings, roles: ['owner', 'manager'] },
+// ═══════════════════════════════════════════════
+// Navigation Structure (per design spec section 7)
+// ═══════════════════════════════════════════════
+
+interface NavSection {
+  label: string;
+  items: NavItemDef[];
+}
+
+interface NavItemDef {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  roles: string[];
+  badgeKey?: string; // if set, shows a badge
+}
+
+const navSections: NavSection[] = [
+  {
+    label: 'MAIN',
+    items: [
+      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+    ],
+  },
+  {
+    label: 'BILLING',
+    items: [
+      { name: 'New Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier'] },
+      { name: 'Quick Bill', href: '/salesman-billing', icon: ShoppingCart, roles: ['salesman'] },
+      { name: 'Draft Bills', href: '/draft-bills', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'], badgeKey: 'drafts' },
+      { name: 'Bills History', href: '/bills-history', icon: Receipt, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+      { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'], badgeKey: 'due' },
+    ],
+  },
+  {
+    label: 'INVENTORY',
+    items: [
+      { name: 'Products', href: '/products', icon: Package, roles: ['owner', 'manager'] },
+      { name: 'Categories', href: '/categories', icon: FolderOpen, roles: ['owner', 'manager'] },
+    ],
+  },
+  {
+    label: 'FINANCE',
+    items: [
+      { name: 'Expenses', href: '/expenses', icon: BarChart2, roles: ['owner', 'manager'] },
+      { name: 'Activity Log', href: '/activity-logs', icon: Activity, roles: ['owner', 'manager'] },
+    ],
+  },
+  {
+    label: 'CRM',
+    items: [
+      { name: 'Customers', href: '/customers', icon: Users, roles: ['owner', 'manager'] },
+    ],
+  },
 ];
 
-const allMobileNavItems = [
+const settingsItem: NavItemDef = { name: 'Settings', href: '/settings', icon: Settings, roles: ['owner', 'manager'] };
+
+const mobileNavItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier', 'salesman'] },
   { name: 'Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier'] },
   { name: 'Bill', href: '/salesman-billing', icon: ShoppingCart, roles: ['salesman'] },
   { name: 'Due', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'] },
   { name: 'History', href: '/bills-history', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'] },
-  { name: 'Exp', href: '/expenses', icon: Receipt, roles: ['owner', 'manager'] },
-  { name: 'Logs', href: '/activity-logs', icon: Activity, roles: ['owner', 'manager'] },
   { name: 'More', href: '/settings', icon: Settings, roles: ['owner', 'manager'] },
 ];
 
-const themeOptions: { name: string; value: ThemeName }[] = [
-  { name: 'Mint Pro', value: 'mint-pro' },
-  { name: 'Sunset Orange', value: 'sunset-orange' },
-  { name: 'Royal Purple', value: 'royal-purple' },
-  { name: 'Ocean Blue', value: 'ocean-blue' },
-  { name: 'Dark Pro', value: 'dark-pro' },
-];
+// ═══════════════════════════════════════════════
+// Page title map for breadcrumbs
+// ═══════════════════════════════════════════════
+const pageTitleMap: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/billing': 'New Bill',
+  '/salesman-billing': 'Quick Bill',
+  '/draft-bills': 'Draft Bills',
+  '/bills-history': 'Bills History',
+  '/due-bills': 'Due Bills',
+  '/products': 'Products',
+  '/categories': 'Categories',
+  '/expenses': 'Expenses',
+  '/activity-logs': 'Activity Log',
+  '/customers': 'Customers',
+  '/settings': 'Settings',
+};
 
-function NavItem({ item, isActive, collapsed }: { item: typeof allNavigation[0]; isActive: boolean; collapsed: boolean }) {
-  const content = (
-    <Link
-      to={item.href}
-      className={cn(
-        'flex items-center gap-3 rounded-lg transition-colors',
-        collapsed ? 'justify-center p-2' : 'px-3 py-2 text-sm font-medium',
-        isActive
-          ? 'bg-primary text-primary-foreground'
-          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-      )}
-    >
-      <item.icon className="h-5 w-5 shrink-0" />
-      {!collapsed && item.name}
-    </Link>
-  );
-
-  if (collapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="right">{item.name}</TooltipContent>
-      </Tooltip>
-    );
-  }
-  return content;
-}
-
+// ═══════════════════════════════════════════════
+// AppLayout Component
+// ═══════════════════════════════════════════════
 export default function AppLayout() {
-  const { user, signOut, userRole, businessId, isSuperAdmin, superAdminLogout, subscription } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { user, signOut, userRole, businessId, isSuperAdmin, superAdminLogout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [infoModal, setInfoModal] = useState<{ open: boolean; title: string; content: React.ReactNode } | null>(null);
-
-  const businessName = (subscription as any)?.plan?.name
-    ? undefined
-    : undefined; // will come from auth context if exposed
 
   const handleSignOut = async () => {
     if (!user && isSuperAdmin) {
@@ -142,316 +151,192 @@ export default function AppLayout() {
 
   const roleLabel = isSuperAdmin ? 'Super Admin' : (userRole === 'owner' ? 'Owner' : (userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'User'));
   const displayName = user?.email?.split('@')[0] || (isSuperAdmin ? 'Admin' : 'User');
+  const currentPageTitle = pageTitleMap[location.pathname] || 'Dashboard';
+  const isBillingPage = location.pathname === '/billing' || location.pathname === '/salesman-billing';
 
-  // Filter nav items by role
-  const navigation = allNavigation.filter(item => !userRole || item.roles.includes(userRole));
-  const mobileNavItems = allMobileNavItems.filter(item => !userRole || item.roles.includes(userRole));
-  // Auto-collapse sidebar on tablet-sized screens
-  const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
-  const effectiveCollapsed = sidebarCollapsed || isTablet;
+  // Filter sections by role
+  const filteredSections = navSections
+    .map(section => ({
+      ...section,
+      items: section.items.filter(item => !userRole || item.roles.includes(userRole)),
+    }))
+    .filter(section => section.items.length > 0);
+
+  const showSettings = !userRole || settingsItem.roles.includes(userRole);
+  const filteredMobileNav = mobileNavItems.filter(item => !userRole || item.roles.includes(userRole));
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      {/* ── Desktop/Tablet Sidebar ── */}
-      <aside className={cn(
-        'hidden flex-shrink-0 border-r border-border bg-card md:flex flex-col transition-all duration-300 shadow-sm z-30',
-        effectiveCollapsed ? 'w-16' : 'w-60'
-      )}>
-        {/* Brand + collapse */}
-        <div className={cn(
-          'flex items-center h-12 border-b border-border transition-all',
-          sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-4',
-          isTablet && 'justify-center px-0'
-        )}>
-          {!effectiveCollapsed && (
-            <div className="flex items-center gap-2 overflow-hidden">
-              <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm flex-shrink-0">
-                SP
-              </div>
-              <span className="font-bold text-base tracking-tight whitespace-nowrap truncate">Smart POS</span>
-            </div>
-          )}
-          {!isTablet && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="h-8 w-8 flex-shrink-0"
-            >
-              {sidebarCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-            </Button>
-          )}
+    <div>
+      {/* ════════════════════════════════════
+          SIDEBAR (desktop/tablet)
+          ════════════════════════════════════ */}
+      <aside className="spos-sidebar">
+        {/* Logo Block */}
+        <div className="spos-sidebar-logo">
+          <div className="spos-sidebar-logo-mark">SP</div>
+          <div>
+            <div className="spos-sidebar-logo-text">Smart POS</div>
+            <div className="spos-sidebar-logo-tagline">Business Management</div>
+          </div>
         </div>
 
-        {/* Search */}
-        <div className={cn('px-2 pb-1', effectiveCollapsed ? 'px-1' : '')}>
-          <CommandPaletteTrigger collapsed={effectiveCollapsed} />
-        </div>
-
-        {/* Navigation */}
-        <nav className={cn('flex-1 overflow-y-auto py-3 space-y-0.5 custom-scrollbar', effectiveCollapsed ? 'px-1' : 'px-2')}>
-          {navigation.map((item) => (
-            <NavItem
-              key={item.name}
-              item={item}
-              isActive={location.pathname === item.href}
-              collapsed={effectiveCollapsed}
-            />
+        {/* Navigation Sections */}
+        <nav className="flex-1 overflow-y-auto py-2 custom-scrollbar">
+          {filteredSections.map((section, sIdx) => (
+            <React.Fragment key={section.label}>
+              {sIdx > 0 && <div className="spos-sidebar-divider" />}
+              <div className="spos-sidebar-section-label">{section.label}</div>
+              {section.items.map(item => (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  className={cn('spos-sidebar-nav-item', location.pathname === item.href && 'active')}
+                >
+                  <item.icon />
+                  <span>{item.name}</span>
+                </Link>
+              ))}
+            </React.Fragment>
           ))}
+
+          {/* Settings always at end */}
+          {showSettings && (
+            <>
+              <div className="spos-sidebar-divider" />
+              <Link
+                to="/settings"
+                className={cn('spos-sidebar-nav-item', location.pathname === '/settings' && 'active')}
+              >
+                <Settings />
+                <span>Settings</span>
+              </Link>
+            </>
+          )}
         </nav>
 
-        {/* ── BOTTOM: User Profile + Theme ── */}
-        <div className={cn('border-t border-border p-2 space-y-1', effectiveCollapsed ? 'px-1' : '')}>
-          {/* Theme picker */}
-          {effectiveCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="w-full">
-                      <Palette className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" side="right" className="w-48">
-                    {themeOptions.map((opt) => (
-                      <DropdownMenuItem key={opt.value} onClick={() => setTheme(opt.value)} className={cn(theme === opt.value && 'bg-accent')}>
-                        <span className="mr-2 h-3 w-3 rounded-full inline-block" style={{ backgroundColor: `hsl(${themes[opt.value].primary})` }} />
-                        {opt.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TooltipTrigger>
-              <TooltipContent side="right">Theme</TooltipContent>
-            </Tooltip>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start gap-2 h-8 px-3 text-sm">
-                  <Palette className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">Theme</span>
-                  <ChevronDown className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                {themeOptions.map((opt) => (
-                  <DropdownMenuItem key={opt.value} onClick={() => setTheme(opt.value)} className={cn(theme === opt.value && 'bg-accent')}>
-                    <span className="mr-2 h-3 w-3 rounded-full inline-block" style={{ backgroundColor: `hsl(${themes[opt.value].primary})` }} />
-                    {opt.name}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-
-          {/* User Profile Block */}
-          {effectiveCollapsed ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  className="w-full flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-                >
-                  <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold uppercase">
-                    {displayName[0]}
-                  </div>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" side="right" className="w-56">
-                <div className="px-3 py-2 border-b">
-                  <p className="text-sm font-semibold truncate">{displayName}</p>
-                  <p className="text-[11px] text-muted-foreground capitalize">{roleLabel}</p>
-                </div>
-                <DropdownMenuItem onClick={() => setInfoModal({
-                  open: true,
-                  title: "Technical Support",
-                  content: (
-                    <div className="space-y-4 pt-4">
-                      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                        <AlertCircle className="h-5 w-5 text-primary" />
-                        <div>
-                          <p className="text-sm font-bold">Email Support</p>
-                          <p className="text-xs text-muted-foreground">support@smartpos.com</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                        <Activity className="h-5 w-5 text-primary" />
-                        <div>
-                          <p className="text-sm font-bold">Priority Whatsapp</p>
-                          <p className="text-xs text-muted-foreground">+91 98765 43210</p>
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-center text-muted-foreground">Available 24/7 for Premium Subscribers</p>
-                    </div>
-                  )
-                })}>
-                  <AlertCircle className="mr-2 h-4 w-4" />
-                  Technical Support
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setInfoModal({
-                  open: true,
-                  title: "Eleanor Say",
-                  content: (
-                    <div className="space-y-4 pt-4">
-                      <div className="text-center">
-                        <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Building2 className="h-8 w-8" />
-                        </div>
-                        <h3 className="text-lg font-black tracking-tight">Eleanor Pro Edition</h3>
-                        <p className="text-xs text-muted-foreground">Version 2.5.4 (Build 2026.02)</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 mt-4 text-[10px]">
-                        <div className="p-2 border rounded text-center">Multi-Tenant Core</div>
-                        <div className="p-2 border rounded text-center">Advanced Stock v2</div>
-                        <div className="p-2 border rounded text-center">Credit Engine</div>
-                        <div className="p-2 border rounded text-center">Offline Sync Pro</div>
-                      </div>
-                    </div>
-                  )
-                })}>
-                  <Building2 className="mr-2 h-4 w-4" />
-                  Eleanor Say
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/40 border border-border cursor-pointer hover:bg-muted/60 transition-colors">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold uppercase flex-shrink-0">
-                    {displayName[0]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{displayName}</p>
-                    <p className="text-[11px] text-muted-foreground capitalize">{roleLabel}</p>
-                  </div>
-                  <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => setInfoModal({
-                  open: true,
-                  title: "Technical Support",
-                  content: (
-                    <div className="space-y-4 pt-4">
-                      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                        <AlertCircle className="h-5 w-5 text-primary" />
-                        <div>
-                          <p className="text-sm font-bold">Email Support</p>
-                          <p className="text-xs text-muted-foreground">support@smartpos.com</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-                        <Activity className="h-5 w-5 text-primary" />
-                        <div>
-                          <p className="text-sm font-bold">Priority Whatsapp</p>
-                          <p className="text-xs text-muted-foreground">+91 98765 43210</p>
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-center text-muted-foreground">Available 24/7 for Premium Subscribers</p>
-                    </div>
-                  )
-                })}>
-                  <AlertCircle className="mr-2 h-4 w-4" />
-                  Technical Support
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setInfoModal({
-                  open: true,
-                  title: "Eleanor Say",
-                  content: (
-                    <div className="space-y-4 pt-4">
-                      <div className="text-center">
-                        <div className="h-16 w-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Building2 className="h-8 w-8" />
-                        </div>
-                        <h3 className="text-lg font-black tracking-tight">Eleanor Pro Edition</h3>
-                        <p className="text-xs text-muted-foreground">Version 2.5.4 (Build 2026.02)</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 mt-4 text-[10px]">
-                        <div className="p-2 border rounded text-center">Multi-Tenant Core</div>
-                        <div className="p-2 border rounded text-center">Advanced Stock v2</div>
-                        <div className="p-2 border rounded text-center">Credit Engine</div>
-                        <div className="p-2 border rounded text-center">Offline Sync Pro</div>
-                      </div>
-                    </div>
-                  )
-                })}>
-                  <Building2 className="mr-2 h-4 w-4" />
-                  Eleanor Say
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
+        {/* User Block */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="spos-sidebar-user">
+              <div className="spos-sidebar-avatar">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="spos-sidebar-username truncate">{displayName}</div>
+                <div className="spos-sidebar-role">{roleLabel}</div>
+              </div>
+              <ChevronsUpDown style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.3)' }} />
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-48">
+            <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </aside>
 
-      {/* ── Main Area ── */}
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden relative">
-        {/* Header — visible only on mobile (below md) */}
-        <header className="sticky top-0 z-40 flex h-12 flex-shrink-0 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 shadow-sm md:hidden">
-          {/* Mobile menu */}
+      {/* ════════════════════════════════════
+          MAIN AREA
+          ════════════════════════════════════ */}
+      <div className="spos-main">
+        {/* Topbar (hidden on billing page for max space) */}
+        {!isBillingPage && (
+          <div className="spos-topbar hidden md:flex">
+            {/* Left side: Breadcrumb + Date */}
+            <div className="flex items-center gap-4">
+              <div className="spos-breadcrumb">
+                <span>Smart POS</span>
+                <ChevronRight className="h-3 w-3 spos-breadcrumb-sep" />
+                <span className="spos-breadcrumb-current">{currentPageTitle}</span>
+              </div>
+              <div className="spos-date-chip">
+                {format(new Date(), 'dd MMM yyyy')}
+              </div>
+            </div>
+
+            {/* Right side: Search trigger + actions */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}
+                className="flex items-center gap-2 px-3 py-1.5 rounded border border-[var(--spos-border)] bg-[var(--spos-bg)] text-[var(--spos-text-sub)] text-sm hover:border-[var(--spos-border-dark)] transition-colors"
+              >
+                <Search className="h-3.5 w-3.5" />
+                <span className="text-xs">Search…</span>
+                <kbd className="text-[10px] font-mono bg-white border border-[var(--spos-border)] rounded px-1.5 py-0.5">⌘K</kbd>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Header (below md) */}
+        <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-white px-4 md:hidden"
+          style={{ borderColor: 'var(--spos-border)' }}
+        >
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0 flex flex-col">
-              <SheetHeader className="p-4 border-b border-border">
-                <SheetTitle className="text-lg font-bold">Smart POS</SheetTitle>
+            <SheetContent side="left" className="w-[260px] p-0" style={{ background: 'var(--spos-navy)' }}>
+              <SheetHeader className="sr-only">
+                <SheetTitle>Navigation Menu</SheetTitle>
               </SheetHeader>
-              <nav className="flex flex-col gap-1 p-2 mt-2 flex-1 overflow-y-auto">
-                {navigation.map((item) => (
-                  <NavItem key={item.name} item={item} isActive={location.pathname === item.href} collapsed={false} />
-                ))}
-              </nav>
-              {/* User profile & sign out (tablet Sheet) */}
-              <div className="border-t border-border p-3 space-y-2">
-                <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-muted/40 border border-border">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold uppercase flex-shrink-0">
-                    {displayName[0]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{displayName}</p>
-                    <p className="text-[11px] text-muted-foreground capitalize">{roleLabel}</p>
-                  </div>
+              {/* Mobile sidebar content */}
+              <div className="spos-sidebar-logo">
+                <div className="spos-sidebar-logo-mark">SP</div>
+                <div>
+                  <div className="spos-sidebar-logo-text">Smart POS</div>
+                  <div className="spos-sidebar-logo-tagline">Business Management</div>
                 </div>
-                <Button variant="ghost" className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleSignOut}>
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </Button>
               </div>
+              <nav className="flex-1 overflow-y-auto py-2">
+                {filteredSections.map((section, sIdx) => (
+                  <React.Fragment key={section.label}>
+                    {sIdx > 0 && <div className="spos-sidebar-divider" />}
+                    <div className="spos-sidebar-section-label">{section.label}</div>
+                    {section.items.map(item => (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        className={cn('spos-sidebar-nav-item', location.pathname === item.href && 'active')}
+                      >
+                        <item.icon />
+                        <span>{item.name}</span>
+                      </Link>
+                    ))}
+                  </React.Fragment>
+                ))}
+                {showSettings && (
+                  <>
+                    <div className="spos-sidebar-divider" />
+                    <Link to="/settings" className={cn('spos-sidebar-nav-item', location.pathname === '/settings' && 'active')}>
+                      <Settings />
+                      <span>Settings</span>
+                    </Link>
+                  </>
+                )}
+              </nav>
             </SheetContent>
           </Sheet>
 
-          {/* App title on mobile */}
-          <span className="font-bold text-base sm:hidden text-primary">Smart POS</span>
+          <span className="font-semibold text-sm" style={{ color: 'var(--spos-text)', fontFamily: 'var(--spos-sans)' }}>
+            {currentPageTitle}
+          </span>
 
-          <div className="flex-1" />
-
-          {/* Right side spacer */}
-
-          {/* Mobile/Tablet: user avatar + sign-out dropdown */}
-          <div className="md:hidden">
+          <div className="ml-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold uppercase">
-                  {displayName[0]}
+                <button className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold uppercase"
+                  style={{ background: 'var(--spos-accent-lt)', color: 'var(--spos-accent)' }}
+                >
+                  {displayName.charAt(0)}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <div className="px-3 py-2 border-b">
-                  <p className="text-sm font-semibold truncate">{displayName}</p>
-                  <p className="text-[11px] text-muted-foreground capitalize">{roleLabel}</p>
-                </div>
-                <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
                 </DropdownMenuItem>
@@ -462,15 +347,19 @@ export default function AppLayout() {
 
         {/* Main Content */}
         <main className={cn(
-          'flex-1 relative z-0 flex flex-col',
-          location.pathname === '/billing'
+          'flex-1 flex flex-col',
+          isBillingPage
             ? 'overflow-hidden p-0'
-            : 'overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-20 sm:pb-6 bg-muted/20 custom-scrollbar'
+            : 'overflow-y-auto custom-scrollbar'
         )}>
-          <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-            <SubscriptionBanner businessId={businessId || ''} />
+          {!isBillingPage && (
+            <div style={{ maxWidth: '1400px', width: '100%', margin: '0 auto' }}>
+              <SubscriptionBanner businessId={businessId || ''} />
+            </div>
+          )}
+          <div className={cn(isBillingPage ? '' : 'spos-content')}>
+            <Outlet />
           </div>
-          <Outlet />
           <OfflineSyncStatus businessId={businessId || ''} userId={user?.id || ''} />
         </main>
 
@@ -478,40 +367,45 @@ export default function AppLayout() {
         <CommandPalette userRole={userRole || undefined} />
 
         {/* Mobile Bottom Navigation */}
-        <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-bottom">
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 safe-area-bottom"
+          style={{ background: 'var(--spos-white)', borderTop: '1px solid var(--spos-border)' }}
+        >
           <div className="flex items-center justify-around h-16">
-            {mobileNavItems.map((item) => {
+            {filteredMobileNav.map((item) => {
               const isActive = location.pathname === item.href;
               return (
                 <Link
-                  key={item.name}
+                  key={item.name + item.href}
                   to={item.href}
-                  className={cn(
-                    'relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-xs font-medium transition-colors',
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  )}
+                  className="relative flex flex-col items-center justify-center gap-0.5 flex-1 h-full"
+                  style={{
+                    color: isActive ? 'var(--spos-accent)' : 'var(--spos-text-faint)',
+                    fontSize: '10px', fontWeight: isActive ? 600 : 400,
+                    fontFamily: 'var(--spos-sans)',
+                  }}
                 >
-                  <item.icon className={cn('h-5 w-5', isActive ? 'text-primary' : 'text-muted-foreground')} />
-                  <span className={cn('text-[10px]', isActive ? 'text-primary font-semibold' : '')}>{item.name}</span>
-                  {isActive && <span className="absolute bottom-0 h-0.5 w-8 bg-primary rounded-t-full" />}
+                  <item.icon style={{ width: 20, height: 20, strokeWidth: isActive ? 2.2 : 1.8 }} />
+                  <span>{item.name}</span>
+                  {isActive && (
+                    <span className="absolute bottom-0 h-0.5 w-8 rounded-t-full" style={{ background: 'var(--spos-accent)' }} />
+                  )}
                 </Link>
               );
             })}
           </div>
         </nav>
+
         {/* Info Dialog */}
         <Dialog open={!!infoModal} onOpenChange={(open) => !open && setInfoModal(null)}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>{infoModal?.title}</DialogTitle>
-              <DialogDescription>
-                System Information & Support
-              </DialogDescription>
+              <DialogDescription>System Information & Support</DialogDescription>
             </DialogHeader>
             {infoModal?.content}
           </DialogContent>
         </Dialog>
       </div>
-    </div >
+    </div>
   );
 }
