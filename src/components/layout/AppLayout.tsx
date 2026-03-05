@@ -347,19 +347,19 @@ export default function AppLayout() {
 
         {/* Main Content */}
         <main className={cn(
-          'flex-1 flex flex-col',
+          'flex-1 relative z-0 flex flex-col',
           isBillingPage
             ? 'overflow-hidden p-0'
-            : 'overflow-y-auto custom-scrollbar'
-        )}>
+            : 'overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-20 sm:pb-6 custom-scrollbar'
+        )}
+          style={!isBillingPage ? { background: 'var(--spos-bg)' } : undefined}
+        >
           {!isBillingPage && (
-            <div style={{ maxWidth: '1400px', width: '100%', margin: '0 auto' }}>
+            <div className="max-w-7xl mx-auto w-full px-0 sm:px-2">
               <SubscriptionBanner businessId={businessId || ''} />
             </div>
           )}
-          <div className={cn(isBillingPage ? '' : 'spos-content')}>
-            <Outlet />
-          </div>
+          <Outlet />
           <OfflineSyncStatus businessId={businessId || ''} userId={user?.id || ''} />
         </main>
 
