@@ -51,11 +51,11 @@ export default function DraftBills() {
     );
 
     return (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Draft Bills</h1>
-                    <p className="text-muted-foreground">Manage and finalize your pending orders.</p>
+                    <h1 className="spos-page-heading">Draft Bills</h1>
+                    <p className="spos-page-subhead" style={{ marginBottom: 0 }}>Manage and finalize your pending orders.</p>
                 </div>
             </div>
 

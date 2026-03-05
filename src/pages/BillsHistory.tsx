@@ -337,7 +337,7 @@ export default function BillsHistory() {
   };
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* SaaS History Limit Alert */}
       {!canViewFullHistory && (isTrial || !isActive) && (
         <Alert className="bg-muted/50 border-dashed animate-in fade-in slide-in-from-top-4">
@@ -355,8 +355,8 @@ export default function BillsHistory() {
 
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Bills History</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">View all your past bills and invoices</p>
+          <h1 className="spos-page-heading">Bills History</h1>
+          <p className="spos-page-subhead" style={{ marginBottom: 0 }}>View all your past bills and invoices</p>
         </div>
         <Button
           onClick={handleExportExcel}

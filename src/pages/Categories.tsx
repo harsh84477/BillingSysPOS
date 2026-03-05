@@ -184,11 +184,11 @@ export default function Categories() {
   const emptyCategories = categories.filter(c => !productCounts[c.id]).length;
 
   return (
-    <div className="space-y-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Categories</h1>
-          <p className="text-muted-foreground">Organize your products into categories</p>
+          <h1 className="spos-page-heading">Categories</h1>
+          <p className="spos-page-subhead" style={{ marginBottom: 0 }}>Organize your products into categories</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={handleExportExcel} variant="outline">

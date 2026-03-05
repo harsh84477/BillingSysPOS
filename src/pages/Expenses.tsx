@@ -8,10 +8,10 @@ export default function Expenses() {
     if (!businessId) return null;
 
     return (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Expense Management</h1>
-                <p className="text-sm text-muted-foreground">
+                <h1 className="spos-page-heading">Expense Management</h1>
+                <p className="spos-page-subhead">
                     Track business expenses and monitor overall profitability.
                 </p>
             </div>

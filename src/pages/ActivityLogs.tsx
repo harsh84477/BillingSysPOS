@@ -8,10 +8,10 @@ export default function ActivityLogsPage() {
     if (!businessId) return null;
 
     return (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Activity Audit Log</h1>
-                <p className="text-sm text-muted-foreground">
+                <h1 className="spos-page-heading">Activity Audit Log</h1>
+                <p className="spos-page-subhead">
                     Detailed history of all actions performed by users in the system.
                 </p>
             </div>

@@ -272,11 +272,11 @@ export default function Customers() {
     }
   };
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Customers</h1>
-          <p className="text-muted-foreground">Manage your customer database</p>
+          <h1 className="spos-page-heading">Customers</h1>
+          <p className="spos-page-subhead" style={{ marginBottom: 0 }}>Manage your customer database</p>
         </div>
 
         <div className="flex gap-2">

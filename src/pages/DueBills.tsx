@@ -112,42 +112,32 @@ export default function DueBills() {
     const overdueCount = dueBills.filter((b: any) => b.due_date && isPast(parseISO(b.due_date))).length;
 
     return (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Header */}
             <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
-                    <AlertCircle className="h-6 w-6 text-destructive" />
+                <h1 className="spos-page-heading" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     Due Bills
                 </h1>
-                <p className="text-muted-foreground text-sm mt-0.5">Manage unpaid & partially paid bills</p>
+                <p className="spos-page-subhead">Manage unpaid & partially paid bills</p>
             </div>
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                <Card>
-                    <CardHeader className="pb-1">
-                        <CardTitle className="text-xs text-muted-foreground uppercase tracking-wide">Total Due</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-black text-destructive">{currencySymbol}{totalDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="pb-1">
-                        <CardTitle className="text-xs text-muted-foreground uppercase tracking-wide">Unpaid Bills</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-2xl font-black">{dueBills.length}</p>
-                    </CardContent>
-                </Card>
-                <Card className={cn(overdueCount > 0 && 'border-red-400 bg-red-50 dark:bg-red-950/20')}>
-                    <CardHeader className="pb-1">
-                        <CardTitle className="text-xs text-muted-foreground uppercase tracking-wide">Overdue</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p className={cn('text-2xl font-black', overdueCount > 0 ? 'text-red-600' : '')}>{overdueCount}</p>
-                    </CardContent>
-                </Card>
+            <div className="spos-kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                <div className="spos-kpi" style={{ animationDelay: '0s' }}>
+                    <div className="spos-kpi-bar spos-kpi-bar--red" />
+                    <div className="spos-kpi-label">Total Due</div>
+                    <div className="spos-kpi-value" style={{ color: 'var(--spos-red-val)' }}>{currencySymbol}{totalDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+                </div>
+                <div className="spos-kpi" style={{ animationDelay: '0.04s' }}>
+                    <div className="spos-kpi-bar spos-kpi-bar--amber" />
+                    <div className="spos-kpi-label">Unpaid Bills</div>
+                    <div className="spos-kpi-value">{dueBills.length}</div>
+                </div>
+                <div className="spos-kpi" style={{ animationDelay: '0.08s' }}>
+                    <div className="spos-kpi-bar spos-kpi-bar--red" />
+                    <div className="spos-kpi-label">Overdue</div>
+                    <div className="spos-kpi-value" style={{ color: overdueCount > 0 ? 'var(--spos-red-val)' : undefined }}>{overdueCount}</div>
+                </div>
             </div>
 
             {/* Search */}

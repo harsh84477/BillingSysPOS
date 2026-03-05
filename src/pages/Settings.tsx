@@ -147,11 +147,11 @@ export default function Settings() {
   const visibleTabs = isAdmin ? TABS : TABS.filter(t => t.id !== 'staff');
 
   return (
-    <div className="space-y-6 font-sans">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, fontFamily: 'var(--spos-sans)' }}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">Manage your business configuration</p>
+          <h1 className="spos-page-heading">Settings</h1>
+          <p className="spos-page-subhead" style={{ marginBottom: 0 }}>Manage your business configuration</p>
         </div>
       </div>
 
