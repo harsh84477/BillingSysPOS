@@ -825,7 +825,7 @@ export default function Billing() {
   });
 
   return (
-    <div className="flex flex-1 gap-0 w-full overflow-hidden relative">
+    <div className="flex gap-0 w-full h-[calc(100dvh-3.5rem)] md:h-[100dvh] overflow-hidden relative bg-background">
       {/* Left Panel - Categories */}
       <div className="hidden lg:flex w-52 flex-shrink-0 flex-col border-r border-border bg-card">
         <ScrollArea className="flex-1 p-2">
@@ -987,7 +987,8 @@ export default function Billing() {
       <div
         className={cn(
           'relative hidden md:flex flex-col border-l border-border bg-card transition-all duration-300',
-          isCartExpanded ? 'w-80 lg:w-96' : 'w-12'
+          isCartExpanded ? 'w-80 lg:w-96' : 'w-12',
+          'overflow-hidden'
         )}
       >
         {/* Collapse/Expand Button */}
