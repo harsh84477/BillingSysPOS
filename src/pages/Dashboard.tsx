@@ -124,18 +124,60 @@ export default function Dashboard() {
     },
   });
 
-  // Fetch monthly revenue
-  const { data: monthlyRevenue, isLoading: loadingMonthly } = useQuery({
-    queryKey: ['monthlyRevenue'],
+  // Fetch monthly stats (Sales, Profit, Orders)
+  const { data: monthlyStats, isLoading: loadingMonthlyStats } = useQuery({
+    queryKey: ['monthlyStats'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bills')
-        .select('total_amount')
+        .select('total_amount, profit')
         .eq('status', 'completed')
         .gte('completed_at', startOfThisMonth.toISOString());
 
       if (error) throw error;
-      return data?.reduce((sum, bill) => sum + Number(bill.total_amount), 0) || 0;
+      const bills = (data || []) as any[];
+      return {
+        revenue: bills.reduce((sum, bill) => sum + Number(bill.total_amount || 0), 0),
+        profit: bills.reduce((sum, bill) => sum + Number(bill.profit || 0), 0),
+        orders: bills.length,
+      };
+    },
+  });
+
+  // Fetch today's orders
+  const { data: todayOrders, isLoading: loadingTodayOrders } = useQuery({
+    queryKey: ['todayOrders'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('bills')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'completed')
+        .gte('completed_at', startOfToday.toISOString());
+
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
+  // Fetch today's payments (cash vs online)
+  const { data: todayPayments, isLoading: loadingTodayPayments } = useQuery({
+    queryKey: ['todayPayments'],
+    queryFn: async () => {
+      const { data, error } = await (supabase
+        .from('bill_payments' as any)
+        .select('amount, payment_mode')
+        .gte('created_at', startOfToday.toISOString()) as any);
+
+      let cash = 0;
+      let online = 0;
+
+      if (!error && data) {
+        (data as any[]).forEach(p => {
+          if (p.payment_mode === 'cash') cash += Number(p.amount || 0);
+          else online += Number(p.amount || 0);
+        });
+      }
+      return { cash, online };
     },
   });
 
@@ -445,26 +487,31 @@ export default function Dashboard() {
       {/* ── Today's Performance ── */}
       <div className="spos-section-label">Today's Performance</div>
       <div className="spos-kpi-grid">
-        <KPICard title="Today's Sales" value={`${currencySymbol}${todaySales?.toFixed(2) || '0.00'}`} icon={DollarSign} description="Total sales today" isLoading={loadingTodaySales} color="green" index={0} />
-        <KPICard title="Profit Today" value={`${currencySymbol}${(todayProfit || 0).toFixed(2)}`} icon={TrendingUp} description="Revenue minus cost" isLoading={loadingTodayProfit} color="green" index={1} />
-        <KPICard title="Cash Collection" value={`${currencySymbol}${(profitSummary?.cash_collection || 0).toFixed(2)}`} icon={Wallet} description="This month (Cash)" isLoading={isSummaryLoading} color="blue" index={2} />
-        <KPICard title="Online Collection" value={`${currencySymbol}${(profitSummary?.online_collection || 0).toFixed(2)}`} icon={Smartphone} description="This month (UPI/Card)" isLoading={isSummaryLoading} color="blue" index={3} />
+        <KPICard title="Today's Sales" value={`${currencySymbol}${todaySales?.toFixed(2) || '0.00'}`} icon={DollarSign} description="Total sales amount today" isLoading={loadingTodaySales} color="green" index={0} />
+        <KPICard title="Today's Profit" value={`${currencySymbol}${(todayProfit || 0).toFixed(2)}`} icon={TrendingUp} description="Profit earned today" isLoading={loadingTodayProfit} color="green" index={1} />
+        <KPICard title="Today's Cash Collection" value={`${currencySymbol}${(todayPayments?.cash || 0).toFixed(2)}`} icon={Wallet} description="Cash payments received today" isLoading={loadingTodayPayments} color="blue" index={2} />
+        <KPICard title="Today's Online Collection" value={`${currencySymbol}${(todayPayments?.online || 0).toFixed(2)}`} icon={Smartphone} description="UPI/Card payments today" isLoading={loadingTodayPayments} color="blue" index={3} />
+        <KPICard title="Today's Orders" value={todayOrders || 0} icon={ShoppingCart} description="Total bills created today" isLoading={loadingTodayOrders} color="blue" index={4} />
       </div>
 
-      {/* ── Operations & Overview ── */}
-      <div className="spos-section-label" style={{ marginTop: 20 }}>Overview & Operations</div>
+      {/* ── Monthly Performance ── */}
+      <div className="spos-section-label" style={{ marginTop: 24 }}>Monthly Performance</div>
       <div className="spos-kpi-grid">
-        <KPICard title="Monthly Sales" value={`${currencySymbol}${monthlyRevenue?.toFixed(2) || '0.00'}`} icon={TrendingUp} description={format(today, 'MMMM yyyy')} isLoading={loadingMonthly} color="green" index={4} />
-        <KPICard title="Total Orders" value={monthlyTotals.orderCount || 0} icon={ShoppingCart} description={`Orders in ${format(today, 'MMM')}`} isLoading={loadingExpense} color="blue" index={5} />
-        <KPICard title="Total Customers" value={customerCount || 0} icon={Users} description="Registered customers" isLoading={loadingCustomers} color="blue" index={6} />
-        <KPICard title="Inventory Value" value={`${currencySymbol}${(inventoryValue || 0).toFixed(2)}`} icon={Package} description="Value of current stock" isLoading={loadingInventoryValue} color="amber" index={7} />
-        <KPICard title="Total Due Amount" value={`${currencySymbol}${(dueStats?.totalDue || 0).toFixed(2)}`} icon={AlertTriangle} description="Outstanding balance" isLoading={loadingDue} color="amber" index={8} />
-        <KPICard title="Draft Bills" value={pendingBills} icon={ShoppingCart} description="Total pending drafts" isLoading={loadingPending} color="amber" index={9} />
+        <KPICard title="Monthly Sales" value={`${currencySymbol}${(monthlyStats?.revenue || 0).toFixed(2)}`} icon={TrendingUp} description="Total sales this month" isLoading={loadingMonthlyStats} color="green" index={0} />
+        <KPICard title="Monthly Profit" value={`${currencySymbol}${(monthlyStats?.profit || 0).toFixed(2)}`} icon={DollarSign} description="Profit this month" isLoading={loadingMonthlyStats} color="green" index={1} />
+        <KPICard title="Monthly Orders" value={monthlyStats?.orders || 0} icon={ShoppingCart} description="Number of invoices created this month" isLoading={loadingMonthlyStats} color="blue" index={2} />
+      </div>
+
+      {/* ── Overall Operations ── */}
+      <div className="spos-section-label" style={{ marginTop: 24 }}>Overall Operations</div>
+      <div className="spos-kpi-grid">
+        <KPICard title="Total Customers" value={customerCount || 0} icon={Users} description="Total registered customers" isLoading={loadingCustomers} color="blue" index={0} />
+        <KPICard title="Inventory Value" value={`${currencySymbol}${(inventoryValue || 0).toFixed(2)}`} icon={Package} description="Total value of stock" isLoading={loadingInventoryValue} color="amber" index={1} />
+        <KPICard title="Total Due Amount" value={`${currencySymbol}${(dueStats?.totalDue || 0).toFixed(2)}`} icon={AlertTriangle} description="Outstanding payments" isLoading={loadingDue} color="amber" index={2} />
+        <KPICard title="Draft Bills" value={pendingBills} icon={ShoppingCart} description="Bills saved but not finalized" isLoading={loadingPending} color="amber" index={3} />
+        <KPICard title="Low Stock Items" value={lowStockProducts?.length || 0} icon={Package} description="Products below minimum stock" isLoading={loadingLowStock} color="red" index={4} />
         {(dueStats?.overdueCount || 0) > 0 && (
-          <KPICard title="Overdue Bills" value={dueStats?.overdueCount || 0} icon={AlertTriangle} description="Past due date" isLoading={loadingDue} color="red" index={10} />
-        )}
-        {(lowStockProducts?.length || 0) > 0 && (
-          <KPICard title="Low Stock Items" value={lowStockProducts?.length || 0} icon={Package} description="Products to restock" isLoading={loadingLowStock} color="red" index={11} />
+          <KPICard title="Overdue Bills" value={dueStats?.overdueCount || 0} icon={AlertTriangle} description="Past due date" isLoading={loadingDue} color="red" index={5} />
         )}
       </div>
 
