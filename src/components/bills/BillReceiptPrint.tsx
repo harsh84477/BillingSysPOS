@@ -99,11 +99,12 @@ export function printBillReceipt(
   const qrPosition = (settings as any)?.invoice_qr_position || 'bottom-center';
   const qrSizeSetting = (settings as any)?.invoice_qr_size || 'medium';
 
-  const getStyleObj = (settingStr: string = '') => {
+  const getStyleObj = (settingStr: string | null | undefined = '') => {
+    const str = settingStr || '';
     return [
-      settingStr.includes('bold') ? 'font-weight: bold;' : '',
-      settingStr.includes('italic') ? 'font-style: italic;' : '',
-      settingStr.includes('underline') ? 'text-decoration: underline;' : ''
+      str.includes('bold') ? 'font-weight: bold;' : '',
+      str.includes('italic') ? 'font-style: italic;' : '',
+      str.includes('underline') ? 'text-decoration: underline;' : ''
     ].join(' ');
   };
 
