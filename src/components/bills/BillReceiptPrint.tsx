@@ -158,20 +158,35 @@ export function printBillReceipt(
   const contactSeparateLines = (settings as any)?.invoice_contact_separate_lines || false;
 
   const sharedHeader = `
-    <div class="header" style="text-align: ${headerAlign}; position: relative; min-height: ${(qrPosition === 'top-right' || qrPosition === 'top-left') && generatedQR ? qrSize + 20 : 0}px; border-bottom: none; padding-bottom: 5px;">
-      ${(qrPosition === 'top-left' && generatedQR) ? `<div style="position: absolute; left: 0; top: 0;">${generatedQR}</div>` : ''}
-      ${(qrPosition === 'top-right' && generatedQR) ? `<div style="position: absolute; right: 0; top: 0;">${generatedQR}</div>` : ''}
-      <div style="${(qrPosition === 'top-left' && generatedQR) ? `padding-left: ${qrSize + 20}px;` : ''} ${(qrPosition === 'top-right' && generatedQR) ? `padding-right: ${qrSize + 20}px;` : ''}">
-        ${invoiceTitle ? `<div class="business-name" style="text-align: ${titleAlign}; font-size: ${isGridFormat ? fontSize + 8 : fontSize + 4}px; text-transform: uppercase; text-decoration: ${isGridFormat ? 'underline' : 'none'}; margin-bottom: ${isGridFormat ? '15px' : '8px'};">${invoiceTitle}</div>` : ''}
-        ${(qrPosition === 'below-title' && generatedQR) ? `<div style="margin: 6px 0 10px 0; display: flex; justify-content: center;">${generatedQR}</div>` : ''}
-        <div class="business-name-main" style="font-size: ${fontSize + 6}px; margin-bottom: 5px; color: ${style === 'modern' ? '#3b82f6' : '#000'}; ${bsNameStyle}">${settings?.business_name || 'Business'}</div>
-        ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''} ${addressStyle}">${settings.address}</div>` : ''}
-        <div class="business-info" style="${isGridFormat && !contactSeparateLines ? 'margin-top: 4px;' : 'margin-top: 4px; line-height: 1.6;'}">
-          ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<span style="${phoneStyle}">${isGridFormat ? 'Mobile' : 'Tel'}: ${settings.phone}</span>` : ''}
-          ${settings?.invoice_show_business_phone !== false && settings?.phone && settings?.invoice_show_business_email !== false && settings?.email ? (contactSeparateLines ? '<br/>' : (isGridFormat ? ' | ' : '<br/>')) : ''}
-          ${settings?.invoice_show_business_email !== false && settings?.email ? `<span style="${emailStyle}">${isGridFormat ? 'Email' : 'Email'}: ${settings.email}</span>` : ''}
+    <div class="header" style="border-bottom: none; padding-bottom: 5px;">
+      
+      <!-- Row 1: Document Title -->
+      ${invoiceTitle ? `
+        <div style="width: 100%; margin-bottom: ${isGridFormat ? '15px' : '8px'};">
+          <div class="business-name" style="text-align: ${titleAlign}; font-size: ${isGridFormat ? fontSize + 8 : fontSize + 4}px; text-transform: uppercase; text-decoration: ${isGridFormat ? 'underline' : 'none'}; margin: 0;">${invoiceTitle}</div>
         </div>
-        ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''} ${gstNumStyle}">GSTIN: ${settings.gst_number}</div>` : ''}
+      ` : ''}
+
+      ${(qrPosition === 'below-title' && generatedQR) ? `<div style="margin: 6px 0 10px 0; display: flex; justify-content: center;">${generatedQR}</div>` : ''}
+
+      <!-- Row 2: Business Details & Top QR -->
+      <div style="display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start; gap: 15px;">
+        
+        ${(qrPosition === 'top-left' && generatedQR) ? `<div style="flex-shrink: 0;">${generatedQR}</div>` : ''}
+        
+        <div style="flex: 1; text-align: ${headerAlign}; min-width: 0;">
+          <div class="business-name-main" style="font-size: ${fontSize + 6}px; margin-bottom: 5px; color: ${style === 'modern' ? '#3b82f6' : '#000'}; ${bsNameStyle}">${settings?.business_name || 'Business'}</div>
+          ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''} ${addressStyle}">${settings.address}</div>` : ''}
+          <div class="business-info" style="${isGridFormat && !contactSeparateLines ? 'margin-top: 4px;' : 'margin-top: 4px; line-height: 1.6;'}">
+            ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<span style="${phoneStyle}">${isGridFormat ? 'Mobile' : 'Tel'}: ${settings.phone}</span>` : ''}
+            ${settings?.invoice_show_business_phone !== false && settings?.phone && settings?.invoice_show_business_email !== false && settings?.email ? (contactSeparateLines ? '<br/>' : (isGridFormat ? ' | ' : '<br/>')) : ''}
+            ${settings?.invoice_show_business_email !== false && settings?.email ? `<span style="${emailStyle}">${isGridFormat ? 'Email' : 'Email'}: ${settings.email}</span>` : ''}
+          </div>
+          ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''} ${gstNumStyle}">GSTIN: ${settings.gst_number}</div>` : ''}
+        </div>
+
+        ${(qrPosition === 'top-right' && generatedQR) ? `<div style="flex-shrink: 0;">${generatedQR}</div>` : ''}
+        
       </div>
     </div>
   `;
