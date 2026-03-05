@@ -147,32 +147,21 @@ export default function Settings() {
   const visibleTabs = isAdmin ? TABS : TABS.filter(t => t.id !== 'staff');
 
   return (
-    <div style={{ fontFamily: T.font, margin: '-16px -16px 0', }}>
-      {/* Page Header — sticky inside main scroll */}
-      <div style={{
-        background: T.color.cardBg, padding: '24px 28px 0',
-        borderBottom: `1px solid ${T.color.border}`, position: 'sticky', top: 0, zIndex: 10,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-      }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
-            <div style={{
-              width: '38px', height: '38px', borderRadius: '10px', display: 'flex',
-              alignItems: 'center', justifyContent: 'center', fontSize: '20px',
-              background: `${T.color.accent}10`,
-            }}>⚙️</div>
-            <div>
-              <h1 style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.025em', color: '#0f172a', margin: 0, lineHeight: 1.2 }}>Settings</h1>
-              <p style={{ fontSize: '12px', color: '#94a3b8', margin: 0 }}>Manage your business configuration</p>
-            </div>
-          </div>
-          <TabBar tabs={visibleTabs} active={activeTab} onSelect={handleTabChange} />
+    <div className="space-y-6 font-sans">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <p className="text-muted-foreground">Manage your business configuration</p>
         </div>
       </div>
 
+      <div className="w-full overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
+        <TabBar tabs={visibleTabs} active={activeTab} onSelect={handleTabChange} />
+      </div>
+
       {/* Content */}
-      <div style={{ padding: '24px 28px 40px' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      <div className="pb-10">
+        <div className="max-w-[1100px] mx-auto">
 
           {/* ═══ BUSINESS ═══ */}
           {activeTab === 'business' && (
