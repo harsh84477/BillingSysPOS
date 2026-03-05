@@ -10,7 +10,7 @@ export default function ActivityLogsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Activity Audit Log</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Activity Audit Log</h1>
                 <p className="text-sm text-muted-foreground">
                     Detailed history of all actions performed by users in the system.
                 </p>

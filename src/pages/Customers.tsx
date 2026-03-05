@@ -6,6 +6,7 @@ import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -274,7 +275,7 @@ export default function Customers() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Customers</h1>
           <p className="text-muted-foreground">Manage your customer database</p>
         </div>
 
@@ -555,10 +556,11 @@ export default function Customers() {
               </Table>
             </div>
           ) : (
-            <div className="flex h-40 items-center justify-center text-muted-foreground">
-              <Users className="mr-2 h-5 w-5" />
-              No customers found
-            </div>
+            <EmptyState
+              icon="customers"
+              title="No customers found"
+              description="Add your first customer to start tracking orders."
+            />
           )}
         </CardContent>
       </Card>

@@ -196,15 +196,17 @@ export function TextInput({ value, defaultValue, placeholder, hint, onBlur, onCh
 }
 
 /* ═══ TextArea ═══ */
-export function TextArea({ defaultValue, placeholder, onBlur, disabled, id, name, rows }: {
-    defaultValue?: string; placeholder?: string; onBlur?: (e: React.FocusEvent<HTMLTextAreaElement>) => void;
+export function TextArea({ value, defaultValue, placeholder, onBlur, onChange, disabled, id, name, rows }: {
+    value?: string; defaultValue?: string; placeholder?: string;
+    onBlur?: (e: React.FocusEvent<HTMLTextAreaElement>) => void;
+    onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
     disabled?: boolean; id?: string; name?: string; rows?: number;
 }) {
     const [focused, setFocused] = useState(false);
     return (
-        <textarea id={id} name={name} defaultValue={defaultValue} placeholder={placeholder} rows={rows || 3}
+        <textarea id={id} name={name} value={value} defaultValue={defaultValue} placeholder={placeholder} rows={rows || 3}
             onFocus={() => setFocused(true)} onBlur={(e) => { setFocused(false); onBlur?.(e); }}
-            disabled={disabled}
+            onChange={onChange} disabled={disabled}
             style={{
                 width: '100%', padding: '9px 13px', fontSize: '13px', borderRadius: T.radius.input,
                 border: `1.5px solid ${focused ? T.color.borderFocus : T.color.border}`,

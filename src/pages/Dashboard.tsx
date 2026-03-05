@@ -30,7 +30,7 @@ import { exportToExcel } from '@/lib/exportToExcel';
 import { cn } from '@/lib/utils';
 import DraftBillModal from '@/components/bills/DraftBillModal';
 import { useExpenseTracking } from '@/hooks/useBillingSystem';
-import { Wallet, Smartphone, CreditCard } from 'lucide-react';
+import { Wallet, Smartphone, CreditCard, Plus, UserPlus, Sun, Moon, Sunrise, Sunset } from 'lucide-react';
 
 function StatCard({
   title,
@@ -377,8 +377,48 @@ export default function Dashboard() {
     toast.success('Monthly report exported');
   };
 
+  // Greeting logic
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return { text: 'Good Morning', icon: Sunrise, emoji: '☀️' };
+    if (hour >= 12 && hour < 17) return { text: 'Good Afternoon', icon: Sun, emoji: '🌤️' };
+    if (hour >= 17 && hour < 21) return { text: 'Good Evening', icon: Sunset, emoji: '🌅' };
+    return { text: 'Good Night', icon: Moon, emoji: '🌙' };
+  };
+  const greeting = getGreeting();
+  const displayName = user?.email?.split('@')[0] || 'User';
+
   return (
-    <div className="space-y-4 -mt-4 sm:-mt-6">
+    <div className="space-y-4">
+
+      {/* Greeting Header + Quick Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <span>{greeting.emoji}</span>
+            {greeting.text}, <span className="text-primary capitalize">{displayName}</span>
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Here's what's happening with your business today
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" onClick={() => navigate('/billing')} className="gap-1.5">
+            <Plus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">New Bill</span>
+            <span className="sm:hidden">Bill</span>
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/products')} className="gap-1.5">
+            <Package className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Add Product</span>
+            <span className="sm:hidden">Product</span>
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/customers')} className="gap-1.5 hidden sm:flex">
+            <UserPlus className="h-3.5 w-3.5" />
+            Add Customer
+          </Button>
+        </div>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState, TableSkeleton } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -114,7 +115,7 @@ export default function DueBills() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
                     <AlertCircle className="h-6 w-6 text-destructive" />
                     Due Bills
                 </h1>
@@ -164,12 +165,13 @@ export default function DueBills() {
             <Card>
                 <CardContent className="p-0">
                     {isLoading ? (
-                        <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">Loading...</div>
+                        <TableSkeleton columns={5} rows={4} />
                     ) : filtered.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-40 text-muted-foreground gap-2">
-                            <CheckCircle2 className="h-10 w-10 opacity-20" />
-                            <p className="text-sm font-medium">No due bills{search && ' matching search'}!</p>
-                        </div>
+                        <EmptyState
+                            icon="alert"
+                            title={search ? 'No due bills matching search' : 'No due bills!'}
+                            description="All bills are paid. Great job!"
+                        />
                     ) : (
                         <div className="overflow-x-auto">
                             <Table>

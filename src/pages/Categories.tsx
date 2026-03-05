@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState, TableSkeleton } from '@/components/ui/EmptyState';
 import {
   Table,
   TableBody,
@@ -186,7 +187,7 @@ export default function Categories() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Categories</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Categories</h1>
           <p className="text-muted-foreground">Organize your products into categories</p>
         </div>
         <div className="flex gap-2">
@@ -351,14 +352,13 @@ export default function Categories() {
       <Card>
         <CardContent>
           {isLoading ? (
-            <div className="flex h-40 items-center justify-center text-muted-foreground">
-              Loading categories...
-            </div>
+            <TableSkeleton columns={4} rows={5} />
           ) : filteredCategories.length === 0 ? (
-            <div className="flex h-40 flex-col items-center justify-center text-muted-foreground">
-              <FolderOpen className="mb-2 h-8 w-8" />
-              No categories found
-            </div>
+            <EmptyState
+              icon="categories"
+              title="No categories found"
+              description="Create your first category to organize products."
+            />
           ) : (
             <Table>
               <TableHeader>

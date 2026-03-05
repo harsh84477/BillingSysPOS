@@ -54,6 +54,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { OfflineSyncStatus, SubscriptionBanner } from '@/components/sync/SyncAndSubscriptionStatus';
+import { CommandPalette, CommandPaletteTrigger } from '@/components/ui/CommandPalette';
 
 const allNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier', 'salesman'] },
@@ -145,20 +146,24 @@ export default function AppLayout() {
   // Filter nav items by role
   const navigation = allNavigation.filter(item => !userRole || item.roles.includes(userRole));
   const mobileNavItems = allMobileNavItems.filter(item => !userRole || item.roles.includes(userRole));
+  // Auto-collapse sidebar on tablet-sized screens
+  const isTablet = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024;
+  const effectiveCollapsed = sidebarCollapsed || isTablet;
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* ── Desktop Sidebar ── */}
+      {/* ── Desktop/Tablet Sidebar ── */}
       <aside className={cn(
-        'hidden flex-shrink-0 border-r border-border bg-card lg:flex flex-col transition-all duration-300 shadow-sm z-30',
-        sidebarCollapsed ? 'w-16' : 'w-60'
+        'hidden flex-shrink-0 border-r border-border bg-card md:flex flex-col transition-all duration-300 shadow-sm z-30',
+        effectiveCollapsed ? 'w-16' : 'w-60'
       )}>
         {/* Brand + collapse */}
         <div className={cn(
           'flex items-center h-12 border-b border-border transition-all',
-          sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-4'
+          sidebarCollapsed ? 'justify-center px-0' : 'justify-between px-4',
+          isTablet && 'justify-center px-0'
         )}>
-          {!sidebarCollapsed && (
+          {!effectiveCollapsed && (
             <div className="flex items-center gap-2 overflow-hidden">
               <div className="h-8 w-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm flex-shrink-0">
                 SP
@@ -166,32 +171,39 @@ export default function AppLayout() {
               <span className="font-bold text-base tracking-tight whitespace-nowrap truncate">Smart POS</span>
             </div>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="h-8 w-8 flex-shrink-0"
-          >
-            {sidebarCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-          </Button>
+          {!isTablet && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="h-8 w-8 flex-shrink-0"
+            >
+              {sidebarCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </Button>
+          )}
+        </div>
+
+        {/* Search */}
+        <div className={cn('px-2 pb-1', effectiveCollapsed ? 'px-1' : '')}>
+          <CommandPaletteTrigger collapsed={effectiveCollapsed} />
         </div>
 
         {/* Navigation */}
-        <nav className={cn('flex-1 overflow-y-auto py-3 space-y-0.5 custom-scrollbar', sidebarCollapsed ? 'px-1' : 'px-2')}>
+        <nav className={cn('flex-1 overflow-y-auto py-3 space-y-0.5 custom-scrollbar', effectiveCollapsed ? 'px-1' : 'px-2')}>
           {navigation.map((item) => (
             <NavItem
               key={item.name}
               item={item}
               isActive={location.pathname === item.href}
-              collapsed={sidebarCollapsed}
+              collapsed={effectiveCollapsed}
             />
           ))}
         </nav>
 
         {/* ── BOTTOM: User Profile + Theme ── */}
-        <div className={cn('border-t border-border p-2 space-y-1', sidebarCollapsed ? 'px-1' : '')}>
+        <div className={cn('border-t border-border p-2 space-y-1', effectiveCollapsed ? 'px-1' : '')}>
           {/* Theme picker */}
-          {sidebarCollapsed ? (
+          {effectiveCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <DropdownMenu>
@@ -233,7 +245,7 @@ export default function AppLayout() {
           )}
 
           {/* User Profile Block */}
-          {sidebarCollapsed ? (
+          {effectiveCollapsed ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -382,12 +394,12 @@ export default function AppLayout() {
 
       {/* ── Main Area ── */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden relative">
-        {/* Header — minimal, hidden on desktop to save space */}
-        <header className="sticky top-0 z-40 flex h-12 flex-shrink-0 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 lg:px-6 shadow-sm lg:hidden">
+        {/* Header — visible only on mobile (below md) */}
+        <header className="sticky top-0 z-40 flex h-12 flex-shrink-0 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 shadow-sm md:hidden">
           {/* Mobile menu */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="hidden sm:flex lg:hidden">
+              <Button variant="ghost" size="icon">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -427,7 +439,7 @@ export default function AppLayout() {
           {/* Right side spacer */}
 
           {/* Mobile/Tablet: user avatar + sign-out dropdown */}
-          <div className="lg:hidden">
+          <div className="md:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold uppercase">
@@ -461,6 +473,9 @@ export default function AppLayout() {
           <Outlet />
           <OfflineSyncStatus businessId={businessId || ''} userId={user?.id || ''} />
         </main>
+
+        {/* Command Palette */}
+        <CommandPalette userRole={userRole || undefined} />
 
         {/* Mobile Bottom Navigation */}
         <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border safe-area-bottom">
@@ -497,6 +512,6 @@ export default function AppLayout() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </div >
   );
 }

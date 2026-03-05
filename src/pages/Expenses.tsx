@@ -10,7 +10,7 @@ export default function Expenses() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary">Expense Management</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Expense Management</h1>
                 <p className="text-sm text-muted-foreground">
                     Track business expenses and monitor overall profitability.
                 </p>

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { EmptyState, TableSkeleton } from '@/components/ui/EmptyState';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertDialog,
@@ -526,14 +527,13 @@ export default function BillsHistory() {
       <Card>
         <CardContent className="pt-4 sm:pt-6">
           {isLoading ? (
-            <div className="flex h-40 items-center justify-center text-muted-foreground">
-              Loading bills...
-            </div>
+            <TableSkeleton columns={6} rows={5} />
           ) : filteredBills.length === 0 ? (
-            <div className="flex h-40 flex-col items-center justify-center text-muted-foreground">
-              <FileText className="mb-2 h-8 w-8" />
-              No bills found
-            </div>
+            <EmptyState
+              icon="bills"
+              title="No bills found"
+              description="Bills you complete will appear here."
+            />
           ) : (
             <ScrollArea className="h-[calc(100vh-26rem)] sm:h-[calc(100vh-24rem)]">
               {/* Mobile Card View */}

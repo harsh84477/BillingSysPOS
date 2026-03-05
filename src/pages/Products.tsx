@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   Table,
   TableBody,
@@ -290,7 +291,7 @@ export default function Products() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Products</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Products</h1>
           <p className="text-muted-foreground">Manage your product inventory</p>
         </div>
 
@@ -674,10 +675,11 @@ export default function Products() {
               </Table>
             </div>
           ) : (
-            <div className="flex h-40 items-center justify-center text-muted-foreground">
-              <Package className="mr-2 h-5 w-5" />
-              No products found
-            </div>
+            <EmptyState
+              icon="products"
+              title="No products found"
+              description="Add your first product to start managing inventory."
+            />
           )}
         </CardContent>
       </Card>

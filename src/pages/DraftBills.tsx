@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { EmptyState, TableSkeleton } from '@/components/ui/EmptyState';
 import {
     Table,
     TableBody,
@@ -53,7 +54,7 @@ export default function DraftBills() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Draft Bills</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Draft Bills</h1>
                     <p className="text-muted-foreground">Manage and finalize your pending orders.</p>
                 </div>
             </div>
@@ -96,14 +97,18 @@ export default function DraftBills() {
                             <TableBody>
                                 {isLoading ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center">
-                                            Loading draft bills...
+                                        <TableCell colSpan={6} className="p-0">
+                                            <TableSkeleton columns={6} rows={4} />
                                         </TableCell>
                                     </TableRow>
                                 ) : filteredBills.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                                            No draft bills found.
+                                        <TableCell colSpan={6} className="p-0">
+                                            <EmptyState
+                                                icon="drafts"
+                                                title="No draft bills found"
+                                                description="Draft bills created by your team will appear here."
+                                            />
                                         </TableCell>
                                     </TableRow>
                                 ) : (
