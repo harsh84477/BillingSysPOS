@@ -112,6 +112,18 @@ export function printBillReceipt(
   const discountStyle = getStyleObj((settings as any)?.invoice_discount_style);
   const gstStyle = getStyleObj((settings as any)?.invoice_gst_style);
 
+  // New text styles
+  const bsNameStyle = getStyleObj((settings as any)?.invoice_business_name_style || 'bold');
+  const addressStyle = getStyleObj((settings as any)?.invoice_address_style);
+  const phoneStyle = getStyleObj((settings as any)?.invoice_phone_style);
+  const emailStyle = getStyleObj((settings as any)?.invoice_email_style);
+  const gstNumStyle = getStyleObj((settings as any)?.invoice_gst_number_style);
+  const footerMsgStyle = getStyleObj((settings as any)?.invoice_footer_msg_style);
+  const termsStyle = getStyleObj((settings as any)?.invoice_terms_style);
+
+  const footerAlign = (settings as any)?.invoice_footer_align || 'center';
+  const footerSpacing = (settings as any)?.invoice_footer_spacing ?? 16;
+
   const widthStyle = paperWidth === '58mm' ? '240px' : (paperWidth === 'A4' || paperWidth === 'A5') ? '100%' : '380px';
   const maxWidthStyle = paperWidth === 'A4' ? '794px' : paperWidth === 'A5' ? '560px' : widthStyle;
 
@@ -123,17 +135,20 @@ export function printBillReceipt(
   else if (qrSizeSetting === 'large') qrSize = 140;
   if (!isGridFormat && qrSizeSetting === 'large') qrSize = 100; // Limit large size on small paper
 
+  const qrAlign = qrPosition.includes('left') ? 'flex-start' : qrPosition.includes('right') ? 'flex-end' : 'center';
+  const qrTextAlign = qrPosition.includes('left') ? 'left' : qrPosition.includes('right') ? 'right' : 'center';
+
   const generatedQR = (settings?.invoice_show_qr_code && settings?.upi_id) ? `
-    <div class="qr-container" style="margin: 0 auto; text-align: center;">
+    <div class="qr-container" style="display: flex; flex-direction: column; align-items: ${qrAlign}; text-align: ${qrTextAlign};">
       <img 
         src="https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`upi://pay?pa=${settings.upi_id}&pn=${settings.business_name || 'Business'}&am=${Number(bill.total_amount).toFixed(2)}&cu=INR`)}" 
         alt="Payment QR"
-        style="width: ${qrSize}px; height: ${qrSize}px; border: 1px solid #ccc; padding: 3px; display: block; margin: 0 auto;"
+        style="width: ${qrSize}px; height: ${qrSize}px; border: 1px solid #ccc; padding: 3px; display: block;"
       />
       <p style="font-size: 8px; color: #666; margin-top: 4px; line-height: 1;">Scan to Pay:<br/>${currencySymbol}${Number(bill.total_amount).toFixed(2)}</p>
     </div>
   ` : (settings?.invoice_show_qr_code ? `
-    <div class="qr-placeholder" style="margin: 0 auto; width: ${qrSize}px; height: ${qrSize}px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #999; text-align: center;">
+    <div class="qr-placeholder" style="width: ${qrSize}px; height: ${qrSize}px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #999; text-align: center;">
       UPI ID<br/>NOT SET
     </div>
   ` : '');
@@ -147,14 +162,15 @@ export function printBillReceipt(
       ${(qrPosition === 'top-right' && generatedQR) ? `<div style="position: absolute; right: 0; top: 0;">${generatedQR}</div>` : ''}
       <div style="${(qrPosition === 'top-left' && generatedQR) ? `padding-left: ${qrSize + 20}px;` : ''} ${(qrPosition === 'top-right' && generatedQR) ? `padding-right: ${qrSize + 20}px;` : ''}">
         ${invoiceTitle ? `<div class="business-name" style="text-align: ${titleAlign}; font-size: ${isGridFormat ? fontSize + 8 : fontSize + 4}px; text-transform: uppercase; text-decoration: ${isGridFormat ? 'underline' : 'none'}; margin-bottom: ${isGridFormat ? '15px' : '8px'};">${invoiceTitle}</div>` : ''}
-        <div class="business-name" style="font-size: ${fontSize + 6}px;">${settings?.business_name || 'Business'}</div>
-        ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''}">${settings.address}</div>` : ''}
+        ${(qrPosition === 'below-title' && generatedQR) ? `<div style="margin: 6px 0 10px 0; display: flex; justify-content: center;">${generatedQR}</div>` : ''}
+        <div class="business-name-main" style="font-size: ${fontSize + 6}px; margin-bottom: 5px; color: ${style === 'modern' ? '#3b82f6' : '#000'}; ${bsNameStyle}">${settings?.business_name || 'Business'}</div>
+        ${settings?.invoice_show_business_address !== false && settings?.address ? `<div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''} ${addressStyle}">${settings.address}</div>` : ''}
         <div class="business-info" style="${isGridFormat && !contactSeparateLines ? 'margin-top: 4px;' : 'margin-top: 4px; line-height: 1.6;'}">
-          ${settings?.invoice_show_business_phone !== false && settings?.phone ? `${isGridFormat ? 'Mobile' : 'Tel'}: ${settings.phone}` : ''}
+          ${settings?.invoice_show_business_phone !== false && settings?.phone ? `<span style="${phoneStyle}">${isGridFormat ? 'Mobile' : 'Tel'}: ${settings.phone}</span>` : ''}
           ${settings?.invoice_show_business_phone !== false && settings?.phone && settings?.invoice_show_business_email !== false && settings?.email ? (contactSeparateLines ? '<br/>' : (isGridFormat ? ' | ' : '<br/>')) : ''}
-          ${settings?.invoice_show_business_email !== false && settings?.email ? `${isGridFormat ? 'Email' : 'Email'}: ${settings.email}` : ''}
+          ${settings?.invoice_show_business_email !== false && settings?.email ? `<span style="${emailStyle}">${isGridFormat ? 'Email' : 'Email'}: ${settings.email}</span>` : ''}
         </div>
-        ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''}">GSTIN: ${settings.gst_number}</div>` : ''}
+        ${settings?.invoice_show_gst !== false && settings?.gst_number ? `<div class="business-info" style="${isGridFormat ? 'margin-top: 4px;' : ''} ${gstNumStyle}">GSTIN: ${settings.gst_number}</div>` : ''}
       </div>
     </div>
   `;
@@ -186,9 +202,7 @@ export function printBillReceipt(
           padding-bottom: 15px; 
         }
         .business-name { 
-          font-size: ${fontSize + 6}px; 
           font-weight: bold; 
-          margin-bottom: 5px; 
           color: ${style === 'modern' ? '#3b82f6' : '#000'};
         }
         .business-info { font-size: ${fontSize - 2}px; color: #4b5563; }
@@ -238,17 +252,17 @@ export function printBillReceipt(
         }
         
         .footer { 
-          text-align: ${headerAlign}; 
-          margin-top: 30px; 
+          text-align: ${footerAlign}; 
+          margin-top: ${footerSpacing}px; 
           padding-top: 15px; 
           border-top: ${showBorders ? '1px dashed #ccc' : 'none'}; 
         }
-        .footer-msg { font-size: ${footerFontSize}px; font-weight: 500; margin-bottom: 5px; }
+        .footer-msg { font-size: ${footerFontSize}px; font-weight: 500; margin-bottom: 5px; ${footerMsgStyle} }
         .footer-print-date { font-size: ${fontSize - 3}px; color: #6b7280; margin-top: 5px; }
-        .terms { font-size: ${fontSize - 3}px; color: #4b5563; margin-top: 15px; text-align: left; font-style: italic; }
+        .terms { font-size: ${fontSize - 3}px; color: #4b5563; margin-top: 15px; text-align: ${footerAlign}; ${termsStyle} }
         
         .qr-placeholder {
-          margin: 15px auto;
+          /* margin removed to obey flex positioning */
           width: ${qrSize}px;
           height: ${qrSize}px;
           border: 1px dashed #ccc;

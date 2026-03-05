@@ -59,6 +59,15 @@ export interface BusinessSettings {
   invoice_border_whole_bill?: boolean;
   invoice_margin?: number;
   invoice_padding?: number;
+  invoice_business_name_style?: string;
+  invoice_address_style?: string;
+  invoice_phone_style?: string;
+  invoice_email_style?: string;
+  invoice_gst_number_style?: string;
+  invoice_footer_msg_style?: string;
+  invoice_terms_style?: string;
+  invoice_footer_align?: 'left' | 'center' | 'right';
+  invoice_footer_spacing?: number;
   // Product grid display settings
   product_button_size?: 'small' | 'medium' | 'large' | 'xlarge';
   product_columns?: number;

@@ -57,22 +57,16 @@ export default function InvoicesTab() {
                             disabled={!isAdmin}
                         />
                     </div>
-                    <SettingRow label="Show Borders" desc="Toggle separation lines" noBorder
-                        right={<Toggle on={settings?.invoice_show_borders !== false} onChange={(v) => u({ invoice_show_borders: v })} disabled={!isAdmin} />}
-                    />
                 </SettingsCard>
 
                 {/* Grid Borders */}
                 <SettingsCard title="Grid Borders & Lines" subtitle="Customizable grid format spacing for A4/A5" icon="⊞" accent="#3b82f6">
-                    <SettingRow label="Top Border" right={<Toggle on={settings?.invoice_border_top ?? true} onChange={(v) => u({ invoice_border_top: v })} disabled={!isAdmin} />} />
-                    <SettingRow label="Bottom Border" right={<Toggle on={settings?.invoice_border_bottom ?? true} onChange={(v) => u({ invoice_border_bottom: v })} disabled={!isAdmin} />} />
-                    <SettingRow label="Left & Right Borders" right={<Toggle on={(settings?.invoice_border_left ?? true) && (settings?.invoice_border_right ?? true)} onChange={(v) => u({ invoice_border_left: v, invoice_border_right: v })} disabled={!isAdmin} />} />
+                    <SettingRow label="Outer Bill Border" desc="Master border around entire invoice" right={<Toggle on={settings?.invoice_border_whole_bill ?? false} onChange={(v) => u({ invoice_border_whole_bill: v })} disabled={!isAdmin} />} />
+                    <SettingRow label="Left & Right Borders" desc="Outer sides of table" right={<Toggle on={(settings?.invoice_border_left ?? true) && (settings?.invoice_border_right ?? true)} onChange={(v) => u({ invoice_border_left: v, invoice_border_right: v })} disabled={!isAdmin} />} />
+                    <SettingRow label="Top Border" desc="Table top line" right={<Toggle on={settings?.invoice_border_top ?? true} onChange={(v) => u({ invoice_border_top: v })} disabled={!isAdmin} />} />
+                    <SettingRow label="Bottom Border" desc="Table bottom line" right={<Toggle on={settings?.invoice_border_bottom ?? true} onChange={(v) => u({ invoice_border_bottom: v })} disabled={!isAdmin} />} />
                     <SettingRow label="Vertical Row Lines (Columns)" right={<Toggle on={settings?.invoice_border_inner_v ?? true} onChange={(v) => u({ invoice_border_inner_v: v })} disabled={!isAdmin} />} />
-                    <SettingRow label="Horizontal Row Lines" right={<Toggle on={settings?.invoice_border_inner_h ?? true} onChange={(v) => u({ invoice_border_inner_h: v })} disabled={!isAdmin} />} />
-                    <SettingRow label="Outer Bill Border" right={<Toggle on={settings?.invoice_border_whole_bill ?? false} onChange={(v) => u({ invoice_border_whole_bill: v })} disabled={!isAdmin} />} />
-                    <SettingRow label="Grid Lines Thickness" desc="Thickness in pixels"
-                        right={<Counter value={(settings as any)?.invoice_grid_thickness ?? 1} min={1} max={5} onChange={(v) => u({ invoice_grid_thickness: v })} disabled={!isAdmin} />}
-                    />
+                    <SettingRow label="Horizontal Row Lines" noBorder={!settings?.invoice_border_whole_bill} right={<Toggle on={settings?.invoice_border_inner_h ?? true} onChange={(v) => u({ invoice_border_inner_h: v })} disabled={!isAdmin} />} />
 
                     {settings?.invoice_border_whole_bill && <>
                         <SectionLabel text="Spacing" />
@@ -91,20 +85,6 @@ export default function InvoicesTab() {
                 {/* Header Settings */}
                 <SettingsCard title="Header Settings" subtitle="Business identity on invoice" icon="🏷️" accent="#f97316">
                     <div style={{ marginBottom: '12px' }}>
-                        <FieldLabel>Header Text Alignment</FieldLabel>
-                        <ButtonGroup
-                            options={[
-                                { id: 'left', label: '← Left' },
-                                { id: 'center', label: '↔ Center' },
-                                { id: 'right', label: '→ Right' },
-                            ]}
-                            value={settings?.invoice_header_align || 'center'}
-                            onChange={(id) => u({ invoice_header_align: id })}
-                            disabled={!isAdmin}
-                            accentColor="#f97316"
-                        />
-                    </div>
-                    <div style={{ marginBottom: '12px' }}>
                         <FieldLabel>Document Title Alignment</FieldLabel>
                         <ButtonGroup
                             options={[
@@ -118,12 +98,36 @@ export default function InvoicesTab() {
                             accentColor="#f97316"
                         />
                     </div>
-                    <SectionLabel text="Show Details" />
-                    <SettingRow label="Address" right={<Toggle on={settings?.invoice_show_business_address !== false} onChange={(v) => u({ invoice_show_business_address: v })} disabled={!isAdmin} />} />
-                    <SettingRow label="Phone Number" right={<Toggle on={settings?.invoice_show_business_phone !== false} onChange={(v) => u({ invoice_show_business_phone: v })} disabled={!isAdmin} />} />
-                    <SettingRow label="Email" right={<Toggle on={settings?.invoice_show_business_email !== false} onChange={(v) => u({ invoice_show_business_email: v })} disabled={!isAdmin} />} />
+                    <div style={{ marginBottom: '12px' }}>
+                        <FieldLabel>Header Text Alignment</FieldLabel>
+                        <ButtonGroup
+                            options={[
+                                { id: 'left', label: '← Left' },
+                                { id: 'center', label: '↔ Center' },
+                                { id: 'right', label: '→ Right' },
+                            ]}
+                            value={settings?.invoice_header_align || 'center'}
+                            onChange={(id) => u({ invoice_header_align: id })}
+                            disabled={!isAdmin}
+                            accentColor="#f97316"
+                        />
+                    </div>
+                    <SectionLabel text="Targeted Header Formatting" />
+                    <SettingRow label="Business Name" right={<FormatGroup value={(settings as any)?.invoice_business_name_style || 'bold'} onChange={(v) => u({ invoice_business_name_style: v })} disabled={!isAdmin} accentColor="#f97316" />} />
+
+                    <SettingRow label="Show Address" desc="Toggle visibility" right={<Toggle on={settings?.invoice_show_business_address !== false} onChange={(v) => u({ invoice_show_business_address: v })} disabled={!isAdmin} />} />
+                    {settings?.invoice_show_business_address !== false && <SettingRow label="↳ Address Format" right={<FormatGroup value={(settings as any)?.invoice_address_style || ''} onChange={(v) => u({ invoice_address_style: v })} disabled={!isAdmin} accentColor="#f97316" />} />}
+
+                    <SettingRow label="Show Phone Number" desc="Toggle visibility" right={<Toggle on={settings?.invoice_show_business_phone !== false} onChange={(v) => u({ invoice_show_business_phone: v })} disabled={!isAdmin} />} />
+                    {settings?.invoice_show_business_phone !== false && <SettingRow label="↳ Phone Format" right={<FormatGroup value={(settings as any)?.invoice_phone_style || ''} onChange={(v) => u({ invoice_phone_style: v })} disabled={!isAdmin} accentColor="#f97316" />} />}
+
+                    <SettingRow label="Show Email" desc="Toggle visibility" right={<Toggle on={settings?.invoice_show_business_email !== false} onChange={(v) => u({ invoice_show_business_email: v })} disabled={!isAdmin} />} />
+                    {settings?.invoice_show_business_email !== false && <SettingRow label="↳ Email Format" right={<FormatGroup value={(settings as any)?.invoice_email_style || ''} onChange={(v) => u({ invoice_email_style: v })} disabled={!isAdmin} accentColor="#f97316" />} />}
+
                     <SettingRow label="Separate Contact Lines" desc="Show Phone & Email on new lines" right={<Toggle on={(settings as any)?.invoice_contact_separate_lines === true} onChange={(v) => u({ invoice_contact_separate_lines: v })} disabled={!isAdmin} />} />
-                    <SettingRow label="GST Number" noBorder right={<Toggle on={settings?.invoice_show_gst !== false} onChange={(v) => u({ invoice_show_gst: v })} disabled={!isAdmin} />} />
+
+                    <SettingRow label="Show GST Number" desc="Toggle visibility" right={<Toggle on={settings?.invoice_show_gst !== false} onChange={(v) => u({ invoice_show_gst: v })} disabled={!isAdmin} />} />
+                    {settings?.invoice_show_gst !== false && <SettingRow label="↳ GST Format" noBorder right={<FormatGroup value={(settings as any)?.invoice_gst_number_style || ''} onChange={(v) => u({ invoice_gst_number_style: v })} disabled={!isAdmin} accentColor="#f97316" />} />}
                 </SettingsCard>
 
                 {/* Body & Table */}
@@ -160,6 +164,21 @@ export default function InvoicesTab() {
                 {/* Footer Settings */}
                 <SettingsCard title="Footer Settings" subtitle="Credits and legal info" icon="📄" accent="#6b7280">
                     <div style={{ marginBottom: '14px' }}>
+                        <FieldLabel>Footer Text Alignment</FieldLabel>
+                        <ButtonGroup
+                            options={[
+                                { id: 'left', label: '← Left' },
+                                { id: 'center', label: '↔ Center' },
+                                { id: 'right', label: '→ Right' },
+                            ]}
+                            value={(settings as any)?.invoice_footer_align || 'center'}
+                            onChange={(id) => u({ invoice_footer_align: id })}
+                            disabled={!isAdmin}
+                            accentColor="#6b7280"
+                        />
+                    </div>
+
+                    <div style={{ marginBottom: '14px' }}>
                         <FieldLabel htmlFor="footer_msg">Thank You Message</FieldLabel>
                         <TextInput
                             id="footer_msg"
@@ -168,11 +187,12 @@ export default function InvoicesTab() {
                             onBlur={(e) => u({ invoice_footer_message: e.target.value })}
                             disabled={!isAdmin}
                         />
+                        <div className="mt-2">
+                            <SettingRow label="Message Format" noBorder right={<FormatGroup value={(settings as any)?.invoice_footer_msg_style || ''} onChange={(v) => u({ invoice_footer_msg_style: v })} disabled={!isAdmin} accentColor="#6b7280" />} />
+                        </div>
                     </div>
-                    <SettingRow label="Footer Font Size"
-                        right={<Counter value={settings?.invoice_footer_font_size || 10} min={6} max={14} onChange={(v) => u({ invoice_footer_font_size: v })} disabled={!isAdmin} />}
-                    />
-                    <div style={{ marginTop: '8px' }}>
+
+                    <div style={{ marginTop: '8px', marginBottom: '14px' }}>
                         <FieldLabel htmlFor="invoice_terms">Terms & Conditions</FieldLabel>
                         <TextArea
                             id="invoice_terms"
@@ -182,7 +202,18 @@ export default function InvoicesTab() {
                             disabled={!isAdmin}
                             rows={3}
                         />
+                        <div className="mt-2">
+                            <SettingRow label="Terms Format" noBorder right={<FormatGroup value={(settings as any)?.invoice_terms_style || ''} onChange={(v) => u({ invoice_terms_style: v })} disabled={!isAdmin} accentColor="#6b7280" />} />
+                        </div>
                     </div>
+
+                    <SectionLabel text="Spacing & Adjustments" />
+                    <SettingRow label="Footer Font Size"
+                        right={<Counter value={settings?.invoice_footer_font_size || 10} min={6} max={14} onChange={(v) => u({ invoice_footer_font_size: v })} disabled={!isAdmin} />}
+                    />
+                    <SettingRow label="Footer Block Spacing" desc="Space above the footer" noBorder
+                        right={<Counter value={(settings as any)?.invoice_footer_spacing ?? 16} min={0} max={60} onChange={(v) => u({ invoice_footer_spacing: v })} disabled={!isAdmin} />}
+                    />
                 </SettingsCard>
 
                 {/* QR Code & Payment */}
@@ -218,6 +249,7 @@ export default function InvoicesTab() {
                                     <SelectInput
                                         options={[
                                             { value: 'top-left', label: 'Top Left' }, { value: 'top-right', label: 'Top Right' },
+                                            { value: 'below-title', label: 'Below Document Title' },
                                             { value: 'bottom-left', label: 'Bottom Left' }, { value: 'bottom-center', label: 'Bottom Center' },
                                             { value: 'bottom-right', label: 'Bottom Right' },
                                         ]}
