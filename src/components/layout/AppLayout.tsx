@@ -241,37 +241,10 @@ export default function AppLayout() {
           MAIN AREA
           ════════════════════════════════════ */}
       <div className="spos-main">
-        {/* Topbar (hidden on billing page for max space) */}
-        {!isBillingPage && (
-          <div className="spos-topbar hidden md:flex">
-            {/* Left side: Breadcrumb + Date */}
-            <div className="flex items-center gap-4">
-              <div className="spos-breadcrumb">
-                <span>Smart POS</span>
-                <ChevronRight className="h-3 w-3 spos-breadcrumb-sep" />
-                <span className="spos-breadcrumb-current">{currentPageTitle}</span>
-              </div>
-              <div className="spos-date-chip">
-                {format(new Date(), 'dd MMM yyyy')}
-              </div>
-            </div>
-
-            {/* Right side: Search trigger + actions */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}
-                className="flex items-center gap-2 px-3 py-1.5 rounded border border-[var(--spos-border)] bg-[var(--spos-bg)] text-[var(--spos-text-sub)] text-sm hover:border-[var(--spos-border-dark)] transition-colors"
-              >
-                <Search className="h-3.5 w-3.5" />
-                <span className="text-xs">Search…</span>
-                <kbd className="text-[10px] font-mono bg-white border border-[var(--spos-border)] rounded px-1.5 py-0.5">⌘K</kbd>
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Topbar removed for cleaner layout */}
 
         {/* Mobile Header (below md) */}
-        <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-white px-4 md:hidden"
+        < header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-white px-4 md:hidden"
           style={{ borderColor: 'var(--spos-border)' }}
         >
           <Sheet>
@@ -406,6 +379,6 @@ export default function AppLayout() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </div >
   );
 }

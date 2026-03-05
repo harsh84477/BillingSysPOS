@@ -392,6 +392,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       const cssVar = cssVarMap[key];
       if (cssVar) {
         root.style.setProperty(cssVar, value as string);
+
+        // Also map to spos custom properties to ensure full UI coverage instantly
+        if (key === 'primary') root.style.setProperty('--spos-accent', `hsl(${value})`);
+        if (key === 'background') root.style.setProperty('--spos-bg', `hsl(${value})`);
+        if (key === 'foreground') root.style.setProperty('--spos-text', `hsl(${value})`);
+        if (key === 'border') root.style.setProperty('--spos-border', `hsl(${value})`);
+        if (key === 'card') root.style.setProperty('--spos-white', `hsl(${value})`);
+        if (key === 'sidebarBackground') root.style.setProperty('--spos-navy', `hsl(${value})`);
+        if (key === 'secondary') root.style.setProperty('--spos-bg2', `hsl(${value})`);
       }
     });
 
@@ -406,6 +415,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setTheme = async (themeName: ThemeName) => {
     setThemeState(themeName);
     applyTheme(themeName);
+    // Persist immediately for fast reload
+    localStorage.setItem('spos-theme', themeName);
 
     // Save to profile if user is logged in
     try {
@@ -425,6 +436,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Load theme from profile
     const loadTheme = async () => {
       try {
+        const localTheme = localStorage.getItem('spos-theme') as ThemeName;
+        if (localTheme && themes[localTheme]) {
+          setThemeState(localTheme);
+          applyTheme(localTheme);
+        }
+
         const { data: { user } } = await supabase.auth.getUser();
 
         if (user) {
@@ -439,13 +456,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             if (themeData.theme && themes[themeData.theme as ThemeName]) {
               setThemeState(themeData.theme as ThemeName);
               applyTheme(themeData.theme as ThemeName);
+              localStorage.setItem('spos-theme', themeData.theme);
               return;
             }
           }
         }
 
-        // Fallback
-        applyTheme('mint-pro');
+        // Fallback if no profile and no localTheme
+        if (!localTheme) {
+          applyTheme('mint-pro');
+        }
 
       } catch (error) {
         console.error('Error loading theme:', error);
