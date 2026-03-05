@@ -825,7 +825,7 @@ export default function Billing() {
   });
 
   return (
-    <div className="flex h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))] sm:h-[calc(100dvh-3.5rem)] gap-0 w-full">
+    <div className="flex flex-1 gap-0 w-full overflow-hidden relative">
       {/* Left Panel - Categories */}
       <div className="hidden lg:flex w-52 flex-shrink-0 flex-col border-r border-border bg-card">
         <ScrollArea className="flex-1 p-2">

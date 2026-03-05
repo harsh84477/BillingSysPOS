@@ -382,8 +382,8 @@ export default function AppLayout() {
 
       {/* ── Main Area ── */}
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden relative">
-        {/* Header — minimal, no user button */}
-        <header className="sticky top-0 z-40 flex h-12 flex-shrink-0 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 lg:px-6 shadow-sm">
+        {/* Header — minimal, hidden on desktop to save space */}
+        <header className="sticky top-0 z-40 flex h-12 flex-shrink-0 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 lg:px-6 shadow-sm lg:hidden">
           {/* Mobile menu */}
           <Sheet>
             <SheetTrigger asChild>
@@ -450,10 +450,10 @@ export default function AppLayout() {
 
         {/* Main Content */}
         <main className={cn(
-          'flex-1 overflow-x-hidden relative z-0',
+          'flex-1 relative z-0 flex flex-col',
           location.pathname === '/billing'
             ? 'overflow-hidden p-0'
-            : 'overflow-y-auto p-4 lg:p-6 pb-20 sm:pb-6 bg-muted/20 custom-scrollbar'
+            : 'overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-20 sm:pb-6 bg-muted/20 custom-scrollbar'
         )}>
           <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8">
             <SubscriptionBanner businessId={businessId || ''} />
