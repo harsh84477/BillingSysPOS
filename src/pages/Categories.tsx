@@ -300,54 +300,55 @@ export default function Categories() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search categories..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button
-                variant={hasActiveFilters ? "default" : "outline"}
-                size="icon"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter className="h-4 w-4" />
-              </Button>
+      {/* Filters Section */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search categories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button
+            variant={hasActiveFilters ? "default" : "outline"}
+            size="icon"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {showFilters && (
+          <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+            <div className="space-y-1 flex-1">
+              <Label className="text-xs">Product Count</Label>
+              <Select value={productCountFilter} onValueChange={setProductCountFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="has-products">Has Products</SelectItem>
+                  <SelectItem value="empty">Empty Categories</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {showFilters && (
-              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                <div className="space-y-1 flex-1">
-                  <Label className="text-xs">Product Count</Label>
-                  <Select value={productCountFilter} onValueChange={setProductCountFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Categories</SelectItem>
-                      <SelectItem value="has-products">Has Products</SelectItem>
-                      <SelectItem value="empty">Empty Categories</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {hasActiveFilters && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters} className="mt-5">
-                    <X className="mr-1 h-3 w-3" />
-                    Clear
-                  </Button>
-                )}
-              </div>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="mt-5">
+                <X className="mr-1 h-3 w-3" />
+                Clear
+              </Button>
             )}
           </div>
-        </CardHeader>
+        )}
+      </div>
+
+      {/* Table Card */}
+      <Card>
         <CardContent>
           {isLoading ? (
             <div className="flex h-40 items-center justify-center text-muted-foreground">

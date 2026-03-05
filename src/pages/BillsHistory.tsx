@@ -418,113 +418,113 @@ export default function BillsHistory() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader className="pb-2 sm:pb-3">
-          <div className="flex flex-col gap-3">
-            {/* Quick Date Presets - horizontally scrollable on mobile */}
-            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
-              {DATE_PRESETS.map((preset) => (
-                <Button
-                  key={preset.value}
-                  variant={datePreset === preset.value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => applyDatePreset(preset.value)}
-                  className="text-xs shrink-0 h-8 px-2.5"
-                >
-                  {preset.label}
+      {/* Filters & Tabs Section */}
+      <div className="flex flex-col gap-3 pb-2 sm:pb-3">
+        {/* Quick Date Presets - horizontally scrollable on mobile */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+          {DATE_PRESETS.map((preset) => (
+            <Button
+              key={preset.value}
+              variant={datePreset === preset.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => applyDatePreset(preset.value)}
+              className="text-xs shrink-0 h-8 px-2.5"
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by bill number or customer..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button
+            variant={hasActiveFilters ? "default" : "outline"}
+            size="icon"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-muted/50 rounded-lg">
+            <div className="space-y-1">
+              <Label className="text-xs">Status</Label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Customer</Label>
+              <Select value={customerFilter} onValueChange={setCustomerFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Customers</SelectItem>
+                  <SelectItem value="walk-in">Walk-in</SelectItem>
+                  {uniqueCustomers.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">From Date</Label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setDatePreset('custom');
+                }}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">To Date</Label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setDatePreset('custom');
+                }}
+              />
+            </div>
+
+            {hasActiveFilters && (
+              <div className="col-span-2 md:col-span-4">
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="mr-1 h-3 w-3" />
+                  Clear Filters
                 </Button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search by bill number or customer..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button
-                variant={hasActiveFilters ? "default" : "outline"}
-                size="icon"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {showFilters && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-muted/50 rounded-lg">
-                <div className="space-y-1">
-                  <Label className="text-xs">Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs">Customer</Label>
-                  <Select value={customerFilter} onValueChange={setCustomerFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Customers</SelectItem>
-                      <SelectItem value="walk-in">Walk-in</SelectItem>
-                      {uniqueCustomers.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs">From Date</Label>
-                  <Input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => {
-                      setDateFrom(e.target.value);
-                      setDatePreset('custom');
-                    }}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs">To Date</Label>
-                  <Input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => {
-                      setDateTo(e.target.value);
-                      setDatePreset('custom');
-                    }}
-                  />
-                </div>
-
-                {hasActiveFilters && (
-                  <div className="col-span-2 md:col-span-4">
-                    <Button variant="ghost" size="sm" onClick={clearFilters}>
-                      <X className="mr-1 h-3 w-3" />
-                      Clear Filters
-                    </Button>
-                  </div>
-                )}
               </div>
             )}
           </div>
-        </CardHeader>
-        <CardContent>
+        )}
+      </div>
+
+      <Card>
+        <CardContent className="pt-4 sm:pt-6">
           {isLoading ? (
             <div className="flex h-40 items-center justify-center text-muted-foreground">
               Loading bills...
@@ -685,6 +685,6 @@ export default function BillsHistory() {
         open={!!selectedDraftBillId}
         onClose={() => setSelectedDraftBillId(null)}
       />
-    </div>
+    </div >
   );
 }

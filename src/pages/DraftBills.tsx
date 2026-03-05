@@ -58,23 +58,27 @@ export default function DraftBills() {
                 </div>
             </div>
 
+            {/* Filters Section */}
+            <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+                <div className="relative w-full sm:max-w-sm">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search draft number or customer..."
+                        className="pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </div>
+
             <Card>
                 <CardHeader className="pb-3">
-                    <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-1">
                         <CardTitle>Draft Orders</CardTitle>
-                        <div className="relative w-full sm:max-w-sm">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search draft number or customer..."
-                                className="pl-8"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
+                        <CardDescription>
+                            You have {draftBills.length} pending draft bills.
+                        </CardDescription>
                     </div>
-                    <CardDescription>
-                        You have {draftBills.length} pending draft bills.
-                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="rounded-md border">

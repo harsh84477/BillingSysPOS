@@ -155,7 +155,7 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="w-full overflow-x-auto pb-2 -mx-2 px-2 sm:mx-0 sm:px-0">
+      <div className="w-full pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 scrollbar-hide">
         <TabBar tabs={visibleTabs} active={activeTab} onSelect={handleTabChange} />
       </div>
 

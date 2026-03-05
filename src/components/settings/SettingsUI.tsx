@@ -316,9 +316,10 @@ export function TabBar({ tabs, active, onSelect }: {
     tabs: { id: string; label: string; icon: string }[]; active: string; onSelect: (id: string) => void;
 }) {
     return (
-        <div style={{
+        <div className="scrollbar-hide" style={{
             display: 'flex', gap: '0', borderBottom: `2px solid ${T.color.border}`,
             overflowX: 'auto' as const, WebkitOverflowScrolling: 'touch' as const,
+            scrollbarWidth: 'none', msOverflowStyle: 'none',
         }}>
             {tabs.map(tab => {
                 const isActive = tab.id === active;

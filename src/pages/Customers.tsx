@@ -368,88 +368,89 @@ export default function Customers() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search customers..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Button
-                variant={hasActiveFilters ? "default" : "outline"}
-                size="icon"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <Filter className="h-4 w-4" />
-              </Button>
+      {/* Filters Section */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search customers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button
+            variant={hasActiveFilters ? "default" : "outline"}
+            size="icon"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-muted/50 rounded-lg">
+            <div className="space-y-1">
+              <Label className="text-xs">Has Email</Label>
+              <Select value={hasEmailFilter} onValueChange={setHasEmailFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="yes">With Email</SelectItem>
+                  <SelectItem value="no">Without Email</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            {showFilters && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-muted/50 rounded-lg">
-                <div className="space-y-1">
-                  <Label className="text-xs">Has Email</Label>
-                  <Select value={hasEmailFilter} onValueChange={setHasEmailFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="yes">With Email</SelectItem>
-                      <SelectItem value="no">Without Email</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Has Phone</Label>
+              <Select value={hasPhoneFilter} onValueChange={setHasPhoneFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="yes">With Phone</SelectItem>
+                  <SelectItem value="no">Without Phone</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                <div className="space-y-1">
-                  <Label className="text-xs">Has Phone</Label>
-                  <Select value={hasPhoneFilter} onValueChange={setHasPhoneFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="yes">With Phone</SelectItem>
-                      <SelectItem value="no">Without Phone</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Added From</Label>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+              />
+            </div>
 
-                <div className="space-y-1">
-                  <Label className="text-xs">Added From</Label>
-                  <Input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                  />
-                </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Added To</Label>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+              />
+            </div>
 
-                <div className="space-y-1">
-                  <Label className="text-xs">Added To</Label>
-                  <Input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                  />
-                </div>
-
-                {hasActiveFilters && (
-                  <div className="col-span-2 md:col-span-4">
-                    <Button variant="ghost" size="sm" onClick={clearFilters}>
-                      <X className="mr-1 h-3 w-3" />
-                      Clear Filters
-                    </Button>
-                  </div>
-                )}
+            {hasActiveFilters && (
+              <div className="col-span-2 md:col-span-4">
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="mr-1 h-3 w-3" />
+                  Clear Filters
+                </Button>
               </div>
             )}
           </div>
-        </CardHeader>
+        )}
+      </div>
+
+      {/* Data Table Card */}
+      <Card>
         <CardContent>
           {isLoading ? (
             <div className="space-y-2">
