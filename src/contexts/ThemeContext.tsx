@@ -401,6 +401,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (key === 'card') root.style.setProperty('--spos-white', `hsl(${value})`);
         if (key === 'sidebarBackground') root.style.setProperty('--spos-navy', `hsl(${value})`);
         if (key === 'secondary') root.style.setProperty('--spos-bg2', `hsl(${value})`);
+
+        // Sidebar specifically
+        if (key === 'sidebarForeground') root.style.setProperty('--spos-sidebar-text', `hsl(${value})`);
+        if (key === 'sidebarBorder') root.style.setProperty('--spos-sidebar-border', `hsl(${value})`);
+        if (key === 'sidebarAccent') root.style.setProperty('--spos-sidebar-hover-bg', `hsl(${value})`);
+        if (key === 'sidebarAccentForeground') root.style.setProperty('--spos-sidebar-hover-text', `hsl(${value})`);
+        if (key === 'sidebarPrimary') root.style.setProperty('--spos-sidebar-active-bg', `hsl(${value})`);
+        if (key === 'sidebarPrimaryForeground') root.style.setProperty('--spos-sidebar-active-text', `hsl(${value})`);
       }
     });
 

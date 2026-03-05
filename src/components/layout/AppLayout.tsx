@@ -225,7 +225,7 @@ export default function AppLayout() {
                 <div className="spos-sidebar-username truncate">{displayName}</div>
                 <div className="spos-sidebar-role">{roleLabel}</div>
               </div>
-              <ChevronsUpDown style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.3)' }} />
+              <ChevronsUpDown style={{ width: 14, height: 14, color: 'var(--spos-sidebar-text)', opacity: 0.5 }} />
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-48">
