@@ -1240,14 +1240,24 @@ export default function Billing() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/10">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground">Total Entered</span>
-                        <span className={cn(
-                          "text-sm font-black",
-                          (Number(cashAmount || 0) + Number(onlineAmount || 0)) === cartCalculations.total ? "text-emerald-600" : "text-amber-600"
-                        )}>
-                          {currencySymbol}{(Number(cashAmount || 0) + Number(onlineAmount || 0)).toFixed(2)} / {cartCalculations.total.toFixed(2)}
-                        </span>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/10">
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground">Total Entered</span>
+                          <span className={cn(
+                            "text-sm font-black",
+                            (Number(cashAmount || 0) + Number(onlineAmount || 0)) === cartCalculations.total ? "text-emerald-600" : "text-amber-600"
+                          )}>
+                            {currencySymbol}{(Number(cashAmount || 0) + Number(onlineAmount || 0)).toFixed(2)} / {cartCalculations.total.toFixed(2)}
+                          </span>
+                        </div>
+                        {cartCalculations.total - (Number(cashAmount || 0) + Number(onlineAmount || 0)) > 0 && (
+                          <div className="flex items-center justify-between p-2 rounded-lg bg-destructive/5 border border-destructive/10 animate-in fade-in zoom-in duration-200">
+                            <span className="text-[10px] uppercase font-bold text-destructive">Remaining Due</span>
+                            <span className="text-sm font-black text-destructive">
+                              {currencySymbol}{(cartCalculations.total - (Number(cashAmount || 0) + Number(onlineAmount || 0))).toFixed(2)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
