@@ -14,6 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import {
   DollarSign,
@@ -42,6 +44,7 @@ function KPICard({
   isLoading,
   color = 'blue',
   index = 0,
+  onClick,
 }: {
   title: string;
   value: string | number;
@@ -50,11 +53,13 @@ function KPICard({
   isLoading?: boolean;
   color?: KPIColor;
   index?: number;
+  onClick?: () => void;
 }) {
   return (
     <div
-      className="spos-kpi"
-      style={{ animationDelay: `${index * 0.04}s` }}
+      className={cn("spos-kpi", onClick && "hover:border-primary/50 cursor-pointer")}
+      style={{ animationDelay: `${index * 0.04}s`, transition: 'all 0.2s', ...(onClick ? { backgroundColor: 'var(--spos-bg)' } : {}) }}
+      onClick={onClick}
     >
       <div className={`spos-kpi-bar spos-kpi-bar--${color}`} />
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -124,61 +129,108 @@ export default function Dashboard() {
     },
   });
 
-  // Fetch monthly stats (Sales, Profit, Orders)
+  // Fetch monthly stats (Sales, Profit, Orders, Due)
   const { data: monthlyStats, isLoading: loadingMonthlyStats } = useQuery({
-    queryKey: ['monthlyStats'],
+    queryKey: ['monthlyStats', businessId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bills')
-        .select('total_amount, profit')
+        .select('*, customers(name)')
         .eq('status', 'completed')
         .gte('completed_at', startOfThisMonth.toISOString());
 
       if (error) throw error;
       const bills = (data || []) as any[];
+      const dueBillsList = bills.filter(b => b.payment_status === 'unpaid' || b.payment_status === 'partial');
       return {
         revenue: bills.reduce((sum, bill) => sum + Number(bill.total_amount || 0), 0),
         profit: bills.reduce((sum, bill) => sum + Number(bill.profit || 0), 0),
         orders: bills.length,
+        dueBillsList,
       };
     },
+    enabled: !!businessId,
   });
 
-  // Fetch today's orders
-  const { data: todayOrders, isLoading: loadingTodayOrders } = useQuery({
-    queryKey: ['todayOrders'],
+  // Fetch monthly payments and due collection
+  const { data: monthlyPayments, isLoading: loadingMonthlyPayments } = useQuery({
+    queryKey: ['monthlyPayments', businessId],
     queryFn: async () => {
-      const { count, error } = await supabase
+      const { data, error } = await supabase
+        .from('bill_payments' as any)
+        .select('amount, payment_mode, created_at, bills!inner(bill_number, created_at, total_amount, due_amount, customers(name))')
+        .eq('business_id', businessId)
+        .gte('created_at', startOfThisMonth.toISOString());
+
+      let dueCollectionSum = 0;
+      const dueCollectionList: any[] = [];
+      if (!error && data) {
+        data.forEach((p: any) => {
+          if (new Date(p.bills.created_at).getTime() < startOfThisMonth.getTime()) {
+            dueCollectionSum += Number(p.amount || 0);
+            dueCollectionList.push(p);
+          }
+        });
+      }
+      return { dueCollectionSum, dueCollectionList };
+    },
+    enabled: !!businessId,
+  });
+
+  const [activeModalData, setActiveModalData] = useState<{ type: 'dueBills' | 'dueCollections', title: string, data: any[] } | null>(null);
+
+  // Fetch today's complete stats from bills
+  const { data: todayStats, isLoading: loadingTodayStats } = useQuery({
+    queryKey: ['todayStats', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('bills')
-        .select('*', { count: 'exact', head: true })
+        .select('*, customers(name, phone)')
         .eq('status', 'completed')
         .gte('completed_at', startOfToday.toISOString());
 
       if (error) throw error;
-      return count || 0;
+      const bills = (data || []) as any[];
+      const dueBillsList = bills.filter((b: any) => b.payment_status === 'unpaid' || b.payment_status === 'partial');
+      return {
+        sales: bills.reduce((sum, b: any) => sum + Number(b.total_amount || 0), 0),
+        profit: bills.reduce((sum, b: any) => sum + Number(b.profit || 0), 0),
+        orders: bills.length,
+        dueBillsList,
+      };
     },
+    enabled: !!businessId,
   });
 
-  // Fetch today's payments (cash vs online)
+  // Fetch today's payments and due collection
   const { data: todayPayments, isLoading: loadingTodayPayments } = useQuery({
-    queryKey: ['todayPayments'],
+    queryKey: ['todayPayments', businessId],
     queryFn: async () => {
       const { data, error } = await (supabase
         .from('bill_payments' as any)
-        .select('amount, payment_mode')
+        .select('amount, payment_mode, created_at, bills!inner(bill_number, created_at, total_amount, due_amount, customers(name))')
+        .eq('business_id', businessId)
         .gte('created_at', startOfToday.toISOString()) as any);
 
       let cash = 0;
       let online = 0;
+      let dueCollectionSum = 0;
+      const dueCollectionList: any[] = [];
 
       if (!error && data) {
-        (data as any[]).forEach(p => {
+        data.forEach((p: any) => {
           if (p.payment_mode === 'cash') cash += Number(p.amount || 0);
-          else online += Number(p.amount || 0);
+          else if (p.payment_mode === 'upi' || p.payment_mode === 'card') online += Number(p.amount || 0);
+
+          if (new Date(p.bills.created_at).getTime() < startOfToday.getTime()) {
+            dueCollectionSum += Number(p.amount || 0);
+            dueCollectionList.push(p);
+          }
         });
       }
-      return { cash, online };
+      return { cash, online, dueCollectionSum, dueCollectionList };
     },
+    enabled: !!businessId,
   });
 
   // Fetch pending bills
@@ -487,11 +539,13 @@ export default function Dashboard() {
       {/* ── Today's Performance ── */}
       <div className="spos-section-label">Today's Performance</div>
       <div className="spos-kpi-grid">
-        <KPICard title="Today's Sales" value={`${currencySymbol}${todaySales?.toFixed(2) || '0.00'}`} icon={DollarSign} description="Total sales amount today" isLoading={loadingTodaySales} color="green" index={0} />
-        <KPICard title="Today's Profit" value={`${currencySymbol}${(todayProfit || 0).toFixed(2)}`} icon={TrendingUp} description="Profit earned today" isLoading={loadingTodayProfit} color="green" index={1} />
+        <KPICard title="Today's Sales" value={`${currencySymbol}${todayStats?.sales?.toFixed(2) || '0.00'}`} icon={DollarSign} description="Total sales amount today" isLoading={loadingTodayStats} color="green" index={0} />
+        <KPICard title="Today's Profit" value={`${currencySymbol}${(todayStats?.profit || 0).toFixed(2)}`} icon={TrendingUp} description="Profit earned today" isLoading={loadingTodayStats} color="green" index={1} />
         <KPICard title="Today's Cash Collection" value={`${currencySymbol}${(todayPayments?.cash || 0).toFixed(2)}`} icon={Wallet} description="Cash payments received today" isLoading={loadingTodayPayments} color="blue" index={2} />
         <KPICard title="Today's Online Collection" value={`${currencySymbol}${(todayPayments?.online || 0).toFixed(2)}`} icon={Smartphone} description="UPI/Card payments today" isLoading={loadingTodayPayments} color="blue" index={3} />
-        <KPICard title="Today's Orders" value={todayOrders || 0} icon={ShoppingCart} description="Total bills created today" isLoading={loadingTodayOrders} color="blue" index={4} />
+        <KPICard title="Today's Orders" value={todayStats?.orders || 0} icon={ShoppingCart} description="Total bills created today" isLoading={loadingTodayStats} color="blue" index={4} />
+        <KPICard title="Today's Due Bills" value={todayStats?.dueBillsList?.length || 0} icon={AlertTriangle} description="Bills created today but not fully paid" isLoading={loadingTodayStats} color="amber" index={5} onClick={() => setActiveModalData({ type: 'dueBills', title: 'Today\'s Due Bills', data: todayStats?.dueBillsList || [] })} />
+        <KPICard title="Today's Due Collection" value={`${currencySymbol}${(todayPayments?.dueCollectionSum || 0).toFixed(2)}`} icon={CreditCard} description="Payments received today from due invoices" isLoading={loadingTodayPayments} color="amber" index={6} onClick={() => setActiveModalData({ type: 'dueCollections', title: 'Today\'s Due Collection', data: todayPayments?.dueCollectionList || [] })} />
       </div>
 
       {/* ── Monthly Performance ── */}
@@ -500,6 +554,8 @@ export default function Dashboard() {
         <KPICard title="Monthly Sales" value={`${currencySymbol}${(monthlyStats?.revenue || 0).toFixed(2)}`} icon={TrendingUp} description="Total sales this month" isLoading={loadingMonthlyStats} color="green" index={0} />
         <KPICard title="Monthly Profit" value={`${currencySymbol}${(monthlyStats?.profit || 0).toFixed(2)}`} icon={DollarSign} description="Profit this month" isLoading={loadingMonthlyStats} color="green" index={1} />
         <KPICard title="Monthly Orders" value={monthlyStats?.orders || 0} icon={ShoppingCart} description="Number of invoices created this month" isLoading={loadingMonthlyStats} color="blue" index={2} />
+        <KPICard title="Monthly Due Bills" value={monthlyStats?.dueBillsList?.length || 0} icon={AlertTriangle} description="Unpaid bills from this month" isLoading={loadingMonthlyStats} color="amber" index={3} onClick={() => setActiveModalData({ type: 'dueBills', title: 'Monthly Due Bills', data: monthlyStats?.dueBillsList || [] })} />
+        <KPICard title="Monthly Due Collection" value={`${currencySymbol}${(monthlyPayments?.dueCollectionSum || 0).toFixed(2)}`} icon={CreditCard} description="Payments collected this month from due bills" isLoading={loadingMonthlyPayments} color="amber" index={4} onClick={() => setActiveModalData({ type: 'dueCollections', title: 'Monthly Due Collection', data: monthlyPayments?.dueCollectionList || [] })} />
       </div>
 
       {/* ── Overall Operations ── */}
@@ -762,11 +818,85 @@ export default function Dashboard() {
       </div>
 
       {/* Draft Bill Popup Modal */}
-      <DraftBillModal
-        billId={selectedDraftBillId}
-        open={!!selectedDraftBillId}
-        onClose={() => setSelectedDraftBillId(null)}
-      />
-    </div >
+      {/* Interactive Daily/Monthly Sub-records Modal */}
+      <Dialog open={!!activeModalData} onOpenChange={(open) => { if (!open) setActiveModalData(null); }}>
+        <DialogContent className="max-w-max min-w-[500px]">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle>{activeModalData?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 max-h-[60vh] overflow-y-auto">
+            {activeModalData?.data?.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground flex flex-col items-center">
+                <AlertTriangle className="h-8 w-8 text-muted-foreground/50 mb-3" />
+                <p>No records found for this KPI.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Bill #</TableHead>
+                    <TableHead>Customer</TableHead>
+                    {activeModalData?.type === 'dueCollections' ? (
+                      <>
+                        <TableHead>Payment Method</TableHead>
+                        <TableHead className="text-right">Collection Amount</TableHead>
+                        <TableHead className="text-right">Date</TableHead>
+                      </>
+                    ) : (
+                      <>
+                        <TableHead className="text-right">Total Amount</TableHead>
+                        <TableHead className="text-right">Due Amount</TableHead>
+                        <TableHead className="text-center">Action</TableHead>
+                      </>
+                    )}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activeModalData?.data?.map((item, idx) => {
+                    if (activeModalData.type === 'dueCollections') {
+                      return (
+                        <TableRow key={idx}>
+                          <TableCell className="font-mono font-medium">{item.bills?.bill_number}</TableCell>
+                          <TableCell>{item.bills?.customers?.name || 'Walk-in'}</TableCell>
+                          <TableCell className="uppercase text-xs font-semibold text-muted-foreground tracking-wider">{item.payment_mode}</TableCell>
+                          <TableCell className="text-right font-semibold text-green-600">
+                            {currencySymbol}{Number(item.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground text-sm">
+                            {format(new Date(item.created_at), 'dd MMM yy')}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    } else {
+                      return (
+                        <TableRow key={item.id || idx}>
+                          <TableCell className="font-mono font-medium">{item.bill_number}</TableCell>
+                          <TableCell>{item.customers?.name ? item.customers.name : 'Walk-in'}</TableCell>
+                          <TableCell className="text-right">
+                            {currencySymbol}{Number(item.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-destructive">
+                            {currencySymbol}{Number(item.due_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button size="sm" variant="outline" className="h-7 text-xs bg-primary/5 hover:bg-primary hover:text-white" onClick={() => { setActiveModalData(null); navigate('/due-bills'); }}>Pay Now</Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setActiveModalData(null)}>Close</Button>
+            {activeModalData?.type === 'dueBills' && activeModalData.data.length > 0 && (
+              <Button onClick={() => { setActiveModalData(null); navigate('/due-bills'); }}>Manage All</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

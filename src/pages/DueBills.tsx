@@ -22,12 +22,13 @@ import {
 import { format, isPast, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function DueBills() {
     const { businessId } = useAuth();
     const queryClient = useQueryClient();
     const [search, setSearch] = useState('');
-    const [payDialog, setPayDialog] = useState<{ bill: any; amount: string } | null>(null);
+    const [payDialog, setPayDialog] = useState<{ bill: any; amount: string; method: string } | null>(null);
 
     // Fetch unpaid/partial bills
     const { data: dueBills = [], isLoading } = useQuery({
@@ -62,6 +63,20 @@ export default function DueBills() {
                 })
                 .eq('id', bill.id);
             if (error) throw error;
+
+            // Record the payment mode in bill_payments
+            if (payDialog?.method) {
+                const { error: paymentError } = await supabase
+                    .from('bill_payments' as any)
+                    .insert({
+                        bill_id: bill.id,
+                        business_id: bill.business_id,
+                        amount: amount,
+                        payment_mode: payDialog.method,
+                        created_at: new Date().toISOString()
+                    } as any);
+                if (paymentError) console.error('Failed to log payment method', paymentError);
+            }
 
             // Update customer current_due
             if (bill.customer_id) {
@@ -215,7 +230,7 @@ export default function DueBills() {
                                                     <Button
                                                         size="sm"
                                                         className="h-7 text-xs"
-                                                        onClick={() => setPayDialog({ bill, amount: String(bill.due_amount || '') })}
+                                                        onClick={() => setPayDialog({ bill, amount: String(bill.due_amount || ''), method: 'cash' })}
                                                     >
                                                         <CreditCard className="h-3 w-3 mr-1" />
                                                         Pay Now
@@ -272,6 +287,22 @@ export default function DueBills() {
                                     Remaining after payment: {currencySymbol}
                                     {Math.max(0, (payDialog.bill.due_amount || 0) - parseFloat(payDialog.amount || '0')).toFixed(2)}
                                 </p>
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label>Payment Method</Label>
+                                <Select
+                                    value={payDialog.method}
+                                    onValueChange={(val) => setPayDialog(d => d ? { ...d, method: val } : null)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select method" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="cash">Cash</SelectItem>
+                                        <SelectItem value="upi">UPI / Online</SelectItem>
+                                        <SelectItem value="card">Card</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                         </div>
                     )}
