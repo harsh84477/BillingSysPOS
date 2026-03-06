@@ -158,7 +158,7 @@ export default function Dashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bill_payments' as any)
-        .select('amount, payment_mode, created_at, bills!inner(bill_number, created_at, total_amount, due_amount, customers(name))')
+        .select('amount, payment_mode, notes, created_at, bills!inner(bill_number, created_at, total_amount, due_amount, customers(name))')
         .eq('business_id', businessId)
         .gte('created_at', startOfThisMonth.toISOString());
 
@@ -166,7 +166,7 @@ export default function Dashboard() {
       const dueCollectionList: any[] = [];
       if (!error && data) {
         data.forEach((p: any) => {
-          if (new Date(p.bills.created_at).getTime() < startOfThisMonth.getTime()) {
+          if (p.notes === 'due_bill' || new Date(p.bills.created_at).getTime() < startOfThisMonth.getTime()) {
             dueCollectionSum += Number(p.amount || 0);
             dueCollectionList.push(p);
           }
@@ -208,7 +208,7 @@ export default function Dashboard() {
     queryFn: async () => {
       const { data, error } = await (supabase
         .from('bill_payments' as any)
-        .select('amount, payment_mode, created_at, bills!inner(bill_number, created_at, total_amount, due_amount, customers(name))')
+        .select('amount, payment_mode, notes, created_at, bills!inner(bill_number, created_at, total_amount, due_amount, customers(name))')
         .eq('business_id', businessId)
         .gte('created_at', startOfToday.toISOString()) as any);
 
@@ -222,7 +222,7 @@ export default function Dashboard() {
           if (p.payment_mode === 'cash') cash += Number(p.amount || 0);
           else if (p.payment_mode === 'upi' || p.payment_mode === 'card') online += Number(p.amount || 0);
 
-          if (new Date(p.bills.created_at).getTime() < startOfToday.getTime()) {
+          if (p.notes === 'due_bill' || new Date(p.bills.created_at).getTime() < startOfToday.getTime()) {
             dueCollectionSum += Number(p.amount || 0);
             dueCollectionList.push(p);
           }

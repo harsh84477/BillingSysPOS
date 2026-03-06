@@ -71,6 +71,7 @@ export default function DueBills() {
                     business_id: bill.business_id,
                     amount: p.amount,
                     payment_mode: p.method,
+                    notes: 'due_bill',
                     created_at: new Date().toISOString()
                 }));
                 const { error: paymentError } = await supabase
