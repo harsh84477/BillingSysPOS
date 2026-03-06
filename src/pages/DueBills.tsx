@@ -28,7 +28,7 @@ export default function DueBills() {
     const { businessId } = useAuth();
     const queryClient = useQueryClient();
     const [search, setSearch] = useState('');
-    const [payDialog, setPayDialog] = useState<{ bill: any; amount: string; method: string } | null>(null);
+    const [payDialog, setPayDialog] = useState<{ bill: any; method: 'cash' | 'upi' | 'split' | 'due'; cashAmount: string | number; onlineAmount: string | number } | null>(null);
 
     // Fetch unpaid/partial bills
     const { data: dueBills = [], isLoading } = useQuery({
@@ -49,7 +49,7 @@ export default function DueBills() {
 
     // Pay mutation
     const payMutation = useMutation({
-        mutationFn: async ({ bill, amount }: { bill: any; amount: number }) => {
+        mutationFn: async ({ bill, amount, payments }: { bill: any; amount: number; payments: { method: string, amount: number }[] }) => {
             const newPaid = (bill.paid_amount || 0) + amount;
             const newDue = Math.max(0, bill.total_amount - newPaid);
             const newStatus = newDue <= 0 ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid';
@@ -65,16 +65,17 @@ export default function DueBills() {
             if (error) throw error;
 
             // Record the payment mode in bill_payments
-            if (payDialog?.method) {
+            if (payments && payments.length > 0) {
+                const inserts = payments.map(p => ({
+                    bill_id: bill.id,
+                    business_id: bill.business_id,
+                    amount: p.amount,
+                    payment_mode: p.method,
+                    created_at: new Date().toISOString()
+                }));
                 const { error: paymentError } = await supabase
                     .from('bill_payments' as any)
-                    .insert({
-                        bill_id: bill.id,
-                        business_id: bill.business_id,
-                        amount: amount,
-                        payment_mode: payDialog.method,
-                        created_at: new Date().toISOString()
-                    } as any);
+                    .insert(inserts as any);
                 if (paymentError) console.error('Failed to log payment method', paymentError);
             }
 
@@ -97,12 +98,33 @@ export default function DueBills() {
 
     const handlePay = () => {
         if (!payDialog) return;
-        const amount = parseFloat(payDialog.amount);
-        if (isNaN(amount) || amount <= 0) {
-            toast.error('Enter a valid payment amount');
+
+        let payments: { method: string, amount: number }[] = [];
+
+        if (payDialog.method === 'cash' || payDialog.method === 'upi') {
+            const amt = Number(payDialog.cashAmount || 0);
+            if (amt <= 0) {
+                toast.error('Enter a valid payment amount');
+                return;
+            }
+            payments.push({ method: payDialog.method, amount: amt });
+        } else if (payDialog.method === 'split') {
+            const cAmt = Number(payDialog.cashAmount || 0);
+            const oAmt = Number(payDialog.onlineAmount || 0);
+            const total = cAmt + oAmt;
+            if (total <= 0 || total > payDialog.bill.due_amount) {
+                toast.error('Invalid split amount calculation');
+                return;
+            }
+            if (cAmt > 0) payments.push({ method: 'cash', amount: cAmt });
+            if (oAmt > 0) payments.push({ method: 'upi', amount: oAmt });
+        } else if (payDialog.method === 'due') {
+            setPayDialog(null);
             return;
         }
-        payMutation.mutate({ bill: payDialog.bill, amount });
+
+        const totalAmt = payments.reduce((sum, p) => sum + p.amount, 0);
+        payMutation.mutate({ bill: payDialog.bill, amount: totalAmt, payments });
     };
 
     const filtered = dueBills.filter((b: any) =>
@@ -230,7 +252,7 @@ export default function DueBills() {
                                                     <Button
                                                         size="sm"
                                                         className="h-7 text-xs"
-                                                        onClick={() => setPayDialog({ bill, amount: String(bill.due_amount || ''), method: 'cash' })}
+                                                        onClick={() => setPayDialog({ bill, cashAmount: String(bill.due_amount || ''), onlineAmount: '', method: 'cash' })}
                                                     >
                                                         <CreditCard className="h-3 w-3 mr-1" />
                                                         Pay Now
@@ -269,41 +291,107 @@ export default function DueBills() {
                                     </span>
                                 </div>
                             </div>
+
                             <div className="space-y-1.5">
-                                <Label>Payment Amount</Label>
-                                <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">₹</span>
-                                    <Input
-                                        type="number"
-                                        className="pl-7"
-                                        value={payDialog.amount}
-                                        onChange={(e) => setPayDialog(d => d ? { ...d, amount: e.target.value } : null)}
-                                        min={0.01}
-                                        max={payDialog.bill.due_amount}
-                                        autoFocus
-                                    />
+                                <Label className="text-[10px] uppercase text-muted-foreground">Payment Method</Label>
+                                <div className="grid grid-cols-4 gap-1 p-0.5 bg-muted/50 rounded-lg border border-border">
+                                    {(['cash', 'upi', 'split', 'due'] as const).map((type) => (
+                                        <button
+                                            key={type}
+                                            onClick={() => {
+                                                setPayDialog(d => {
+                                                    if (!d) return null;
+                                                    if (type === 'due' || type === 'split') {
+                                                        return { ...d, method: type, cashAmount: '', onlineAmount: '' };
+                                                    }
+                                                    return { ...d, method: type, cashAmount: String(d.bill.due_amount), onlineAmount: '' };
+                                                });
+                                            }}
+                                            className={cn(
+                                                'py-1.5 rounded-md text-[10px] font-bold transition-all uppercase',
+                                                payDialog.method === type
+                                                    ? 'bg-primary text-primary-foreground shadow-md'
+                                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                            )}
+                                        >
+                                            {type}
+                                        </button>
+                                    ))}
                                 </div>
-                                <p className="text-xs text-muted-foreground">
-                                    Remaining after payment: {currencySymbol}
-                                    {Math.max(0, (payDialog.bill.due_amount || 0) - parseFloat(payDialog.amount || '0')).toFixed(2)}
-                                </p>
                             </div>
-                            <div className="space-y-1.5">
-                                <Label>Payment Method</Label>
-                                <Select
-                                    value={payDialog.method}
-                                    onValueChange={(val) => setPayDialog(d => d ? { ...d, method: val } : null)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select method" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="cash">Cash</SelectItem>
-                                        <SelectItem value="upi">UPI / Online</SelectItem>
-                                        <SelectItem value="card">Card</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+
+                            {payDialog.method === 'split' ? (
+                                <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="space-y-1 text-left">
+                                            <Label className="text-[10px] uppercase text-muted-foreground">Cash Amount</Label>
+                                            <div className="relative">
+                                                <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
+                                                <Input
+                                                    type="number"
+                                                    value={payDialog.cashAmount}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value === '' ? '' : Number(e.target.value);
+                                                        const rem = val === '' ? '' : Math.max(0, payDialog.bill.due_amount - Number(val));
+                                                        setPayDialog(d => d ? { ...d, cashAmount: val, onlineAmount: rem } : null);
+                                                    }}
+                                                    className="h-8 pl-5 text-sm font-bold bg-emerald-50/30 border-emerald-100 focus-visible:ring-emerald-500"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1 text-left">
+                                            <Label className="text-[10px] uppercase text-muted-foreground">Online Amount</Label>
+                                            <div className="relative">
+                                                <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
+                                                <Input
+                                                    type="number"
+                                                    value={payDialog.onlineAmount}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value === '' ? '' : Number(e.target.value);
+                                                        const rem = val === '' ? '' : Math.max(0, payDialog.bill.due_amount - Number(val));
+                                                        setPayDialog(d => d ? { ...d, onlineAmount: val, cashAmount: rem } : null);
+                                                    }}
+                                                    className="h-8 pl-5 text-sm font-bold bg-blue-50/30 border-blue-100 focus-visible:ring-blue-500"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/10">
+                                        <span className="text-[10px] uppercase font-bold text-muted-foreground">Total Entered</span>
+                                        <span className={cn(
+                                            "text-sm font-black",
+                                            (Number(payDialog.cashAmount || 0) + Number(payDialog.onlineAmount || 0)) === payDialog.bill.due_amount ? "text-emerald-600" : "text-amber-600"
+                                        )}>
+                                            {currencySymbol}{(Number(payDialog.cashAmount || 0) + Number(payDialog.onlineAmount || 0)).toFixed(2)} / {payDialog.bill.due_amount.toFixed(2)}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : payDialog.method !== 'due' ? (
+                                <div className="space-y-1.5 mt-3">
+                                    <Label className="text-[10px] uppercase text-muted-foreground">Payment Amount</Label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">₹</span>
+                                        <Input
+                                            type="number"
+                                            className="pl-7 bg-muted/50 h-10 font-bold"
+                                            value={payDialog.cashAmount}
+                                            onChange={(e) => setPayDialog(d => d ? { ...d, cashAmount: e.target.value === '' ? '' : Number(e.target.value) } : null)}
+                                            min={0}
+                                            max={payDialog.bill.due_amount}
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Remaining after payment: {currencySymbol}
+                                        {Math.max(0, (payDialog.bill.due_amount || 0) - Number(payDialog.cashAmount || 0)).toFixed(2)}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="mt-3 p-3 rounded-lg bg-amber-50/50 border border-amber-100 flex items-center gap-3">
+                                    <AlertTriangle className="h-5 w-5 text-amber-500" />
+                                    <p className="text-xs text-amber-700">Remaining balance will be marked as Due.</p>
+                                </div>
+                            )}
                         </div>
                     )}
                     <DialogFooter>
