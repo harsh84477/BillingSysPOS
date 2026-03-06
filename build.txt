@@ -1,0 +1,7 @@
+﻿
+> vite_react_shadcn_ts@0.0.0 build:dev
+> vite build --mode development
+
+[36mvite v5.4.19 [32mbuilding for development...[36m[39m
+transforming...
+[32mΓ£ô[39m 2119 modules transformed.
