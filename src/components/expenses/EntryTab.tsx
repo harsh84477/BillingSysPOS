@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, PlusCircle, Paperclip } from 'lucide-react';
+import { PlusCircle, IndianRupee } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,6 +18,8 @@ export function EntryTab({ categories = [], addExpense }: any) {
     const [receiptUrl, setReceiptUrl] = useState('');
     const [uploading, setUploading] = useState(false);
 
+    const safeCategories = categories || [];
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -25,11 +27,11 @@ export function EntryTab({ categories = [], addExpense }: any) {
         try {
             setUploading(true);
             const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random()}.${fileExt}`;
+            const fileName = `${Math.random().toString(36).substring(7)}.${fileExt}`;
             const filePath = `receipts/${fileName}`;
 
-            const { error: uploadError } = await supabase.storage
-                .from('documents') // Assuming a generic 'documents' bucket exists or fallback
+            const { error: uploadError } = await (supabase as any).storage
+                .from('documents')
                 .upload(filePath, file);
 
             if (uploadError) {
@@ -50,7 +52,7 @@ export function EntryTab({ categories = [], addExpense }: any) {
             toast.error('Please enter a valid amount');
             return;
         }
-        if (!categoryId && categories && categories.length > 0) {
+        if (!categoryId && safeCategories.length > 0) {
             toast.error('Please select a category');
             return;
         }
@@ -63,12 +65,13 @@ export function EntryTab({ categories = [], addExpense }: any) {
             description: description,
             expense_date: expenseDate,
             receipt_url: receiptUrl
-        }, (categories || []).find((c: any) => c.id === categoryId)?.name || 'Uncategorized');
+        }, safeCategories.find((c: any) => c.id === categoryId)?.name || 'Uncategorized');
 
         if (success) {
             setAmount('');
             setDescription('');
             setReceiptUrl('');
+            setCategoryId('');
             setExpenseDate(new Date().toISOString().split('T')[0]);
         }
         setIsSubmitting(false);
@@ -79,119 +82,139 @@ export function EntryTab({ categories = [], addExpense }: any) {
     };
 
     return (
-        <Card className="max-w-2xl mx-auto shadow-lg animate-in fade-in zoom-in-95 duration-500">
+        <Card className="max-w-2xl mx-auto shadow-sm border animate-in fade-in zoom-in-95 duration-500">
             <CardHeader className="bg-muted/30 border-b">
-                <CardTitle className="text-xl flex items-center gap-2">
-                    <PlusCircle className="text-primary h-5 w-5" />
+                <CardTitle className="text-lg flex items-center gap-2">
+                    <PlusCircle className="text-emerald-500 h-5 w-5" />
                     Record New Expense
                 </CardTitle>
-                <CardDescription>Instantly log a business expense to your ledger</CardDescription>
+                <CardDescription>Log a business expense to your ledger</CardDescription>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <Label className="font-bold text-muted-foreground uppercase text-xs">Amount (₹)</Label>
+            <CardContent className="p-6 space-y-5">
+                {/* Amount */}
+                <div className="space-y-2">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Amount (₹)</Label>
+                    <div className="relative">
+                        <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground/50" />
                         <Input
                             type="number"
-                            className="h-16 text-4xl font-black rounded-xl bg-muted/20 border-2"
+                            className="h-16 text-3xl font-black pl-12 rounded-xl bg-muted/10 border-2 focus:border-emerald-500"
                             value={amount}
                             onChange={(e) => setAmount(e.target.value)}
                             placeholder="0.00"
                         />
-                        <div className="flex gap-2 pt-2">
-                            <Button variant="outline" type="button" onClick={() => addQuickAmount(500)}>+500</Button>
-                            <Button variant="outline" type="button" onClick={() => addQuickAmount(1000)}>+1000</Button>
-                            <Button variant="outline" type="button" onClick={() => addQuickAmount(5000)}>+5000</Button>
-                        </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label className="font-bold text-muted-foreground uppercase text-xs">Category</Label>
-                            <Select value={categoryId} onValueChange={setCategoryId}>
-                                <SelectTrigger className="h-12 border-2 rounded-xl">
-                                    <SelectValue placeholder="Select Category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {(categories || []).map((cat: any) => (
-                                        <SelectItem key={cat.id} value={cat.id}>
-                                            <span className="flex items-center gap-2">
-                                                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color || '#ccc' }} />
-                                                {cat.name}
-                                            </span>
-                                        </SelectItem>
-                                    ))}
-                                    {(!categories || categories.length === 0) && (
-                                        <div className="p-2 text-sm text-muted-foreground italic">No categories found. Create one first!</div>
-                                    )}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="font-bold text-muted-foreground uppercase text-xs">Payment Method</Label>
-                            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                                <SelectTrigger className="h-12 border-2 rounded-xl">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="cash">Cash</SelectItem>
-                                    <SelectItem value="upi">UPI / Online</SelectItem>
-                                    <SelectItem value="card">Card</SelectItem>
-                                    <SelectItem value="bank">Bank Transfer</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                    <div className="flex gap-2 pt-1">
+                        {[500, 1000, 2000, 5000].map(val => (
+                            <Button key={val} variant="outline" type="button" size="sm" className="text-xs font-bold" onClick={() => addQuickAmount(val)}>
+                                +{val.toLocaleString()}
+                            </Button>
+                        ))}
+                        {amount && (
+                            <Button variant="ghost" type="button" size="sm" className="text-xs text-muted-foreground" onClick={() => setAmount('')}>
+                                Clear
+                            </Button>
+                        )}
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label className="font-bold text-muted-foreground uppercase text-xs">Date</Label>
-                            <Input
-                                type="date"
-                                className="h-12 border-2 rounded-xl"
-                                value={expenseDate}
-                                onChange={(e) => setExpenseDate(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label className="font-bold text-muted-foreground uppercase text-xs">Receipt Attachment</Label>
-                            <div className="relative">
-                                <Input
-                                    type="file"
-                                    className="h-12 border-2 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
-                                    onChange={handleFileUpload}
-                                    disabled={uploading}
-                                    accept="image/*,.pdf"
-                                />
-                                {uploading && <div className="absolute right-3 top-3 text-xs text-muted-foreground">Uploading...</div>}
-                                {receiptUrl && !uploading && <div className="absolute right-3 top-3 text-xs text-emerald-600 font-bold flex items-center"><Paperclip className="h-3 w-3 mr-1" /> Attached</div>}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label className="font-bold text-muted-foreground uppercase text-xs">Description</Label>
-                        <Input
-                            type="text"
-                            className="h-12 border-2 rounded-xl"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="What was this expense for?"
-                        />
-                    </div>
-
-                    <Button
-                        className="w-full h-14 text-lg font-black tracking-wider uppercase rounded-xl mt-4"
-                        onClick={handleCreate}
-                        disabled={isSubmitting || uploading}
-                    >
-                        <Save className="mr-2 h-5 w-5" />
-                        {isSubmitting ? 'Saving...' : 'Save Expense'}
-                    </Button>
-
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Category */}
+                    <div className="space-y-2">
+                        <Label className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Category</Label>
+                        <Select value={categoryId} onValueChange={setCategoryId}>
+                            <SelectTrigger className="h-11 border-2 rounded-xl">
+                                <SelectValue placeholder="Select Category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {safeCategories.map((cat: any) => (
+                                    <SelectItem key={cat.id} value={cat.id}>
+                                        <span className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color || '#94a3b8' }} />
+                                            {cat.name}
+                                        </span>
+                                    </SelectItem>
+                                ))}
+                                {safeCategories.length === 0 && (
+                                    <div className="p-2 text-sm text-muted-foreground italic">No categories found. Create one in Settings.</div>
+                                )}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* Payment Method */}
+                    <div className="space-y-2">
+                        <Label className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Payment Method</Label>
+                        <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                            <SelectTrigger className="h-11 border-2 rounded-xl">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="cash">💵 Cash</SelectItem>
+                                <SelectItem value="upi">📱 UPI / Online</SelectItem>
+                                <SelectItem value="card">💳 Card</SelectItem>
+                                <SelectItem value="bank">🏦 Bank Transfer</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+
+                {/* Date */}
+                <div className="space-y-2">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Expense Date</Label>
+                    <Input
+                        type="date"
+                        value={expenseDate}
+                        onChange={(e) => setExpenseDate(e.target.value)}
+                        className="h-11 border-2 rounded-xl"
+                    />
+                </div>
+
+                {/* Description */}
+                <div className="space-y-2">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Description</Label>
+                    <Input
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="e.g. Monthly office rent payment"
+                        className="h-11 border-2 rounded-xl"
+                    />
+                </div>
+
+                {/* Receipt Upload */}
+                <div className="space-y-2">
+                    <Label className="text-xs uppercase font-bold text-muted-foreground tracking-wider">
+                        Receipt (optional)
+                    </Label>
+                    <Input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={handleFileUpload}
+                        disabled={uploading}
+                        className="h-11 border-2 rounded-xl file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary"
+                    />
+                    {receiptUrl && (
+                        <p className="text-xs text-emerald-600 font-medium">✓ Receipt attached</p>
+                    )}
+                </div>
+
+                {/* Submit Button */}
+                <Button
+                    onClick={handleCreate}
+                    disabled={isSubmitting || !amount}
+                    className="w-full h-12 uppercase font-black tracking-wider rounded-xl mt-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                    {isSubmitting ? (
+                        <div className="flex items-center gap-2">
+                            <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Recording...
+                        </div>
+                    ) : (
+                        <>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Record Expense
+                        </>
+                    )}
+                </Button>
             </CardContent>
         </Card>
     );
