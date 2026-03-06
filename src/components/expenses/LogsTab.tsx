@@ -51,13 +51,24 @@ export function LogsTab({ expenses = [], categories = [], deleteExpense }: any) 
             return;
         }
 
-        const data = filteredExpenses.map(exp => ({
-            Date: exp.expense_date ? new Date(exp.expense_date).toLocaleDateString() : 'N/A',
-            Category: exp.category?.name || exp.category || 'Uncategorized',
-            Description: exp.description || 'N/A',
-            Payment_Method: exp.payment_method || 'cash',
-            Amount: Number(exp.amount || 0)
-        }));
+        const data = filteredExpenses.map(exp => {
+            let catName = 'Uncategorized';
+            if (typeof exp?.category === 'string') {
+                catName = exp.category;
+            } else if (exp?.category && typeof exp.category === 'object' && !Array.isArray(exp.category) && exp.category.name) {
+                catName = exp.category.name;
+            } else if (Array.isArray(exp?.category) && exp.category.length > 0) {
+                catName = exp.category[0]?.name || 'Uncategorized';
+            }
+
+            return {
+                Date: exp.expense_date ? new Date(exp.expense_date).toLocaleDateString() : 'N/A',
+                Category: catName,
+                Description: exp.description || 'N/A',
+                Payment_Method: exp.payment_method || 'cash',
+                Amount: Number(exp.amount || 0)
+            };
+        });
 
         if (format === 'csv') {
             const header = Object.keys(data[0]).join(',');
@@ -205,9 +216,22 @@ export function LogsTab({ expenses = [], categories = [], deleteExpense }: any) 
                         </TableHeader>
                         <TableBody>
                             {(filteredExpenses || []).map((exp: any) => {
-                                const catObj = exp?.category?.name ? exp.category : (categories || []).find((c: any) => c.id === exp?.category_id || c.name === exp?.category);
-                                const catName = catObj?.name || exp?.category || 'Uncategorized';
-                                const catColor = catObj?.color || '#ccc';
+                                let catName = 'Uncategorized';
+                                let catColor = '#ccc';
+
+                                if (typeof exp?.category === 'string') {
+                                    catName = exp.category;
+                                } else if (exp?.category && typeof exp.category === 'object' && !Array.isArray(exp.category) && exp.category.name) {
+                                    catName = exp.category.name;
+                                } else if (Array.isArray(exp?.category) && exp.category.length > 0) {
+                                    catName = exp.category[0]?.name || 'Uncategorized';
+                                }
+
+                                const catObj = (categories || []).find((c: any) => c.id === exp?.category_id || c.name === catName);
+                                if (catObj) {
+                                    catName = catObj.name;
+                                    catColor = catObj.color || '#ccc';
+                                }
 
                                 return (
                                     <TableRow key={exp?.id || Math.random()}>

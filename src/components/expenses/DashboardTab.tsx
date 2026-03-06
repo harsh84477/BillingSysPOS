@@ -17,7 +17,15 @@ export function DashboardTab({ profitSummary = {}, expenses = [], categories = [
 
     const pieData = useMemo(() => {
         const grouped = (expenses || []).reduce((acc: any, exp: any) => {
-            const catName = exp?.category?.name || exp?.category || 'Uncategorized';
+            let catName = 'Uncategorized';
+            if (typeof exp?.category === 'string') {
+                catName = exp.category;
+            } else if (exp?.category && typeof exp.category === 'object' && !Array.isArray(exp.category)) {
+                catName = exp.category.name || 'Uncategorized';
+            } else if (Array.isArray(exp?.category) && exp.category.length > 0) {
+                catName = exp.category[0]?.name || 'Uncategorized';
+            }
+
             acc[catName] = (acc[catName] || 0) + Number(exp?.amount || 0);
             return acc;
         }, {});
