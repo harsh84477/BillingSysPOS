@@ -145,6 +145,7 @@ export default function Dashboard() {
       return {
         revenue: bills.reduce((sum, bill) => sum + Number(bill.total_amount || 0), 0),
         profit: bills.reduce((sum, bill) => sum + Number(bill.profit || 0), 0),
+        dueAmount: bills.reduce((sum, bill) => sum + (bill.payment_status === 'unpaid' || bill.payment_status === 'partial' ? Number(bill.due_amount || 0) : 0), 0),
         orders: bills.length,
         dueBillsList,
       };
@@ -195,6 +196,7 @@ export default function Dashboard() {
       return {
         sales: bills.reduce((sum, b: any) => sum + Number(b.total_amount || 0), 0),
         profit: bills.reduce((sum, b: any) => sum + Number(b.profit || 0), 0),
+        dueAmount: bills.reduce((sum, b: any) => sum + (b.payment_status === 'unpaid' || b.payment_status === 'partial' ? Number(b.due_amount || 0) : 0), 0),
         orders: bills.length,
         dueBillsList,
       };
@@ -546,6 +548,7 @@ export default function Dashboard() {
         <KPICard title="Today's Orders" value={todayStats?.orders || 0} icon={ShoppingCart} description="Total bills created today" isLoading={loadingTodayStats} color="blue" index={4} />
         <KPICard title="Today's Due Bills" value={todayStats?.dueBillsList?.length || 0} icon={AlertTriangle} description="Bills created today but not fully paid" isLoading={loadingTodayStats} color="amber" index={5} onClick={() => setActiveModalData({ type: 'dueBills', title: 'Today\'s Due Bills', data: todayStats?.dueBillsList || [] })} />
         <KPICard title="Today's Due Collection" value={`${currencySymbol}${(todayPayments?.dueCollectionSum || 0).toFixed(2)}`} icon={CreditCard} description="Payments received today from due invoices" isLoading={loadingTodayPayments} color="amber" index={6} onClick={() => setActiveModalData({ type: 'dueCollections', title: 'Today\'s Due Collection', data: todayPayments?.dueCollectionList || [] })} />
+        <KPICard title="Today's Total Due Amount" value={`${currencySymbol}${(todayStats?.dueAmount || 0).toFixed(2)}`} icon={AlertTriangle} description="Remaining amount from today's due bills" isLoading={loadingTodayStats} color="red" index={7} onClick={() => setActiveModalData({ type: 'dueBills', title: 'Today\'s Due Bills', data: todayStats?.dueBillsList || [] })} />
       </div>
 
       {/* ── Monthly Performance ── */}
@@ -556,6 +559,7 @@ export default function Dashboard() {
         <KPICard title="Monthly Orders" value={monthlyStats?.orders || 0} icon={ShoppingCart} description="Number of invoices created this month" isLoading={loadingMonthlyStats} color="blue" index={2} />
         <KPICard title="Monthly Due Bills" value={monthlyStats?.dueBillsList?.length || 0} icon={AlertTriangle} description="Unpaid bills from this month" isLoading={loadingMonthlyStats} color="amber" index={3} onClick={() => setActiveModalData({ type: 'dueBills', title: 'Monthly Due Bills', data: monthlyStats?.dueBillsList || [] })} />
         <KPICard title="Monthly Due Collection" value={`${currencySymbol}${(monthlyPayments?.dueCollectionSum || 0).toFixed(2)}`} icon={CreditCard} description="Payments collected this month from due bills" isLoading={loadingMonthlyPayments} color="amber" index={4} onClick={() => setActiveModalData({ type: 'dueCollections', title: 'Monthly Due Collection', data: monthlyPayments?.dueCollectionList || [] })} />
+        <KPICard title="Monthly Total Due Amount" value={`${currencySymbol}${(monthlyStats?.dueAmount || 0).toFixed(2)}`} icon={AlertTriangle} description="Remaining amount from this month's due bills" isLoading={loadingMonthlyStats} color="red" index={5} onClick={() => setActiveModalData({ type: 'dueBills', title: 'Monthly Due Bills', data: monthlyStats?.dueBillsList || [] })} />
       </div>
 
       {/* ── Overall Operations ── */}
