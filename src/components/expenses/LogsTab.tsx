@@ -224,7 +224,14 @@ export function LogsTab({ expenses, categories, deleteExpense }: any) {
                                         <TableCell className="text-right font-black text-rose-600">₹{exp.amount.toFixed(2)}</TableCell>
                                         <TableCell className="text-center">
                                             {exp.receipt_url ? (
-                                                <a href={`#`} className="text-blue-500 text-xs hover:underline" onClick={(e) => { e.preventDefault(); toast.info('Receipt viewing requires public URL setup.'); }}>View</a>
+                                                <a
+                                                    href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${exp.receipt_url}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-blue-500 text-xs hover:underline flex items-center justify-center gap-1"
+                                                >
+                                                    <ReceiptText className="h-3 w-3" /> View
+                                                </a>
                                             ) : '-'}
                                         </TableCell>
                                         <TableCell className="text-right">

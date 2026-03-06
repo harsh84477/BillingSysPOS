@@ -9,42 +9,47 @@
 -- 01. TYPES & ENUMS
 -- ============================================================
 
--- Payment modes enum
-CREATE TYPE public.payment_mode AS ENUM ('cash', 'upi', 'card', 'credit');
+DO $$ BEGIN
+  CREATE TYPE public.payment_mode AS ENUM ('cash', 'upi', 'card', 'credit');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- Expense categories enum
-CREATE TYPE public.expense_category AS ENUM (
-  'Rent', 
-  'Electricity bill', 
-  'Salary', 
-  'Other exp',
-  'transport', 
-  'maintenance', 
-  'internet', 
-  'miscellaneous'
-);
+DO $$ BEGIN
+  CREATE TYPE public.expense_category AS ENUM (
+    'Rent', 
+    'Electricity bill', 
+    'Salary', 
+    'Other exp',
+    'transport', 
+    'maintenance', 
+    'internet', 
+    'miscellaneous'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- Activity action types
-CREATE TYPE public.activity_action AS ENUM (
-  'create_bill',
-  'update_bill',
-  'finalize_bill',
-  'cancel_bill',
-  'create_product',
-  'update_product',
-  'delete_product',
-  'adjust_stock',
-  'create_customer',
-  'update_customer',
-  'create_expense',
-  'update_expense',
-  'delete_expense',
-  'credit_transaction',
-  'sync_offline_data'
-);
+DO $$ BEGIN
+  CREATE TYPE public.activity_action AS ENUM (
+    'create_bill',
+    'update_bill',
+    'finalize_bill',
+    'cancel_bill',
+    'create_product',
+    'update_product',
+    'delete_product',
+    'adjust_stock',
+    'create_customer',
+    'update_customer',
+    'create_expense',
+    'update_expense',
+    'delete_expense',
+    'credit_transaction',
+    'sync_offline_data'
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- Sync status
-CREATE TYPE public.offline_sync_status AS ENUM ('pending', 'syncing', 'synced', 'failed', 'conflict');
+DO $$ BEGIN
+  CREATE TYPE public.offline_sync_status AS ENUM ('pending', 'syncing', 'synced', 'failed', 'conflict');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 
 -- ============================================================
 -- 02. TABLES - PAYMENT & SPLIT PAYMENT SYSTEM
@@ -660,6 +665,7 @@ $$;
 -- 10. DRAFT BILL & STOCK RESERVATION
 -- ============================================================
 
+DROP FUNCTION IF EXISTS public.create_draft_bill;
 CREATE OR REPLACE FUNCTION public.create_draft_bill(
   _business_id UUID,
   _bill_number TEXT,
@@ -739,6 +745,7 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.update_draft_bill;
 CREATE OR REPLACE FUNCTION public.update_draft_bill(
   _bill_id UUID,
   _customer_id UUID DEFAULT NULL,
@@ -815,6 +822,7 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.finalize_draft_bill;
 CREATE OR REPLACE FUNCTION public.finalize_draft_bill(
   _bill_id UUID,
   _payment_type TEXT,
@@ -867,6 +875,7 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.cancel_draft_bill;
 CREATE OR REPLACE FUNCTION public.cancel_draft_bill(_bill_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -907,62 +916,77 @@ $$;
 -- ============================================================
 
 ALTER TABLE public.bill_payments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view bill payments" ON public.bill_payments;
 CREATE POLICY "Users can view bill payments" ON public.bill_payments
   FOR SELECT TO authenticated
   USING (business_id = public.get_user_business_id(auth.uid()));
+DROP POLICY IF EXISTS "Staff can create payments" ON public.bill_payments;
 CREATE POLICY "Staff can create payments" ON public.bill_payments
   FOR INSERT TO authenticated
   WITH CHECK (business_id = public.get_user_business_id(auth.uid()));
 
 ALTER TABLE public.customer_credit_limits ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view credit limits" ON public.customer_credit_limits;
 CREATE POLICY "Users can view credit limits" ON public.customer_credit_limits
   FOR SELECT TO authenticated
   USING (business_id = public.get_user_business_id(auth.uid()));
+DROP POLICY IF EXISTS "Admin/Manager can manage credit" ON public.customer_credit_limits;
 CREATE POLICY "Admin/Manager can manage credit" ON public.customer_credit_limits
   FOR ALL TO authenticated
   USING (business_id = public.get_user_business_id(auth.uid()) AND public.is_admin_or_manager(auth.uid()));
 
 ALTER TABLE public.customer_credit_ledger ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view credit ledger" ON public.customer_credit_ledger;
 CREATE POLICY "Users can view credit ledger" ON public.customer_credit_ledger
   FOR SELECT TO authenticated
   USING (business_id = public.get_user_business_id(auth.uid()));
+DROP POLICY IF EXISTS "System can insert to ledger" ON public.customer_credit_ledger;
 CREATE POLICY "System can insert to ledger" ON public.customer_credit_ledger
   FOR INSERT TO authenticated
   WITH CHECK (business_id = public.get_user_business_id(auth.uid()));
 
 ALTER TABLE public.expenses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Owner/Manager can view expenses" ON public.expenses;
 CREATE POLICY "Owner/Manager can view expenses" ON public.expenses
   FOR SELECT TO authenticated
   USING (business_id = public.get_user_business_id(auth.uid()) AND public.is_admin_or_manager(auth.uid()));
+DROP POLICY IF EXISTS "Owner/Manager can manage expenses" ON public.expenses;
 CREATE POLICY "Owner/Manager can manage expenses" ON public.expenses
   FOR ALL TO authenticated
   USING (business_id = public.get_user_business_id(auth.uid()) AND public.is_admin_or_manager(auth.uid()));
 
 ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Owner/Manager can view activity logs" ON public.activity_logs;
 CREATE POLICY "Owner/Manager can view activity logs" ON public.activity_logs
   FOR SELECT TO authenticated
   USING (business_id = public.get_user_business_id(auth.uid()) AND public.is_admin_or_manager(auth.uid()));
+DROP POLICY IF EXISTS "System can create activity logs" ON public.activity_logs;
 CREATE POLICY "System can create activity logs" ON public.activity_logs
   FOR INSERT TO authenticated
   WITH CHECK (business_id = public.get_user_business_id(auth.uid()));
 
 ALTER TABLE public.offline_sync_queue ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view their sync queue" ON public.offline_sync_queue;
 CREATE POLICY "Users can view their sync queue" ON public.offline_sync_queue
   FOR SELECT TO authenticated
   USING (business_id = public.get_user_business_id(auth.uid()));
+DROP POLICY IF EXISTS "System can manage sync queue" ON public.offline_sync_queue;
 CREATE POLICY "System can manage sync queue" ON public.offline_sync_queue
   FOR ALL TO authenticated
   USING (business_id = public.get_user_business_id(auth.uid()));
 
 ALTER TABLE public.offline_data_cache ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view their cache" ON public.offline_data_cache;
 CREATE POLICY "Users can view their cache" ON public.offline_data_cache
   FOR ALL TO authenticated
   USING (business_id = public.get_user_business_id(auth.uid()));
 
 ALTER TABLE public.sync_conflicts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view conflicts" ON public.sync_conflicts;
 CREATE POLICY "Users can view conflicts" ON public.sync_conflicts
   FOR SELECT TO authenticated
   USING (business_id = public.get_user_business_id(auth.uid()) AND public.is_admin_or_manager(auth.uid()));
+DROP POLICY IF EXISTS "System can manage conflicts" ON public.sync_conflicts;
 CREATE POLICY "System can manage conflicts" ON public.sync_conflicts
   FOR ALL TO authenticated
   USING (business_id = public.get_user_business_id(auth.uid()));

@@ -160,7 +160,7 @@ export function EntryTab({ categories, addExpense }: any) {
                             <div className="relative">
                                 <Input
                                     type="file"
-                                    className="h-12 border-2 rounded-xl File:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                                    className="h-12 border-2 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
                                     onChange={handleFileUpload}
                                     disabled={uploading}
                                     accept="image/*,.pdf"
