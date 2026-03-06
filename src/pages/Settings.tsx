@@ -168,11 +168,11 @@ export default function Settings() {
             <ColStack>
               <SettingsCard title="Business Information" subtitle="Your business details that appear on invoices" icon="🏢" accent="#10b981">
                 <form onSubmit={handleBusinessSubmit}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-3.5">
                     <div><FieldLabel htmlFor="business_name">Business Name</FieldLabel><TextInput id="business_name" name="business_name" defaultValue={settings?.business_name} disabled={!isAdmin} /></div>
                     <div><FieldLabel htmlFor="email">Email</FieldLabel><TextInput id="email" name="email" type="email" defaultValue={settings?.email || ''} disabled={!isAdmin} /></div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-3.5">
                     <div><FieldLabel htmlFor="phone">Phone</FieldLabel><TextInput id="phone" name="phone" defaultValue={settings?.phone || ''} disabled={!isAdmin} /></div>
                     <div><FieldLabel htmlFor="gst_number">GST Number</FieldLabel><TextInput id="gst_number" placeholder="e.g. 22AAAAA0000A1Z5" defaultValue={settings?.gst_number || ''} onBlur={(e) => u({ gst_number: e.target.value })} disabled={!isAdmin} /></div>
                   </div>
@@ -216,7 +216,7 @@ export default function Settings() {
                 <SettingsCard title="Billing Rules" subtitle="Configure your business billing defaults" icon="📋" accent="#10b981">
                   <form onSubmit={handleBillingSubmit}>
                     <div style={{ marginBottom: '14px' }}><FieldLabel htmlFor="bill_prefix">Business Bill Prefix</FieldLabel><TextInput id="bill_prefix" name="bill_prefix" defaultValue={settings?.bill_prefix} hint="This prefix identifies your business on all bills." disabled={!isAdmin} /></div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3.5">
                       <div><FieldLabel htmlFor="currency">Currency Code</FieldLabel><TextInput id="currency" name="currency" defaultValue={settings?.currency} disabled={!isAdmin} /></div>
                       <div><FieldLabel htmlFor="currency_symbol">Symbol</FieldLabel><TextInput id="currency_symbol" name="currency_symbol" defaultValue={settings?.currency_symbol} disabled={!isAdmin} /></div>
                     </div>
@@ -233,7 +233,7 @@ export default function Settings() {
               </TwoColGrid>
 
               <SettingsCard title="GST Configuration" subtitle="Tax settings for your business" icon="🧾" accent="#f97316">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <form onSubmit={handleTaxSubmit}>
                       <SettingRow label="GST Percentage (%)" desc="Default tax rate for new items"
@@ -285,7 +285,7 @@ export default function Settings() {
                       <DialogHeader><DialogTitle>{editingCategory ? 'Edit Category' : 'Add Category'}</DialogTitle></DialogHeader>
                       <form onSubmit={handleCategorySubmit} className="space-y-4">
                         <div className="space-y-2"><Label htmlFor="cat_name">Name</Label><Input id="cat_name" name="name" defaultValue={editingCategory?.name} required /></div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2"><Label htmlFor="cat_color">Color</Label><Input id="cat_color" name="color" type="color" defaultValue={editingCategory?.color || '#3B82F6'} /></div>
                           <div className="space-y-2"><Label htmlFor="cat_icon">Icon</Label><Input id="cat_icon" name="icon" defaultValue={editingCategory?.icon || 'Package'} placeholder="Lucide icon name" /></div>
                         </div>
@@ -307,7 +307,7 @@ export default function Settings() {
           {/* ═══ STAFF ═══ */}
           {activeTab === 'staff' && isAdmin && (
             <ColStack>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '14px' }}>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
                 {[{ label: 'Total Users', count: userRoles.length, color: '#10b981' }, { label: 'Owners', count: userRoles.filter((ur: any) => ur.role === 'owner').length, color: '#f59e0b' },
                 { label: 'Managers', count: userRoles.filter((ur: any) => ur.role === 'manager').length, color: '#8b5cf6' }, { label: 'Salesmen', count: userRoles.filter((ur: any) => ur.role === 'salesman').length, color: '#3b82f6' }].map(({ label, count, color }) => (
                   <div key={label} style={{ background: T.color.cardBg, borderRadius: '12px', padding: '16px 20px', border: `1px solid ${T.color.border}`, borderLeft: `4px solid ${color}` }}>
@@ -342,7 +342,7 @@ export default function Settings() {
             <ColStack gap="20px">
               {/* Light Themes */}
               <SettingsCard title="Light Themes" subtitle="Clean and bright themes for daytime use" icon="☀️" accent="#f59e0b">
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                   {themeOptions.filter(o => !o.isDark).map(opt => {
                     const active = theme === opt.value;
                     return (
@@ -384,7 +384,7 @@ export default function Settings() {
 
               {/* Dark Themes */}
               <SettingsCard title="Dark Themes" subtitle="Easy on the eyes in low-light environments" icon="🌙" accent="#6366f1">
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                   {themeOptions.filter(o => o.isDark).map(opt => {
                     const active = theme === opt.value;
                     return (

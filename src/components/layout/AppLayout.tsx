@@ -253,7 +253,7 @@ export default function AppLayout() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[260px] p-0" style={{ background: 'var(--spos-navy)' }}>
+            <SheetContent side="left" className="w-[260px] p-0 flex flex-col h-full" style={{ background: 'var(--spos-navy)' }}>
               <SheetHeader className="sr-only">
                 <SheetTitle>Navigation Menu</SheetTitle>
               </SheetHeader>

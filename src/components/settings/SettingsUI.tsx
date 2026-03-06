@@ -138,15 +138,14 @@ export function SettingRow({ label, desc, right, noBorder }: {
     label: string; desc?: string; right: React.ReactNode; noBorder?: boolean;
 }) {
     return (
-        <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
-            padding: '13px 0', borderBottom: noBorder ? 'none' : `1px solid ${op(T.color.border, 50)}`,
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-3" style={{
+            borderBottom: noBorder ? 'none' : `1px solid ${op(T.color.border, 50)}`,
         }}>
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '13.5px', fontWeight: 550, color: T.color.textPri, lineHeight: 1.3 }}>{label}</div>
                 {desc && <div style={{ fontSize: '11.5px', color: T.color.textMuted, marginTop: '2px', lineHeight: 1.4 }}>{desc}</div>}
             </div>
-            <div style={{ flexShrink: 0 }}>{right}</div>
+            <div className="w-full sm:w-auto flex justify-end" style={{ flexShrink: 0 }}>{right}</div>
         </div>
     );
 }
@@ -221,8 +220,8 @@ export function TextArea({ value, defaultValue, placeholder, onBlur, onChange, d
 }
 
 /* ═══ SaveBtn ═══ */
-export function SaveBtn({ label = 'Save Changes', onClick, disabled, color = T.color.accent }: {
-    label?: string; onClick?: () => void; disabled?: boolean; color?: string;
+export function SaveBtn({ label = 'Save Changes', onClick, disabled, color = T.color.accent, className }: {
+    label?: string; onClick?: () => void; disabled?: boolean; color?: string; className?: string;
 }) {
     const [saved, setSaved] = useState(false);
     const [hovered, setHovered] = useState(false);
@@ -230,8 +229,9 @@ export function SaveBtn({ label = 'Save Changes', onClick, disabled, color = T.c
     return (
         <button type="submit" onClick={onClick ? handleClick : undefined} disabled={disabled}
             onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+            className={className || "w-full sm:w-auto"}
             style={{
-                padding: '10px 28px', fontSize: '13px', fontWeight: 600, borderRadius: T.radius.btn,
+                padding: '12px 28px', minHeight: '44px', fontSize: '13px', fontWeight: 600, borderRadius: T.radius.btn,
                 border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', letterSpacing: '-0.01em',
                 background: saved ? T.color.saved : color, color: '#fff',
                 transition: 'all 0.2s', opacity: disabled ? 0.5 : 1, fontFamily: T.font,
@@ -347,7 +347,7 @@ export function TabBar({ tabs, active, onSelect }: {
 
 /* ═══ Layout Helpers ═══ */
 export const TwoColGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>{children}</div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">{children}</div>
 );
 
 export const ColStack: React.FC<{ children: React.ReactNode; gap?: string }> = ({ children, gap = '20px' }) => (
