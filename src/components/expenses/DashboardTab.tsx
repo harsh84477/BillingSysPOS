@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, LineChart, Line, CartesianGrid } from 'recharts';
 import { Wallet, TrendingUp, TrendingDown, Activity } from 'lucide-react';
 
-export function DashboardTab({ profitSummary, expenses, categories }: any) {
+export function DashboardTab({ profitSummary = {}, expenses = [], categories = [] }: any) {
     const summary = profitSummary || {};
     const totalEarnings = Number(summary.sales || 0);
     const totalDeductions = Number(summary.purchase_cost || 0) + Number(summary.expenses || 0);
@@ -16,9 +16,9 @@ export function DashboardTab({ profitSummary, expenses, categories }: any) {
     ];
 
     const pieData = useMemo(() => {
-        const grouped = expenses.reduce((acc: any, exp: any) => {
-            const catName = exp.category?.name || exp.category || 'Uncategorized';
-            acc[catName] = (acc[catName] || 0) + exp.amount;
+        const grouped = (expenses || []).reduce((acc: any, exp: any) => {
+            const catName = exp?.category?.name || exp?.category || 'Uncategorized';
+            acc[catName] = (acc[catName] || 0) + Number(exp?.amount || 0);
             return acc;
         }, {});
         return Object.entries(grouped).map(([name, value]) => ({ name, value }));

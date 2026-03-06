@@ -8,7 +8,7 @@ import { Save, PlusCircle, Paperclip } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
-export function EntryTab({ categories, addExpense }: any) {
+export function EntryTab({ categories = [], addExpense }: any) {
     const [amount, setAmount] = useState('');
     const [categoryId, setCategoryId] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('cash');
@@ -50,7 +50,7 @@ export function EntryTab({ categories, addExpense }: any) {
             toast.error('Please enter a valid amount');
             return;
         }
-        if (!categoryId && categories.length > 0) {
+        if (!categoryId && categories && categories.length > 0) {
             toast.error('Please select a category');
             return;
         }
@@ -63,7 +63,7 @@ export function EntryTab({ categories, addExpense }: any) {
             description: description,
             expense_date: expenseDate,
             receipt_url: receiptUrl
-        }, categories.find((c: any) => c.id === categoryId)?.name || 'Uncategorized');
+        }, (categories || []).find((c: any) => c.id === categoryId)?.name || 'Uncategorized');
 
         if (success) {
             setAmount('');
@@ -113,7 +113,7 @@ export function EntryTab({ categories, addExpense }: any) {
                                     <SelectValue placeholder="Select Category" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {categories.map((cat: any) => (
+                                    {(categories || []).map((cat: any) => (
                                         <SelectItem key={cat.id} value={cat.id}>
                                             <span className="flex items-center gap-2">
                                                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.color || '#ccc' }} />
@@ -121,7 +121,7 @@ export function EntryTab({ categories, addExpense }: any) {
                                             </span>
                                         </SelectItem>
                                     ))}
-                                    {categories.length === 0 && (
+                                    {(!categories || categories.length === 0) && (
                                         <div className="p-2 text-sm text-muted-foreground italic">No categories found. Create one first!</div>
                                     )}
                                 </SelectContent>

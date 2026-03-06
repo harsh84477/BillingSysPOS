@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CalendarClock, PlusCircle, Trash2, Edit2, Play, Pause } from 'lucide-react';
 import { toast } from 'sonner';
 
-export function RecurringTab({ recurringExpenses, categories, addRecurringExpense, updateRecurringExpense, deleteRecurringExpense }: any) {
+export function RecurringTab({ recurringExpenses = [], categories = [], addRecurringExpense, updateRecurringExpense, deleteRecurringExpense }: any) {
     const [formData, setFormData] = useState({
         amount: '',
         category_id: '',
@@ -72,7 +72,7 @@ export function RecurringTab({ recurringExpenses, categories, addRecurringExpens
                         <Select value={formData.category_id} onValueChange={v => setFormData({ ...formData, category_id: v })}>
                             <SelectTrigger className="h-12 border-2 rounded-xl"><SelectValue placeholder="Select Category" /></SelectTrigger>
                             <SelectContent>
-                                {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                {(categories || []).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -142,14 +142,14 @@ export function RecurringTab({ recurringExpenses, categories, addRecurringExpens
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {recurringExpenses.map((r: any) => {
-                                const cat = categories.find((c: any) => c.id === r.category_id);
+                            {(recurringExpenses || []).map((r: any) => {
+                                const cat = (categories || []).find((c: any) => c.id === r.category_id);
                                 return (
                                     <TableRow key={r.id}>
                                         <TableCell className="font-semibold">{cat ? cat.name : 'Unknown'}</TableCell>
-                                        <TableCell className="font-bold text-emerald-600">₹{r.amount.toFixed(2)}</TableCell>
+                                        <TableCell className="font-bold text-emerald-600">₹{Number(r.amount || 0).toFixed(2)}</TableCell>
                                         <TableCell className="uppercase text-xs">{r.frequency}</TableCell>
-                                        <TableCell className="text-xs text-muted-foreground">{new Date(r.next_due_date).toLocaleDateString()}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">{r.next_due_date ? new Date(r.next_due_date).toLocaleDateString() : '-'}</TableCell>
                                         <TableCell>
                                             <Badge variant={r.is_active ? "default" : "secondary"} className={r.is_active ? "bg-emerald-500" : ""}>
                                                 {r.is_active ? 'Active' : 'Paused'}
@@ -169,7 +169,7 @@ export function RecurringTab({ recurringExpenses, categories, addRecurringExpens
                                     </TableRow>
                                 );
                             })}
-                            {recurringExpenses.length === 0 && (
+                            {(!recurringExpenses || recurringExpenses.length === 0) && (
                                 <TableRow>
                                     <TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic">
                                         No recurring expenses found. Save time by automating fixed costs!

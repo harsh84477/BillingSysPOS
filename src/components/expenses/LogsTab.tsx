@@ -9,14 +9,14 @@ import { Trash2, Download, Filter, ReceiptText } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 
-export function LogsTab({ expenses, categories, deleteExpense }: any) {
+export function LogsTab({ expenses = [], categories = [], deleteExpense }: any) {
     const [filterPeriod, setFilterPeriod] = useState('all');
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterPayment, setFilterPayment] = useState('all');
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
     const filteredExpenses = useMemo(() => {
-        let result = [...expenses];
+        let result = [...(expenses || [])];
 
         // Filter by Category
         if (filterCategory !== 'all') {
@@ -31,15 +31,15 @@ export function LogsTab({ expenses, categories, deleteExpense }: any) {
         const now = new Date();
         const today = now.toISOString().split('T')[0];
         if (filterPeriod === 'today') {
-            result = result.filter(e => e.expense_date === today);
+            result = result.filter(e => e?.expense_date === today);
         } else if (filterPeriod === 'week') {
             const weekAgo = new Date(now.setDate(now.getDate() - 7)).toISOString().split('T')[0];
-            result = result.filter(e => e.expense_date >= weekAgo && e.expense_date <= today);
+            result = result.filter(e => e?.expense_date >= weekAgo && e?.expense_date <= today);
         } else if (filterPeriod === 'month') {
             const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-            result = result.filter(e => e.expense_date >= monthStart && e.expense_date <= today);
+            result = result.filter(e => e?.expense_date >= monthStart && e?.expense_date <= today);
         } else if (filterPeriod === 'custom' && dateRange.start && dateRange.end) {
-            result = result.filter(e => e.expense_date >= dateRange.start && e.expense_date <= dateRange.end);
+            result = result.filter(e => e?.expense_date >= dateRange.start && e?.expense_date <= dateRange.end);
         }
 
         return result;
@@ -52,11 +52,11 @@ export function LogsTab({ expenses, categories, deleteExpense }: any) {
         }
 
         const data = filteredExpenses.map(exp => ({
-            Date: new Date(exp.expense_date).toLocaleDateString(),
+            Date: exp.expense_date ? new Date(exp.expense_date).toLocaleDateString() : 'N/A',
             Category: exp.category?.name || exp.category || 'Uncategorized',
             Description: exp.description || 'N/A',
             Payment_Method: exp.payment_method || 'cash',
-            Amount: exp.amount
+            Amount: Number(exp.amount || 0)
         }));
 
         if (format === 'csv') {
@@ -140,7 +140,7 @@ export function LogsTab({ expenses, categories, deleteExpense }: any) {
                                 <SelectTrigger className="h-10 bg-background"><SelectValue placeholder="All Categories" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">All Categories</SelectItem>
-                                    {categories.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                    {(categories || []).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -204,26 +204,26 @@ export function LogsTab({ expenses, categories, deleteExpense }: any) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredExpenses.map((exp: any) => {
-                                const catObj = exp.category?.name ? exp.category : categories.find((c: any) => c.id === exp.category_id || c.name === exp.category);
-                                const catName = catObj?.name || exp.category || 'Uncategorized';
+                            {(filteredExpenses || []).map((exp: any) => {
+                                const catObj = exp?.category?.name ? exp.category : (categories || []).find((c: any) => c.id === exp?.category_id || c.name === exp?.category);
+                                const catName = catObj?.name || exp?.category || 'Uncategorized';
                                 const catColor = catObj?.color || '#ccc';
 
                                 return (
-                                    <TableRow key={exp.id}>
+                                    <TableRow key={exp?.id || Math.random()}>
                                         <TableCell className="font-medium whitespace-nowrap text-xs">
-                                            {new Date(exp.expense_date).toLocaleDateString()}
+                                            {exp?.expense_date ? new Date(exp.expense_date).toLocaleDateString() : '-'}
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="outline" style={{ backgroundColor: `${catColor}15`, color: catColor, borderColor: catColor }}>
                                                 {catName}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="max-w-[200px] truncate text-xs" title={exp.description}>{exp.description || '-'}</TableCell>
-                                        <TableCell className="uppercase text-[10px] font-bold tracking-wider">{exp.payment_method || 'cash'}</TableCell>
-                                        <TableCell className="text-right font-black text-rose-600">₹{exp.amount.toFixed(2)}</TableCell>
+                                        <TableCell className="max-w-[200px] truncate text-xs" title={exp?.description}>{exp?.description || '-'}</TableCell>
+                                        <TableCell className="uppercase text-[10px] font-bold tracking-wider">{exp?.payment_method || 'cash'}</TableCell>
+                                        <TableCell className="text-right font-black text-rose-600">₹{Number(exp?.amount || 0).toFixed(2)}</TableCell>
                                         <TableCell className="text-center">
-                                            {exp.receipt_url ? (
+                                            {exp?.receipt_url ? (
                                                 <a
                                                     href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/documents/${exp.receipt_url}`}
                                                     target="_blank"

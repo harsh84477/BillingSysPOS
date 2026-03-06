@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PlusCircle, Trash2, Edit2, Bookmark, FolderOpen } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
-export function CategoriesTab({ categories, addCategory, updateCategory, deleteCategory }: any) {
+export function CategoriesTab({ categories = [], addCategory, updateCategory, deleteCategory }: any) {
     const [newCat, setNewCat] = useState({ name: '', color: '#3b82f6', icon: 'FolderOpen', sort_order: 0 });
     const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -80,7 +80,7 @@ export function CategoriesTab({ categories, addCategory, updateCategory, deleteC
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {categories.map((c: any) => (
+                            {(categories || []).map((c: any) => (
                                 <TableRow key={c.id}>
                                     <TableCell>
                                         <div className="w-4 h-4 rounded-full border border-black/10 shadow-sm" style={{ backgroundColor: c.color || '#ccc' }} />
@@ -98,7 +98,7 @@ export function CategoriesTab({ categories, addCategory, updateCategory, deleteC
                                     </TableCell>
                                 </TableRow>
                             ))}
-                            {categories.length === 0 && (
+                            {(!categories || categories.length === 0) && (
                                 <TableRow>
                                     <TableCell colSpan={3} className="h-32 text-center text-muted-foreground italic">
                                         No custom categories defined.
