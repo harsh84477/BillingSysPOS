@@ -3,7 +3,7 @@ import { MobileQuickBilling } from '@/components/salesman/MobileQuickBilling';
 
 export default function SalesmanBilling() {
     return (
-        <div className="h-full bg-slate-50 lg:hidden">
+        <div className="h-full bg-background">
             <MobileQuickBilling />
         </div>
     );
