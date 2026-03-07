@@ -1145,9 +1145,14 @@ export default function Billing() {
               {selectedCustomerId && (() => {
                 const sc = customers.find(c => c.id === selectedCustomerId);
                 return sc ? (
-                  <div className="mt-1.5 flex items-center gap-2 text-[10px]">
-                    <Badge variant="secondary" className="py-0 px-1.5 text-[10px] font-semibold">{sc.name}</Badge>
-                    {sc.phone && <span className="text-muted-foreground">📱 {sc.phone}</span>}
+                  <div className="mt-1.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <Badge variant="secondary" className="py-0 px-1.5 text-[10px] font-semibold">{sc.name}</Badge>
+                      {sc.phone && <span className="text-muted-foreground">📱 {sc.phone}</span>}
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-destructive" onClick={() => { setSelectedCustomerId(null); setCustomerName(''); }}>
+                      ✕ Clear
+                    </Button>
                   </div>
                 ) : null;
               })()}
@@ -1552,12 +1557,54 @@ export default function Billing() {
               Bill #{previewBillNumber} ({totalItems} items)
             </SheetTitle>
           </SheetHeader>
-          <div className="flex flex-col h-[calc(100%-4rem)] p-4 gap-4">
-            <Input
-              placeholder="Customer name"
-              value={customerName || selectedCustomer?.name || ''}
-              onChange={(e) => setCustomerName(e.target.value)}
-            />
+          <div className="flex flex-col h-[calc(100%-4rem)] p-4 gap-3">
+            {/* Mobile Customer Section — matching desktop */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Walk-in Customer"
+                  value={customerName || (selectedCustomerId ? customers.find(c => c.id === selectedCustomerId)?.name : '') || ''}
+                  onChange={(e) => {
+                    setCustomerName(e.target.value);
+                    if (selectedCustomerId) setSelectedCustomerId(null);
+                  }}
+                  className="pl-8 h-10 text-sm"
+                />
+              </div>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-10 w-10 shrink-0 border border-border"
+                onClick={() => { setCustomerSearchQuery(''); setIsCustomerDialogOpen(true); }}
+                title="Select Customer"
+              >
+                <Users className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-10 w-10 shrink-0 border border-border text-emerald-600"
+                onClick={() => { setQuickAddName(''); setQuickAddPhone(''); setQuickAddOpen(true); }}
+                title="Quick Add Customer"
+              >
+                <UserPlus className="h-4 w-4" />
+              </Button>
+            </div>
+            {selectedCustomerId && (() => {
+              const sc = customers.find(c => c.id === selectedCustomerId);
+              return sc ? (
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2 text-xs">
+                    <Badge variant="secondary" className="py-0.5 px-2 text-[11px] font-semibold">{sc.name}</Badge>
+                    {sc.phone && <span className="text-muted-foreground">📱 {sc.phone}</span>}
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-muted-foreground hover:text-destructive" onClick={() => { setSelectedCustomerId(null); setCustomerName(''); }}>
+                    ✕ Clear
+                  </Button>
+                </div>
+              ) : null;
+            })()}
 
             <ScrollArea className="flex-1 -mx-4 px-4 pb-4">
               {/* SaaS Alerts */}
