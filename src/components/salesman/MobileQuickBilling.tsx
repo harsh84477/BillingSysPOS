@@ -196,25 +196,21 @@ export function MobileQuickBilling() {
 
         <div className="flex items-center justify-between relative z-10">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/20 shadow-inner">
-              <ShoppingCart className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">Quick POS v2</h1>
-              <div className="flex items-center gap-1.5 opacity-80">
-                <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[10px] uppercase font-black tracking-widest leading-none">Professional Interface</span>
+              <div className="h-9 w-9 rounded-lg bg-white/20 flex items-center justify-center border border-white/10">
+                <ShoppingCart className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg font-bold">Quick POS v2</h1>
+                <div className="flex items-center gap-1 opacity-80">
+                  <div className="h-1 w-1 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] uppercase font-semibold leading-none">Professional Interface</span>
+                </div>
               </div>
             </div>
-          </div>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="bg-white/95 text-primary font-black px-3 py-1 shadow-sm border-none">
+            <Badge variant="secondary" className="bg-white/95 text-primary font-semibold px-2 py-0.5 shadow border-none text-sm">
               {cart.reduce((a, b) => a + b.quantity, 0)} Items
             </Badge>
-            <div className="hidden md:flex flex-col items-end mr-1">
-              <span className="text-[10px] font-bold opacity-70 uppercase tracking-tighter">Current Session</span>
-              <span className="text-xs font-mono font-bold leading-none capitalize">{user?.email?.split('@')[0]}</span>
-            </div>
           </div>
         </div>
       </div>
@@ -409,9 +405,9 @@ export function MobileQuickBilling() {
         </div>
 
         {/* ── Mobile Tabbed View (md hidden) ── */}
-        <div className="flex-1 md:hidden flex flex-col overflow-hidden bg-background pb-28">{/* reserve space for fixed bottom nav/actions */}
+        <div className="flex-1 md:hidden flex flex-col overflow-hidden bg-background pb-32">{/* reserve space for fixed bottom nav/actions */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="w-full rounded-none border-b grid grid-cols-2 bg-card h-14 p-1">
+            <TabsList className="w-full rounded-none border-b grid grid-cols-2 bg-card h-12 p-1">
               <TabsTrigger value="products" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">
                 <Package className="w-4 h-4 mr-2" />
                 Inventory
@@ -441,13 +437,13 @@ export function MobileQuickBilling() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
                 {productsLoading ? (
                   <div className="flex justify-center py-10"><Loader2 className="animate-spin text-primary" /></div>
                 ) : filteredProducts.length === 0 ? (
                   <div className="text-center py-20 text-muted-foreground/50 font-bold opacity-30">No products found</div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-4 pb-6">
+                  <div className="grid grid-cols-2 gap-3 pb-28">
                     {filteredProducts.map((product) => {
                       const available = product.stock_quantity - (product.reserved_quantity || 0);
                       const isLow = available <= product.low_stock_threshold;
@@ -461,15 +457,15 @@ export function MobileQuickBilling() {
                           onClick={() => available > 0 && addToCart(product)}
                         >
                           <CardContent className="p-0">
-                            <div className="h-24 bg-muted/40 flex items-center justify-center relative">
+                            <div className="h-20 bg-muted/40 flex items-center justify-center relative">
                               <Package className="w-10 h-10 text-muted-foreground/10" />
                               {isLow && available > 0 && (
                                 <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-red-500 rounded text-white font-black text-[8px] uppercase">Low Stock</div>
                               )}
                               <div className="absolute bottom-1 right-2 text-primary font-black text-sm">₹{product.selling_price}</div>
                             </div>
-                            <div className="p-2 space-y-1">
-                              <p className="font-bold text-[11px] uppercase tracking-tight leading-tight line-clamp-2 h-7">{product.name}</p>
+                            <div className="p-1 space-y-1">
+                              <p className="font-bold text-[11px] leading-tight line-clamp-2">{product.name}</p>
                               <div className={cn("text-[9px] font-black uppercase tracking-widest", isLow ? 'text-red-500' : 'text-muted-foreground/60')}>
                                 Avail: {available}
                               </div>
@@ -485,7 +481,7 @@ export function MobileQuickBilling() {
 
             {/* Checkout Tab */}
             <TabsContent value="cart" className="flex-1 overflow-hidden flex flex-col m-0 p-0 bg-muted/10">
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar pb-28">
                 {cart.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground/40 text-center space-y-4">
                     <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center mb-2 border border-border/50">
@@ -542,7 +538,7 @@ export function MobileQuickBilling() {
                       ))}
                     </div>
 
-                    <div className="bg-primary/5 border border-primary/10 p-5 rounded-3xl space-y-3 mt-4">
+                    <div className="bg-primary/5 border border-primary/10 p-4 rounded-2xl space-y-3 mt-4">
                       <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none">
                         <span>Sum Total</span>
                         <span className="text-foreground">₹{subtotal.toFixed(0)}</span>
@@ -554,7 +550,7 @@ export function MobileQuickBilling() {
                     </div>
 
                     <div
-                      className="bg-background border border-border/60 p-4 rounded-3xl flex items-center justify-between shadow-xs active:scale-95 transition-all text-left"
+                      className="bg-background border border-border/60 p-3 rounded-2xl flex items-center justify-between shadow-xs active:scale-95 transition-all text-left"
                       onClick={() => setShowCustomerModal(true)}
                     >
                       <div className="flex items-center gap-4">
@@ -575,9 +571,10 @@ export function MobileQuickBilling() {
               </div>
 
               {/* Fixed Bottom Action Mobile */}
-              <div className="sticky bottom-16 z-40 p-4 bg-background border-t border-border/40 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] safe-area-bottom">
+              {/* Fixed checkout bar placed above bottom nav */}
+              <div className="fixed bottom-16 left-0 right-0 z-50 px-4 safe-area-bottom">
                 {cart.length > 0 && (
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="mx-auto max-w-xl grid grid-cols-4 gap-3">
                     <Button
                       variant="outline"
                       className="col-span-1 rounded-2xl h-14 border-muted-foreground/20 text-muted-foreground"
