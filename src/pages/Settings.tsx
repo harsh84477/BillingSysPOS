@@ -100,8 +100,28 @@ export default function Settings() {
   const { data: userRoles = [] } = useQuery({
     queryKey: ['allUserRoles', businessId],
     queryFn: async () => {
-      const { data: roles, error } = await supabase.from('user_roles').select('id, user_id, role, business_id, bill_prefix, created_at, manager_full_access').eq('business_id', businessId!);
+      let data, error;
+
+      // Try to fetch with the new manager_full_access column first
+      const res = await supabase.from('user_roles')
+        .select('id, user_id, role, business_id, bill_prefix, created_at, manager_full_access')
+        .eq('business_id', businessId!);
+
+      if (res.error && res.error.code === '42703') {
+        // Fallback for unapplied database schema migrations (missing column)
+        console.warn('manager_full_access column missing. Falling back to base query.');
+        const fallbackRes = await supabase.from('user_roles')
+          .select('id, user_id, role, business_id, bill_prefix, created_at')
+          .eq('business_id', businessId!);
+        data = fallbackRes.data as any;
+        error = fallbackRes.error as any;
+      } else {
+        data = res.data as any;
+        error = res.error as any;
+      }
+
       if (error) throw error;
+      const roles = data;
       if (!roles || roles.length === 0) return [];
       const userIds = (roles as any[]).map(r => r.user_id);
       const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);

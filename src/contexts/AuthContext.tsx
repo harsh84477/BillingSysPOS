@@ -73,13 +73,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
     try {
       // Get the most recent role for this user
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('user_roles')
         .select('role, business_id, bill_prefix, manager_full_access')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
+
+      if (error && error.code === '42703') {
+        // Fallback if manager_full_access column hasn't been created yet
+        const fallback = await supabase
+          .from('user_roles')
+          .select('role, business_id, bill_prefix')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        data = fallback.data as any;
+        error = fallback.error as any;
+      }
 
       if (error) {
         console.error('Error fetching user role:', error);
