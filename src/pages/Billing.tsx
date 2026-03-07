@@ -42,6 +42,8 @@ import {
   Save,
   Printer,
   MessageCircle,
+  UserPlus,
+  FileText,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -135,6 +137,13 @@ export default function Billing() {
   const [whatsappPhoneDialogOpen, setWhatsappPhoneDialogOpen] = useState(false);
   const [whatsappPhone, setWhatsappPhone] = useState('');
   const [pendingWhatsappBillNumber, setPendingWhatsappBillNumber] = useState<string | null>(null);
+
+  // Quick Add Customer state
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAddName, setQuickAddName] = useState('');
+  const [quickAddPhone, setQuickAddPhone] = useState('');
+  const [quickAddSaving, setQuickAddSaving] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
 
   // Payment type: 'cash' | 'online' | 'split' | 'due'
   const [paymentType, setPaymentType] = useState<'cash' | 'online' | 'split' | 'due'>('cash');
@@ -629,7 +638,7 @@ export default function Billing() {
 
   // Create bill mutation with retry logic for duplicate key handling
   const createBillMutation = useMutation({
-    mutationFn: async (shouldPrint: boolean | 'whatsapp') => {
+    mutationFn: async (shouldPrint: boolean | 'whatsapp' | 'draft' | 'save-print') => {
       let retryCount = 0;
       const maxRetries = 3;
 
@@ -652,7 +661,7 @@ export default function Billing() {
           finalCustomerId = newCustomer.id;
         }
 
-        const isDraft = isSalesman;
+        const isDraft = isSalesman || shouldPrint === 'draft';
 
         // ─── DRAFT PATH: Use atomic RPC ───
         if (isDraft) {
@@ -774,7 +783,7 @@ export default function Billing() {
       throw new Error('Failed to generate unique bill number after multiple attempts');
     },
     onSuccess: ({ billNumber, shouldPrint, isDraft }) => {
-      if (shouldPrint === true && !isDraft) {
+      if ((shouldPrint === true || shouldPrint === 'save-print') && !isDraft) {
         printBill(billNumber);
       }
       if (shouldPrint === 'whatsapp' && !isDraft) {
@@ -791,11 +800,13 @@ export default function Billing() {
       setApplyGst(settings?.show_gst_in_billing ?? true);
       generateBillNumber().then(setPreviewBillNumber);
       if (isDraft) {
-        toast.success('Draft order saved! Stock has been reserved.');
+        toast.success('Draft saved! Stock reserved. Resume from Draft Bills.');
       } else if (shouldPrint === 'whatsapp') {
         toast.success('Bill saved! Opening WhatsApp...');
+      } else if (shouldPrint === 'save-print') {
+        toast.success('Bill saved & printed!');
       } else {
-        toast.success(shouldPrint ? 'Bill saved & printed!' : 'Bill saved successfully!');
+        toast.success(shouldPrint ? 'Bill printed!' : 'Bill saved successfully!');
       }
     },
     onError: (error: Error) => {
@@ -1116,12 +1127,30 @@ export default function Billing() {
                   variant="secondary"
                   size="icon"
                   className="h-9 w-9 shrink-0 border border-border"
-                  onClick={() => setIsCustomerDialogOpen(true)}
+                  onClick={() => { setCustomerSearchQuery(''); setIsCustomerDialogOpen(true); }}
                   title="Select Customer"
                 >
                   <Users className="h-4 w-4" />
                 </Button>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 border border-border text-emerald-600"
+                  onClick={() => { setQuickAddName(''); setQuickAddPhone(''); setQuickAddOpen(true); }}
+                  title="Quick Add Customer"
+                >
+                  <UserPlus className="h-4 w-4" />
+                </Button>
               </div>
+              {selectedCustomerId && (() => {
+                const sc = customers.find(c => c.id === selectedCustomerId);
+                return sc ? (
+                  <div className="mt-1.5 flex items-center gap-2 text-[10px]">
+                    <Badge variant="secondary" className="py-0 px-1.5 text-[10px] font-semibold">{sc.name}</Badge>
+                    {sc.phone && <span className="text-muted-foreground">📱 {sc.phone}</span>}
+                  </div>
+                ) : null;
+              })()}
             </div>
 
             {/* Cart Items */}
@@ -1417,7 +1446,7 @@ export default function Billing() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-wrap gap-1.5 pt-2">
                 {isSalesman ? (
                   <Button
                     className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
@@ -1429,31 +1458,61 @@ export default function Billing() {
                   </Button>
                 ) : (
                   <>
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                      onClick={() => createBillMutation.mutate(false)}
-                    >
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Bill
-                    </Button>
-                    <Button
-                      className="flex-1"
-                      disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                      onClick={() => createBillMutation.mutate(true)}
-                    >
-                      <Printer className="mr-2 h-4 w-4" />
-                      Print
-                    </Button>
-                    {(settings?.checkout_whatsapp_enabled ?? true) && (
+                    {(settings?.checkout_save_enabled ?? true) && (
                       <Button
-                        className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white"
+                        variant="outline"
+                        className="flex-1 min-w-[80px] text-xs h-9"
                         disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                        onClick={() => createBillMutation.mutate('whatsapp')}
+                        onClick={() => createBillMutation.mutate(false)}
                       >
-                        <MessageCircle className="mr-2 h-4 w-4" />
-                        WhatsApp
+                        <Save className="mr-1.5 h-3.5 w-3.5" />
+                        Save
+                      </Button>
+                    )}
+                    {(settings?.checkout_print_enabled ?? true) && (
+                      <Button
+                        className="flex-1 min-w-[80px] text-xs h-9"
+                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                        onClick={() => createBillMutation.mutate(true)}
+                      >
+                        <Printer className="mr-1.5 h-3.5 w-3.5" />
+                        Print
+                      </Button>
+                    )}
+                    {(settings?.checkout_save_print_enabled ?? true) && (
+                      <Button
+                        className="flex-1 min-w-[80px] text-xs h-9 bg-indigo-600 hover:bg-indigo-700 text-white"
+                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                        onClick={() => createBillMutation.mutate('save-print')}
+                      >
+                        <Printer className="mr-1.5 h-3.5 w-3.5" />
+                        Save & Print
+                      </Button>
+                    )}
+                    {(settings?.checkout_whatsapp_enabled ?? true) && (() => {
+                      const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
+                      const hasPhone = !!(customer?.phone?.trim());
+                      return (
+                        <Button
+                          className="flex-1 min-w-[80px] text-xs h-9 bg-[#25D366] hover:bg-[#128C7E] text-white"
+                          disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill || !hasPhone}
+                          onClick={() => createBillMutation.mutate('whatsapp')}
+                          title={hasPhone ? 'Send bill via WhatsApp' : 'Select a customer with phone number first'}
+                        >
+                          <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
+                          WhatsApp
+                        </Button>
+                      );
+                    })()}
+                    {(settings?.checkout_draft_enabled ?? true) && (
+                      <Button
+                        variant="outline"
+                        className="flex-1 min-w-[80px] text-xs h-9 border-amber-300 text-amber-700 hover:bg-amber-50"
+                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                        onClick={() => createBillMutation.mutate('draft')}
+                      >
+                        <FileText className="mr-1.5 h-3.5 w-3.5" />
+                        Draft
                       </Button>
                     )}
                   </>
@@ -1657,10 +1716,10 @@ export default function Billing() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2">
               {isSalesman ? (
                 <Button
-                  className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
+                  className="w-full bg-teal-600 hover:bg-teal-700 text-white"
                   disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
                   onClick={() => createBillMutation.mutate(false)}
                 >
@@ -1669,31 +1728,65 @@ export default function Billing() {
                 </Button>
               ) : (
                 <>
-                  <Button
-                    variant="outline"
-                    className="flex-1"
-                    disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                    onClick={() => createBillMutation.mutate(false)}
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </Button>
-                  <Button
-                    className="flex-1"
-                    disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                    onClick={() => createBillMutation.mutate(true)}
-                  >
-                    <Printer className="mr-2 h-4 w-4" />
-                    Print
-                  </Button>
-                  {(settings?.checkout_whatsapp_enabled ?? true) && (
+                  <div className="flex gap-2">
+                    {(settings?.checkout_save_enabled ?? true) && (
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                        onClick={() => createBillMutation.mutate(false)}
+                      >
+                        <Save className="mr-1.5 h-3.5 w-3.5" />
+                        Save
+                      </Button>
+                    )}
+                    {(settings?.checkout_print_enabled ?? true) && (
+                      <Button
+                        className="flex-1"
+                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                        onClick={() => createBillMutation.mutate(true)}
+                      >
+                        <Printer className="mr-1.5 h-3.5 w-3.5" />
+                        Print
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {(settings?.checkout_save_print_enabled ?? true) && (
+                      <Button
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                        onClick={() => createBillMutation.mutate('save-print')}
+                      >
+                        <Printer className="mr-1.5 h-3.5 w-3.5" />
+                        Save & Print
+                      </Button>
+                    )}
+                    {(settings?.checkout_whatsapp_enabled ?? true) && (() => {
+                      const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
+                      const hasPhone = !!(customer?.phone?.trim());
+                      return (
+                        <Button
+                          className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white"
+                          disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill || !hasPhone}
+                          onClick={() => createBillMutation.mutate('whatsapp')}
+                          title={hasPhone ? 'Send via WhatsApp' : 'Select customer with phone'}
+                        >
+                          <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
+                          WhatsApp
+                        </Button>
+                      );
+                    })()}
+                  </div>
+                  {(settings?.checkout_draft_enabled ?? true) && (
                     <Button
-                      className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white"
+                      variant="outline"
+                      className="w-full border-amber-300 text-amber-700 hover:bg-amber-50"
                       disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                      onClick={() => createBillMutation.mutate('whatsapp')}
+                      onClick={() => createBillMutation.mutate('draft')}
                     >
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      WhatsApp
+                      <FileText className="mr-1.5 h-3.5 w-3.5" />
+                      Save as Draft
                     </Button>
                   )}
                 </>
@@ -1705,44 +1798,124 @@ export default function Billing() {
 
       {/* Customer Selection Dialog */}
       <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Select Customer</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              Select Customer
+              <Button size="sm" variant="outline" className="text-xs gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => { setIsCustomerDialogOpen(false); setQuickAddName(''); setQuickAddPhone(''); setQuickAddOpen(true); }}>
+                <UserPlus className="h-3.5 w-3.5" /> New Customer
+              </Button>
+            </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-64">
-            <div className="space-y-2">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search by name or phone..." value={customerSearchQuery} onChange={(e) => setCustomerSearchQuery(e.target.value)} className="pl-10 h-10" autoFocus />
+          </div>
+          <ScrollArea className="max-h-72">
+            <div className="space-y-1">
               <Button
                 variant="ghost"
-                className="w-full justify-start"
+                className="w-full justify-start h-auto py-2.5"
                 onClick={() => {
                   setSelectedCustomerId(null);
                   setCustomerName('');
                   setIsCustomerDialogOpen(false);
                 }}
               >
-                Walk-in Customer
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground"><User className="h-4 w-4" /></div>
+                  <span className="font-medium text-sm">Walk-in Customer</span>
+                </div>
               </Button>
-              {customers.map((customer) => (
-                <Button
-                  key={customer.id}
-                  variant={selectedCustomerId === customer.id ? 'secondary' : 'ghost'}
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setSelectedCustomerId(customer.id);
-                    setCustomerName(customer.name);
-                    setIsCustomerDialogOpen(false);
-                  }}
-                >
-                  <div className="text-left">
-                    <div>{customer.name}</div>
-                    {customer.phone && (
-                      <div className="text-xs text-muted-foreground">{customer.phone}</div>
-                    )}
+              {customers
+                .filter(c => {
+                  if (!customerSearchQuery.trim()) return true;
+                  const q = customerSearchQuery.toLowerCase();
+                  return c.name?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q);
+                })
+                .map((customer) => (
+                  <Button
+                    key={customer.id}
+                    variant={selectedCustomerId === customer.id ? 'secondary' : 'ghost'}
+                    className="w-full justify-start h-auto py-2.5"
+                    onClick={() => {
+                      setSelectedCustomerId(customer.id);
+                      setCustomerName(customer.name);
+                      setIsCustomerDialogOpen(false);
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">{customer.name?.charAt(0)?.toUpperCase()}</div>
+                      <div className="text-left">
+                        <div className="font-medium text-sm">{customer.name}</div>
+                        {customer.phone && (
+                          <div className="text-[11px] text-muted-foreground">📱 {customer.phone}</div>
+                        )}
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              {customers.filter(c => {
+                if (!customerSearchQuery.trim()) return true;
+                const q = customerSearchQuery.toLowerCase();
+                return c.name?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q);
+              }).length === 0 && customerSearchQuery.trim() && (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    <p>No customers found</p>
+                    <Button size="sm" variant="link" className="text-primary mt-1" onClick={() => { setIsCustomerDialogOpen(false); setQuickAddName(customerSearchQuery); setQuickAddPhone(''); setQuickAddOpen(true); }}>Create "{customerSearchQuery}" as new customer</Button>
                   </div>
-                </Button>
-              ))}
+                )}
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Add Customer Dialog */}
+      <Dialog open={quickAddOpen} onOpenChange={setQuickAddOpen}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-emerald-500" />
+              Quick Add Customer
+            </DialogTitle>
+            <DialogDescription>Add a new customer for fast billing.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Customer Name *</Label>
+              <Input placeholder="e.g. Ravi Kumar" value={quickAddName} onChange={e => setQuickAddName(e.target.value)} autoFocus />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Mobile Number</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-muted-foreground bg-muted px-3 py-2 rounded-lg">+91</span>
+                <Input type="tel" placeholder="10 digit number" value={quickAddPhone} onChange={e => setQuickAddPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength={10} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setQuickAddOpen(false)}>Cancel</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={!quickAddName.trim() || quickAddSaving}
+              onClick={async () => {
+                setQuickAddSaving(true);
+                try {
+                  const { data: newCust, error } = await supabase.from('customers').insert({ name: quickAddName.trim(), phone: quickAddPhone || null, business_id: businessId }).select().single();
+                  if (error) throw error;
+                  queryClient.invalidateQueries({ queryKey: ['customers'] });
+                  setSelectedCustomerId(newCust.id);
+                  setCustomerName(newCust.name);
+                  toast.success(`Customer "${newCust.name}" added!`);
+                  setQuickAddOpen(false);
+                } catch (err: any) { toast.error('Failed: ' + err.message); }
+                finally { setQuickAddSaving(false); }
+              }}
+            >
+              {quickAddSaving ? 'Saving...' : 'Add & Select'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
