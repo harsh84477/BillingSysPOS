@@ -153,12 +153,25 @@ export default function Billing() {
   const [dueDate, setDueDate] = useState<string>('');
   const { finalizeBill, isFinalizing } = useBilling();
 
-  // Sync applyGst with settings once settings load
+  // Sync settings once they load
   React.useEffect(() => {
-    if (settings && settings.show_gst_in_billing !== undefined) {
-      setApplyGst(settings.show_gst_in_billing);
+    if (settings) {
+      if (settings.show_gst_in_billing !== undefined) setApplyGst(settings.show_gst_in_billing);
+      if (settings.default_payment_method && cart.length === 0) {
+        setPaymentType(settings.default_payment_method as any);
+      }
     }
-  }, [settings?.show_gst_in_billing]);
+  }, [settings]);
+
+  const availablePaymentMethods = useMemo(() => {
+    const methods: { id: 'cash' | 'online' | 'split' | 'due'; label: string }[] = [];
+    if (settings?.enable_payment_cash ?? true) methods.push({ id: 'cash', label: 'CASH' });
+    if (settings?.enable_payment_online ?? true) methods.push({ id: 'online', label: 'UPI' });
+    if (settings?.enable_payment_split ?? true) methods.push({ id: 'split', label: 'SPLIT' });
+    if (settings?.enable_payment_due ?? true) methods.push({ id: 'due', label: 'DUE' });
+    if (methods.length === 0) methods.push({ id: 'cash', label: 'CASH' }); // safe fallback
+    return methods;
+  }, [settings]);
   const [isCartExpanded, setIsCartExpanded] = useState(true);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
@@ -798,6 +811,10 @@ export default function Billing() {
       setSelectedCustomerId(null);
       setDiscountValue(0);
       setApplyGst(settings?.show_gst_in_billing ?? true);
+      setPaymentType(settings?.default_payment_method as any || 'cash');
+      setCashAmount('');
+      setOnlineAmount('');
+      setPaidAmount('');
       generateBillNumber().then(setPreviewBillNumber);
       if (isDraft) {
         toast.success('Draft saved! Stock reserved. Resume from Draft Bills.');
@@ -917,6 +934,130 @@ export default function Billing() {
       </button>
     );
   });
+
+  const renderPaymentSelector = () => (
+    <div className="pt-2 border-t text-left">
+      <p className="text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">Payment Method</p>
+      <div className="grid grid-cols-4 gap-1 p-0.5 bg-muted/50 rounded-lg border border-border">
+        {availablePaymentMethods.map((pm) => (
+          <button
+            key={pm.id}
+            onClick={() => {
+              setPaymentType(pm.id as any);
+              setCashAmount('');
+              setOnlineAmount('');
+              setPaidAmount('');
+            }}
+            className={cn(
+              'py-1.5 rounded-md text-[10px] font-bold transition-all uppercase',
+              paymentType === pm.id
+                ? 'bg-primary text-primary-foreground shadow-md'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+            )}
+          >
+            {pm.label}
+          </button>
+        ))}
+      </div>
+
+      {paymentType === 'split' && (
+        <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1 text-left">
+              <Label className="text-[10px] uppercase text-muted-foreground">Cash Amount</Label>
+              <div className="relative">
+                <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={cashAmount}
+                  onChange={(e) => setCashAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="h-8 pl-5 text-sm font-bold bg-emerald-50/30 border-emerald-100 focus-visible:ring-emerald-500"
+                />
+              </div>
+            </div>
+            <div className="space-y-1 text-left">
+              <Label className="text-[10px] uppercase text-muted-foreground">Online Amount</Label>
+              <div className="relative">
+                <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={onlineAmount}
+                  onChange={(e) => setOnlineAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="h-8 pl-5 text-sm font-bold bg-blue-50/30 border-blue-100 focus-visible:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/10">
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">Total Entered</span>
+              <span className={cn(
+                "text-sm font-black",
+                (Number(cashAmount || 0) + Number(onlineAmount || 0)) === cartCalculations.total ? "text-emerald-600" : "text-amber-600"
+              )}>
+                {currencySymbol}{(Number(cashAmount || 0) + Number(onlineAmount || 0)).toFixed(2)} / {cartCalculations.total.toFixed(2)}
+              </span>
+            </div>
+            {cartCalculations.total - (Number(cashAmount || 0) + Number(onlineAmount || 0)) > 0 && (
+              <div className="flex items-center justify-between p-2 rounded-lg bg-destructive/5 border border-destructive/10 animate-in fade-in zoom-in duration-200">
+                <span className="text-[10px] uppercase font-bold text-destructive">Remaining Due</span>
+                <span className="text-sm font-black text-destructive">
+                  {currencySymbol}{(cartCalculations.total - (Number(cashAmount || 0) + Number(onlineAmount || 0))).toFixed(2)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {paymentType === 'online' && (
+        <div className="mt-3 p-3 rounded-lg bg-blue-50/50 border border-blue-100 flex items-center gap-3 animate-in fade-in duration-200 text-left">
+          <Smartphone className="h-5 w-5 text-blue-500" />
+          <div>
+            <p className="text-[10px] uppercase font-bold text-blue-700">Online Payment (UPI/Card)</p>
+            <p className="text-xs text-blue-600/80">Full amount ₹{cartCalculations.total.toFixed(2)}</p>
+          </div>
+        </div>
+      )}
+
+      {paymentType === 'due' && (
+        <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-[10px] uppercase text-muted-foreground">Paid Now</Label>
+            <div className="relative">
+              <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
+              <Input
+                type="number"
+                placeholder="0"
+                value={paidAmount}
+                onChange={(e) => setPaidAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                className="w-32 h-8 pl-5 text-right text-sm font-bold"
+                max={cartCalculations.total}
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-lg bg-destructive/5 border border-destructive/10">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground">Due Amount</span>
+            <span className="text-sm font-black text-destructive">
+              {currencySymbol}{(cartCalculations.total - Number(paidAmount || 0)).toFixed(2)}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-[10px] uppercase text-muted-foreground">Due Date</Label>
+            <Input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className="w-36 h-8 text-[10px]"
+              min={new Date().toISOString().split('T')[0]}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="flex gap-0 w-full h-[calc(100dvh-3.5rem)] md:h-[100dvh] overflow-hidden relative bg-background">
@@ -1301,132 +1442,7 @@ export default function Billing() {
               )}
 
               {/* ── Payment Type Selector (hidden for salesman) ── */}
-              {!isSalesman && (
-                <div className="pt-2 border-t text-left">
-                  <p className="text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">Payment Method</p>
-                  <div className="grid grid-cols-4 gap-1 p-0.5 bg-muted/50 rounded-lg border border-border">
-                    {(['cash', 'online', 'split', 'due'] as const).map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => {
-                          setPaymentType(type);
-                          setCashAmount('');
-                          setOnlineAmount('');
-                          setPaidAmount('');
-                        }}
-                        className={cn(
-                          'py-1.5 rounded-md text-[10px] font-bold transition-all uppercase',
-                          paymentType === type
-                            ? 'bg-primary text-primary-foreground shadow-md'
-                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                        )}
-                      >
-                        {type === 'online' ? 'UPI' : type}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Split payment fields */}
-                  {paymentType === 'split' && (
-                    <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1 text-left">
-                          <Label className="text-[10px] uppercase text-muted-foreground">Cash Amount</Label>
-                          <div className="relative">
-                            <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
-                            <Input
-                              type="number"
-                              placeholder="0"
-                              value={cashAmount}
-                              onChange={(e) => setCashAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                              className="h-8 pl-5 text-sm font-bold bg-emerald-50/30 border-emerald-100 focus-visible:ring-emerald-500"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-1 text-left">
-                          <Label className="text-[10px] uppercase text-muted-foreground">Online Amount</Label>
-                          <div className="relative">
-                            <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
-                            <Input
-                              type="number"
-                              placeholder="0"
-                              value={onlineAmount}
-                              onChange={(e) => setOnlineAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                              className="h-8 pl-5 text-sm font-bold bg-blue-50/30 border-blue-100 focus-visible:ring-blue-500"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/10">
-                          <span className="text-[10px] uppercase font-bold text-muted-foreground">Total Entered</span>
-                          <span className={cn(
-                            "text-sm font-black",
-                            (Number(cashAmount || 0) + Number(onlineAmount || 0)) === cartCalculations.total ? "text-emerald-600" : "text-amber-600"
-                          )}>
-                            {currencySymbol}{(Number(cashAmount || 0) + Number(onlineAmount || 0)).toFixed(2)} / {cartCalculations.total.toFixed(2)}
-                          </span>
-                        </div>
-                        {cartCalculations.total - (Number(cashAmount || 0) + Number(onlineAmount || 0)) > 0 && (
-                          <div className="flex items-center justify-between p-2 rounded-lg bg-destructive/5 border border-destructive/10 animate-in fade-in zoom-in duration-200">
-                            <span className="text-[10px] uppercase font-bold text-destructive">Remaining Due</span>
-                            <span className="text-sm font-black text-destructive">
-                              {currencySymbol}{(cartCalculations.total - (Number(cashAmount || 0) + Number(onlineAmount || 0))).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Online payment info */}
-                  {paymentType === 'online' && (
-                    <div className="mt-3 p-3 rounded-lg bg-blue-50/50 border border-blue-100 flex items-center gap-3 animate-in fade-in duration-200 text-left">
-                      <Smartphone className="h-5 w-5 text-blue-500" />
-                      <div>
-                        <p className="text-[10px] uppercase font-bold text-blue-700">Online Payment (UPI/Card)</p>
-                        <p className="text-xs text-blue-600/80">Full amount ₹{cartCalculations.total.toFixed(2)}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Due-specific fields */}
-                  {paymentType === 'due' && (
-                    <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                      <div className="flex items-center justify-between gap-2">
-                        <Label className="text-[10px] uppercase text-muted-foreground">Paid Now</Label>
-                        <div className="relative">
-                          <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
-                          <Input
-                            type="number"
-                            placeholder="0"
-                            value={paidAmount}
-                            onChange={(e) => setPaidAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                            className="w-32 h-8 pl-5 text-right text-sm font-bold"
-                            max={cartCalculations.total}
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between p-2 rounded-lg bg-destructive/5 border border-destructive/10">
-                        <span className="text-[10px] uppercase font-bold text-muted-foreground">Due Amount</span>
-                        <span className="text-sm font-black text-destructive">
-                          {currencySymbol}{(cartCalculations.total - Number(paidAmount || 0)).toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <Label className="text-[10px] uppercase text-muted-foreground">Due Date</Label>
-                        <Input
-                          type="date"
-                          value={dueDate}
-                          onChange={(e) => setDueDate(e.target.value)}
-                          className="w-36 h-8 text-[10px]"
-                          min={new Date().toISOString().split('T')[0]}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {!isSalesman && renderPaymentSelector()}
 
               {/* Salesman info badge */}
               {isSalesman && (
@@ -1765,7 +1781,10 @@ export default function Billing() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 relative z-10">
+              {/* Payment Type Selector inside Mobile Drawer */}
+              {!isSalesman && renderPaymentSelector()}
+
               {isSalesman ? (
                 <Button
                   className="w-full bg-teal-600 hover:bg-teal-700 text-white"

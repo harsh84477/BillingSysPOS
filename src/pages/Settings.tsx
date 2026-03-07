@@ -440,6 +440,31 @@ export default function Settings() {
                   }} disabled={!isAdmin} />} />
                 <InfoBox bg={op('#10b981', 8)} border={`1px solid ${op('#10b981', 25)}`} icon="💡" title="Tip" titleColor="#10b981" value="At least one checkout button must stay enabled. Salesmen always see Draft button only." />
               </SettingsCard>
+              <SettingsCard title="Payment Methods" subtitle="Configure accepted payment methods and defaults" icon="💳" accent="#8b5cf6">
+                <SectionLabel text="Default Payment Method" />
+                <SettingRow label="Default Method" desc="Automatically selected when starting a new bill"
+                  right={<SelectInput
+                    value={settings?.default_payment_method || 'cash'}
+                    onChange={(v) => u({ default_payment_method: v })}
+                    disabled={!isAdmin}
+                    options={[
+                      { value: 'cash', label: 'Cash' },
+                      { value: 'online', label: 'UPI / Online' },
+                      { value: 'split', label: 'Split Payment' },
+                      { value: 'due', label: 'Due (Unpaid)' },
+                    ]}
+                  />}
+                />
+                <SectionLabel text="Available Methods" />
+                <SettingRow label="Cash" desc="Accept cash payments"
+                  right={<Toggle on={settings?.enable_payment_cash ?? true} onChange={(v) => u({ enable_payment_cash: v })} disabled={!isAdmin} />} />
+                <SettingRow label="UPI / Online" desc="Accept digital payments"
+                  right={<Toggle on={settings?.enable_payment_online ?? true} onChange={(v) => u({ enable_payment_online: v })} disabled={!isAdmin} />} />
+                <SettingRow label="Split Payment" desc="Accept payment split across multiple methods"
+                  right={<Toggle on={settings?.enable_payment_split ?? true} onChange={(v) => u({ enable_payment_split: v })} disabled={!isAdmin} />} />
+                <SettingRow label="Due Bill" desc="Allow bills to be marked as unpaid/due" noBorder
+                  right={<Toggle on={settings?.enable_payment_due ?? true} onChange={(v) => u({ enable_payment_due: v })} disabled={!isAdmin} />} />
+              </SettingsCard>
             </ColStack>
           )}
 
