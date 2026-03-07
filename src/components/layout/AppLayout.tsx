@@ -244,7 +244,7 @@ export default function AppLayout() {
         {/* Topbar removed for cleaner layout */}
 
         {/* Mobile Header (below md) */}
-        < header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-white px-4 md:hidden"
+        <header className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b bg-background px-4 md:hidden"
           style={{ borderColor: 'var(--spos-border)' }}
         >
           <Sheet>
