@@ -41,6 +41,7 @@ import {
   ShoppingCart,
   Save,
   Printer,
+  MessageCircle,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -129,6 +130,11 @@ export default function Billing() {
   const [customerName, setCustomerName] = useState('');
   const [discountValue, setDiscountValue] = useState(0);
   const [applyGst, setApplyGst] = useState(true);
+
+  // WhatsApp state
+  const [whatsappPhoneDialogOpen, setWhatsappPhoneDialogOpen] = useState(false);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [pendingWhatsappBillNumber, setPendingWhatsappBillNumber] = useState<string | null>(null);
 
   // Payment type: 'cash' | 'online' | 'split' | 'due'
   const [paymentType, setPaymentType] = useState<'cash' | 'online' | 'split' | 'due'>('cash');
@@ -549,9 +555,81 @@ export default function Billing() {
     printBillReceipt(billData, itemsData, settings);
   };
 
+  // ── WhatsApp Bill Function ──
+  const sendWhatsApp = (billNumber: string, phone: string) => {
+    const storeName = settings?.business_name || 'Our Store';
+    const custName = selectedCustomerId
+      ? customers.find(c => c.id === selectedCustomerId)?.name || customerName || 'Customer'
+      : customerName || 'Walk-in Customer';
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+    let itemLines = '';
+    cart.forEach((item, i) => {
+      const total = item.unitPrice * item.quantity;
+      itemLines += `${i + 1}. ${item.name}\n   Qty: ${item.quantity} × ${currencySymbol}${item.unitPrice.toFixed(2)} = ${currencySymbol}${total.toFixed(2)}\n\n`;
+    });
+
+    let paymentLabel = 'Cash';
+    if (paymentType === 'online') paymentLabel = 'UPI / Online';
+    else if (paymentType === 'split') paymentLabel = 'Split (Cash + Online)';
+    else if (paymentType === 'due') paymentLabel = 'Due / Credit';
+
+    let msg = `🧾 *Invoice from ${storeName}*\n\n`;
+    msg += `Invoice No: ${billNumber}\n`;
+    msg += `Customer: ${custName}\n`;
+    msg += `Date: ${dateStr} ${timeStr}\n\n`;
+    msg += `*Items Purchased*\n`;
+    msg += `--------------------------------\n`;
+    msg += itemLines;
+    msg += `--------------------------------\n`;
+    msg += `Subtotal: ${currencySymbol}${cartCalculations.subtotal.toFixed(2)}\n`;
+    if (cartCalculations.discountAmount > 0) {
+      msg += `Discount: -${currencySymbol}${cartCalculations.discountAmount.toFixed(2)}\n`;
+    }
+    if (cartCalculations.taxAmount > 0) {
+      msg += `GST: ${currencySymbol}${cartCalculations.taxAmount.toFixed(2)}\n`;
+    }
+    msg += `\n*Total Amount: ${currencySymbol}${cartCalculations.total.toFixed(2)}*\n\n`;
+    msg += `Payment: ${paymentLabel}\n`;
+    if (settings?.gst_number) {
+      msg += `GST No: ${settings.gst_number}\n`;
+    }
+    if (settings?.address) {
+      msg += `Address: ${settings.address}\n`;
+    }
+    msg += `\nThank you for shopping with us 🙏`;
+
+    // Clean phone number — strip everything except digits
+    let cleanPhone = phone.replace(/[^0-9]/g, '');
+    // If Indian number without country code, add 91
+    if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+
+    const encoded = encodeURIComponent(msg);
+    const url = `https://wa.me/${cleanPhone}?text=${encoded}`;
+    window.open(url, '_blank');
+    toast.success('WhatsApp message prepared!');
+  };
+
+  const handleWhatsAppAfterSave = (billNumber: string) => {
+    // Check if we have a customer phone
+    const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
+    const customerPhone = customer?.phone?.trim();
+
+    if (customerPhone) {
+      sendWhatsApp(billNumber, customerPhone);
+    } else {
+      // Open phone dialog
+      setPendingWhatsappBillNumber(billNumber);
+      setWhatsappPhone('');
+      setWhatsappPhoneDialogOpen(true);
+    }
+  };
+
   // Create bill mutation with retry logic for duplicate key handling
   const createBillMutation = useMutation({
-    mutationFn: async (shouldPrint: boolean) => {
+    mutationFn: async (shouldPrint: boolean | 'whatsapp') => {
       let retryCount = 0;
       const maxRetries = 3;
 
@@ -696,8 +774,11 @@ export default function Billing() {
       throw new Error('Failed to generate unique bill number after multiple attempts');
     },
     onSuccess: ({ billNumber, shouldPrint, isDraft }) => {
-      if (shouldPrint && !isDraft) {
+      if (shouldPrint === true && !isDraft) {
         printBill(billNumber);
+      }
+      if (shouldPrint === 'whatsapp' && !isDraft) {
+        handleWhatsAppAfterSave(billNumber);
       }
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
@@ -711,6 +792,8 @@ export default function Billing() {
       generateBillNumber().then(setPreviewBillNumber);
       if (isDraft) {
         toast.success('Draft order saved! Stock has been reserved.');
+      } else if (shouldPrint === 'whatsapp') {
+        toast.success('Bill saved! Opening WhatsApp...');
       } else {
         toast.success(shouldPrint ? 'Bill saved & printed!' : 'Bill saved successfully!');
       }
@@ -1361,8 +1444,18 @@ export default function Billing() {
                       onClick={() => createBillMutation.mutate(true)}
                     >
                       <Printer className="mr-2 h-4 w-4" />
-                      Checkout & Print
+                      Print
                     </Button>
+                    {(settings?.checkout_whatsapp_enabled ?? true) && (
+                      <Button
+                        className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white"
+                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                        onClick={() => createBillMutation.mutate('whatsapp')}
+                      >
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        WhatsApp
+                      </Button>
+                    )}
                   </>
                 )}
               </div>
@@ -1591,8 +1684,18 @@ export default function Billing() {
                     onClick={() => createBillMutation.mutate(true)}
                   >
                     <Printer className="mr-2 h-4 w-4" />
-                    Save & Print
+                    Print
                   </Button>
+                  {(settings?.checkout_whatsapp_enabled ?? true) && (
+                    <Button
+                      className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white"
+                      disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                      onClick={() => createBillMutation.mutate('whatsapp')}
+                    >
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      WhatsApp
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -1700,6 +1803,64 @@ export default function Billing() {
             </Button>
             <Button variant="destructive" onClick={confirmCostWarning}>
               Accept Price
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* WhatsApp Phone Number Dialog */}
+      <Dialog open={whatsappPhoneDialogOpen} onOpenChange={(open) => { setWhatsappPhoneDialogOpen(open); if (!open) setPendingWhatsappBillNumber(null); }}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-[#25D366]" />
+              Enter Customer Phone
+            </DialogTitle>
+            <DialogDescription className="py-1">
+              No phone number found for this customer. Enter a WhatsApp number to send the bill.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-muted-foreground bg-muted px-3 py-2 rounded-lg">+91</span>
+              <Input
+                type="tel"
+                placeholder="10 digit mobile number"
+                value={whatsappPhone}
+                onChange={(e) => setWhatsappPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && whatsappPhone.length === 10 && pendingWhatsappBillNumber) {
+                    sendWhatsApp(pendingWhatsappBillNumber, whatsappPhone);
+                    setWhatsappPhoneDialogOpen(false);
+                    setPendingWhatsappBillNumber(null);
+                  }
+                }}
+                className="text-lg h-12 text-center font-mono tracking-wider flex-1"
+                autoFocus
+                maxLength={10}
+              />
+            </div>
+            {whatsappPhone.length > 0 && whatsappPhone.length < 10 && (
+              <p className="text-xs text-destructive font-medium">Please enter a valid 10-digit number</p>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setWhatsappPhoneDialogOpen(false); setPendingWhatsappBillNumber(null); }}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#25D366] hover:bg-[#128C7E] text-white"
+              disabled={whatsappPhone.length !== 10 || !pendingWhatsappBillNumber}
+              onClick={() => {
+                if (pendingWhatsappBillNumber) {
+                  sendWhatsApp(pendingWhatsappBillNumber, whatsappPhone);
+                  setWhatsappPhoneDialogOpen(false);
+                  setPendingWhatsappBillNumber(null);
+                }
+              }}
+            >
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Send via WhatsApp
             </Button>
           </DialogFooter>
         </DialogContent>

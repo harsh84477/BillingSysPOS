@@ -76,6 +76,7 @@ export interface BusinessSettings {
   show_product_code?: boolean;
   show_cost_price?: boolean;
   auto_fit_enabled?: boolean;
+  checkout_whatsapp_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }

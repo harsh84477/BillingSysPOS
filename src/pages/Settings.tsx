@@ -335,7 +335,14 @@ export default function Settings() {
           )}
 
           {/* ═══ POS ═══ */}
-          {activeTab === 'pos' && <ComingSoon icon="🖥️" label="POS Settings" />}
+          {activeTab === 'pos' && (
+            <ColStack>
+              <SettingsCard title="Checkout Buttons" subtitle="Control which action buttons appear during billing" icon="🛒" accent="#10b981">
+                <SettingRow label="Enable WhatsApp Bill Button" desc="Allow sending invoices via WhatsApp after checkout"
+                  right={<Toggle on={settings?.checkout_whatsapp_enabled ?? true} onChange={(v) => u({ checkout_whatsapp_enabled: v })} disabled={!isAdmin} />} noBorder />
+              </SettingsCard>
+            </ColStack>
+          )}
 
           {/* ═══ APPEARANCE ═══ */}
           {activeTab === 'appearance' && (
