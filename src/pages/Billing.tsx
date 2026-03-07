@@ -976,29 +976,29 @@ export default function Billing() {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Subscription Expired</AlertTitle>
               <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <span>Your {planName} has expired. Please upgrade to continue creating bills.</span>
-                <Button size="sm" variant="outline" className="w-fit" onClick={() => navigate('/settings')}>
-                  Upgrade Now
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
+                <span>Your {planName} has expired. {userRole === 'owner' ? 'Please upgrade to continue creating bills.' : 'Please ask the Business Owner to renew.'}</span>
+                {userRole === 'owner' && (
+                  <Button size="sm" variant="outline" className="w-fit" onClick={() => navigate('/settings')}>
+                    Upgrade Now
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
               </AlertDescription>
             </Alert>
           </div>
         )}
 
-        {isTrial && isActive && !subscriptionLoading && (isAdmin || isManager) && (
+        {isTrial && isActive && !subscriptionLoading && userRole === 'owner' && (
           <div className="px-4 pt-4">
             <Alert className="bg-primary/5 border-primary/20 animate-in fade-in slide-in-from-top-4 duration-300">
               <Sparkles className="h-4 w-4 text-primary" />
               <AlertTitle>Free Trial</AlertTitle>
               <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <span>You are currently using the Free Trial. Upgrade for full features and history.</span>
-                {isAdmin && (
-                  <Button size="sm" variant="link" className="text-primary p-0 h-auto w-fit" onClick={() => navigate('/settings')}>
-                    View Plans
-                    <ChevronRight className="ml-1 h-3 w-3" />
-                  </Button>
-                )}
+                <Button size="sm" variant="link" className="text-primary p-0 h-auto w-fit" onClick={() => navigate('/settings')}>
+                  View Plans
+                  <ChevronRight className="ml-1 h-3 w-3" />
+                </Button>
               </AlertDescription>
             </Alert>
           </div>
@@ -1608,7 +1608,7 @@ export default function Billing() {
 
             <ScrollArea className="flex-1 -mx-4 px-4 pb-4">
               {/* SaaS Alerts */}
-              {isTrial && (
+              {isTrial && userRole === 'owner' && (
                 <div className="mb-4">
                   <Alert className="bg-primary/5 border-primary/20 animate-pulse">
                     <Sparkles className="h-4 w-4 text-primary" />
@@ -1629,10 +1629,12 @@ export default function Billing() {
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle className="text-sm font-semibold">Subscription Expired</AlertTitle>
                     <AlertDescription className="text-xs flex items-center justify-between">
-                      <span>Renew now to continue creating bills.</span>
-                      <Button size="sm" variant="link" className="h-auto p-0 text-white font-bold" onClick={() => navigate('/settings')}>
-                        Renew
-                      </Button>
+                      <span>{userRole === 'owner' ? 'Renew now to continue.' : 'Contact owner to renew.'}</span>
+                      {userRole === 'owner' && (
+                        <Button size="sm" variant="link" className="h-auto p-0 text-white font-bold" onClick={() => navigate('/settings')}>
+                          Renew
+                        </Button>
+                      )}
                     </AlertDescription>
                   </Alert>
                 </div>

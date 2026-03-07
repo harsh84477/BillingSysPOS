@@ -142,6 +142,7 @@ export function OfflineSyncStatus({ businessId, userId }: OfflineSyncStatusProps
 // ============================================================
 // Location: src/components/subscription/SubscriptionBanner.tsx
 
+import { useAuth } from '@/contexts/AuthContext';
 import { useSubscriptionStatus } from '@/hooks/useBillingSystem';
 
 interface SubscriptionBannerProps {
@@ -151,6 +152,12 @@ interface SubscriptionBannerProps {
 export function SubscriptionBanner({ businessId }: SubscriptionBannerProps) {
   const { subscription, isActive, isExpired, daysUntilExpiration } =
     useSubscriptionStatus(businessId);
+  const { userRole } = useAuth();
+
+  // Only the business owner should see subscription alerts
+  if (userRole !== 'owner') {
+    return null;
+  }
 
   if (isActive && daysUntilExpiration > 7) {
     return null;
