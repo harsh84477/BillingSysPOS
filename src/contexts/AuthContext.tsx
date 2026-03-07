@@ -452,7 +452,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     joinBusiness,
     refreshBusinessInfo,
     refreshSubscription,
-    isAdmin: userRole === 'owner' || (userRole === 'manager' && isManagerFullAccess),
+    isAdmin: userRole === 'owner' || userRole === 'manager',
     isManager: userRole === 'manager',
     isCashier: userRole === 'cashier',
     isSalesman: userRole === 'salesman',
