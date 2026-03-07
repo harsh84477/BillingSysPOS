@@ -322,7 +322,7 @@ export default function AppLayout() {
         <main className={cn(
           'flex-1 relative z-0 flex flex-col',
           isBillingPage
-            ? 'overflow-hidden p-0'
+            ? 'overflow-hidden p-0 pb-28 safe-area-bottom' // ensure billing pages reserve space for mobile nav and floating actions
             : 'overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-20 sm:pb-6 custom-scrollbar'
         )}
           style={!isBillingPage ? { background: 'var(--spos-bg)' } : undefined}
