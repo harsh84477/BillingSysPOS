@@ -189,10 +189,10 @@ export function MobileQuickBilling() {
   return (
     <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* ── Premium Header ── */}
-      <div className="bg-primary px-5 py-4 text-primary-foreground shadow-lg shrink-0 relative overflow-hidden backdrop-blur-md">
+      <div className="bg-primary px-4 py-3 md:px-5 md:py-4 text-primary-foreground shadow-lg shrink-0 relative overflow-hidden backdrop-blur-md">
         {/* Subtle background pattern decoration */}
-        <div className="absolute top-0 right-0 h-40 w-40 bg-white/5 rounded-full -mr-10 -mt-10 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 h-20 w-20 bg-white/5 rounded-full -ml-5 -mb-5 blur-2xl pointer-events-none" />
+        <div className="absolute top-0 right-0 md:h-40 md:w-40 h-24 w-24 bg-white/5 rounded-full -mr-8 -mt-8 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 md:h-20 md:w-20 h-12 w-12 bg-white/5 rounded-full -ml-4 -mb-4 blur-2xl pointer-events-none" />
 
         <div className="flex items-center justify-between relative z-10">
           <div className="flex items-center gap-3">
@@ -409,7 +409,7 @@ export function MobileQuickBilling() {
         </div>
 
         {/* ── Mobile Tabbed View (md hidden) ── */}
-        <div className="flex-1 md:hidden flex flex-col overflow-hidden bg-background">
+        <div className="flex-1 md:hidden flex flex-col overflow-hidden bg-background pb-28">{/* reserve space for fixed bottom nav/actions */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
             <TabsList className="w-full rounded-none border-b grid grid-cols-2 bg-card h-14 p-1">
               <TabsTrigger value="products" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">
@@ -575,7 +575,7 @@ export function MobileQuickBilling() {
               </div>
 
               {/* Fixed Bottom Action Mobile */}
-              <div className="p-4 bg-background border-t border-border/40 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] pb-8">
+              <div className="sticky bottom-16 z-40 p-4 bg-background border-t border-border/40 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] safe-area-bottom">
                 {cart.length > 0 && (
                   <div className="grid grid-cols-4 gap-3">
                     <Button

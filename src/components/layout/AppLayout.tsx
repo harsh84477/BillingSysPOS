@@ -101,7 +101,7 @@ const navSections: NavSection[] = [
   },
 ];
 
-const settingsItem: NavItemDef = { name: 'Settings', href: '/settings', icon: Settings, roles: ['owner', 'manager'] };
+const settingsItem: NavItemDef = { name: 'Settings', href: '/settings', icon: Settings, roles: ['owner', 'manager', 'salesman'] };
 
 const mobileNavItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier', 'salesman'] },
