@@ -337,9 +337,39 @@ export default function Settings() {
           {/* ═══ POS ═══ */}
           {activeTab === 'pos' && (
             <ColStack>
-              <SettingsCard title="Checkout Buttons" subtitle="Control which action buttons appear during billing" icon="🛒" accent="#10b981">
-                <SettingRow label="Enable WhatsApp Bill Button" desc="Allow sending invoices via WhatsApp after checkout"
-                  right={<Toggle on={settings?.checkout_whatsapp_enabled ?? true} onChange={(v) => u({ checkout_whatsapp_enabled: v })} disabled={!isAdmin} />} noBorder />
+              <SettingsCard title="Checkout Buttons" subtitle="Control which action buttons appear during billing checkout" icon="🛒" accent="#10b981">
+                <SectionLabel text="Button Visibility" />
+                <SettingRow label="Save Bill" desc="Save bill without printing"
+                  right={<Toggle on={settings?.checkout_save_enabled ?? true} onChange={(v) => {
+                    const others = [settings?.checkout_print_enabled ?? true, settings?.checkout_save_print_enabled ?? true, settings?.checkout_whatsapp_enabled ?? true, settings?.checkout_draft_enabled ?? true];
+                    if (!v && !others.some(Boolean)) { toast.error('At least one checkout button must remain enabled.'); return; }
+                    u({ checkout_save_enabled: v });
+                  }} disabled={!isAdmin} />} />
+                <SettingRow label="Print Bill" desc="Save and send to printer"
+                  right={<Toggle on={settings?.checkout_print_enabled ?? true} onChange={(v) => {
+                    const others = [settings?.checkout_save_enabled ?? true, settings?.checkout_save_print_enabled ?? true, settings?.checkout_whatsapp_enabled ?? true, settings?.checkout_draft_enabled ?? true];
+                    if (!v && !others.some(Boolean)) { toast.error('At least one checkout button must remain enabled.'); return; }
+                    u({ checkout_print_enabled: v });
+                  }} disabled={!isAdmin} />} />
+                <SettingRow label="Save & Print" desc="Combined save + print action"
+                  right={<Toggle on={settings?.checkout_save_print_enabled ?? true} onChange={(v) => {
+                    const others = [settings?.checkout_save_enabled ?? true, settings?.checkout_print_enabled ?? true, settings?.checkout_whatsapp_enabled ?? true, settings?.checkout_draft_enabled ?? true];
+                    if (!v && !others.some(Boolean)) { toast.error('At least one checkout button must remain enabled.'); return; }
+                    u({ checkout_save_print_enabled: v });
+                  }} disabled={!isAdmin} />} />
+                <SettingRow label="Save & WhatsApp" desc="Save bill and send invoice via WhatsApp"
+                  right={<Toggle on={settings?.checkout_whatsapp_enabled ?? true} onChange={(v) => {
+                    const others = [settings?.checkout_save_enabled ?? true, settings?.checkout_print_enabled ?? true, settings?.checkout_save_print_enabled ?? true, settings?.checkout_draft_enabled ?? true];
+                    if (!v && !others.some(Boolean)) { toast.error('At least one checkout button must remain enabled.'); return; }
+                    u({ checkout_whatsapp_enabled: v });
+                  }} disabled={!isAdmin} />} />
+                <SettingRow label="Save as Draft" desc="Save unfinished bill to resume later" noBorder
+                  right={<Toggle on={settings?.checkout_draft_enabled ?? true} onChange={(v) => {
+                    const others = [settings?.checkout_save_enabled ?? true, settings?.checkout_print_enabled ?? true, settings?.checkout_save_print_enabled ?? true, settings?.checkout_whatsapp_enabled ?? true];
+                    if (!v && !others.some(Boolean)) { toast.error('At least one checkout button must remain enabled.'); return; }
+                    u({ checkout_draft_enabled: v });
+                  }} disabled={!isAdmin} />} />
+                <InfoBox bg={op('#10b981', 8)} border={`1px solid ${op('#10b981', 25)}`} icon="💡" title="Tip" titleColor="#10b981" value="At least one checkout button must stay enabled. Salesmen always see Draft button only." />
               </SettingsCard>
             </ColStack>
           )}

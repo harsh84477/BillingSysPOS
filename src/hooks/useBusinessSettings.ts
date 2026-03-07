@@ -76,7 +76,12 @@ export interface BusinessSettings {
   show_product_code?: boolean;
   show_cost_price?: boolean;
   auto_fit_enabled?: boolean;
+  // Checkout button toggles
+  checkout_save_enabled?: boolean;
+  checkout_print_enabled?: boolean;
+  checkout_save_print_enabled?: boolean;
   checkout_whatsapp_enabled?: boolean;
+  checkout_draft_enabled?: boolean;
   created_at: string;
   updated_at: string;
 }
