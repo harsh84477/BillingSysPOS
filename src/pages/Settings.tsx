@@ -100,7 +100,7 @@ export default function Settings() {
   const { data: userRoles = [] } = useQuery({
     queryKey: ['allUserRoles', businessId],
     queryFn: async () => {
-      const { data: roles, error } = await supabase.from('user_roles').select('id, user_id, role, business_id, bill_prefix, created_at').eq('business_id', businessId!);
+      const { data: roles, error } = await supabase.from('user_roles').select('id, user_id, role, business_id, bill_prefix, created_at, manager_full_access').eq('business_id', businessId!);
       if (error) throw error;
       if (!roles || roles.length === 0) return [];
       const userIds = (roles as any[]).map(r => r.user_id);
@@ -108,6 +108,32 @@ export default function Settings() {
       return (roles as any[]).map(role => ({ ...role, profiles: (profiles as any[])?.find(p => p.user_id === role.user_id) || null }));
     },
     enabled: isAdmin && !!businessId,
+  });
+
+  const updateManagerAccessMutation = useMutation({
+    mutationFn: async ({ roleId, fullAccess }: { roleId: string; fullAccess: boolean }) => {
+      const { error } = await supabase.from('user_roles').update({ manager_full_access: fullAccess } as any).eq('id', roleId);
+      if (error) throw error;
+    },
+    onSuccess: async (_, variables) => {
+      toast.success(variables.fullAccess ? 'Manager granted full access' : 'Manager full access revoked');
+      queryClient.invalidateQueries({ queryKey: ['allUserRoles'] });
+      if (userRoles.find((r: any) => r.id === variables.roleId)?.user_id === user?.id) await refreshBusinessInfo();
+    },
+    onError: (error) => toast.error('Failed to update access: ' + error.message),
+  });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ roleId, newRole }: { roleId: string; newRole: string }) => {
+      const { error } = await supabase.from('user_roles').update({ role: newRole } as any).eq('id', roleId);
+      if (error) throw error;
+    },
+    onSuccess: async (_, variables) => {
+      toast.success('Role updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['allUserRoles'] });
+      if (userRoles.find((r: any) => r.id === variables.roleId)?.user_id === user?.id) await refreshBusinessInfo();
+    },
+    onError: (error) => toast.error('Failed to update role: ' + error.message),
   });
 
   /* ─── Mutations ─── */
@@ -318,10 +344,33 @@ export default function Settings() {
               </div>
               <SettingsCard title="Team Members" subtitle="Manage user access and permissions" icon="👥" accent="#3b82f6">
                 {userRoles.length > 0 ? (
-                  <Table><TableHeader><TableRow><TableHead>User</TableHead><TableHead>Role</TableHead><TableHead>Bill Prefix</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                  <Table><TableHeader><TableRow><TableHead>User</TableHead><TableHead>Role & Permissions</TableHead><TableHead>Bill Prefix</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                     <TableBody>{userRoles.map((ur: any) => (
                       <TableRow key={ur.id}><TableCell className="font-medium">{ur.profiles?.display_name || 'Unknown'}{ur.user_id === user?.id && <span className="ml-2 text-xs text-muted-foreground">(You)</span>}</TableCell>
-                        <TableCell><Badge variant={ur.role === 'owner' ? 'default' : 'secondary'}>{ur.role === 'owner' ? '👑 Owner' : ur.role === 'manager' ? '🔧 Manager' : ur.role === 'salesman' ? '💼 Salesman' : '💵 Cashier'}</Badge></TableCell>
+                        <TableCell>
+                          {ur.role === 'owner' ? (
+                            <Badge variant="default">👑 Owner</Badge>
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <SelectInput
+                                value={ur.role}
+                                onChange={(v) => updateRoleMutation.mutate({ roleId: ur.id, newRole: v })}
+                                options={[
+                                  { value: 'manager', label: '🔧 Manager' },
+                                  { value: 'cashier', label: '💵 Cashier' },
+                                  { value: 'salesman', label: '💼 Salesman' }
+                                ]}
+                              />
+                              {ur.role === 'manager' && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Toggle on={ur.manager_full_access || false} onChange={(v) => updateManagerAccessMutation.mutate({ roleId: ur.id, fullAccess: v })} />
+                                  <span className="text-xs font-semibold text-muted-foreground">Full Access</span>
+                                  {ur.manager_full_access && <Badge className="bg-indigo-600 text-[10px] py-0 px-1.5 ml-1">Full Permission</Badge>}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell><Input className="w-16 h-8 text-center uppercase" placeholder="-" maxLength={2} defaultValue={ur.bill_prefix || ''} onBlur={(e) => { const v = (e.target as HTMLInputElement).value.toUpperCase(); if (v !== (ur.bill_prefix || '')) updatePrefixMutation.mutate({ roleId: ur.id, prefix: v }); }} onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }} /></TableCell>
                         <TableCell className="text-right">{ur.role !== 'owner' && ur.user_id !== user?.id && <Button variant="ghost" size="sm" className="text-destructive" onClick={async () => { if (!confirm(`Remove ${ur.profiles?.display_name || 'this user'}?`)) return; const { error } = await supabase.from('user_roles').delete().eq('id', ur.id); if (error) toast.error('Failed: ' + error.message); else { toast.success('User removed'); queryClient.invalidateQueries({ queryKey: ['allUserRoles'] }); } }}><Trash className="h-4 w-4" /></Button>}</TableCell>
                       </TableRow>))}</TableBody></Table>

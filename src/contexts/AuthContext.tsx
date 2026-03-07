@@ -50,6 +50,7 @@ interface AuthContextType {
   isSalesman: boolean;
   isStaff: boolean; // backwards compat: true for manager (replaces old staff role)
   isViewer: boolean; // backwards compat: true for cashier
+  isManagerFullAccess: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
+  const [isManagerFullAccess, setIsManagerFullAccess] = useState(false);
   const [billPrefix, setBillPrefix] = useState<string | null>(null);
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
@@ -73,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Get the most recent role for this user
       const { data, error } = await supabase
         .from('user_roles')
-        .select('role, business_id, bill_prefix')
+        .select('role, business_id, bill_prefix, manager_full_access')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -84,17 +86,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
 
-      if (data?.business_id) {
-        setBusinessId(data.business_id);
+      if (data) {
+        const d = data as any;
+        setIsManagerFullAccess(d.manager_full_access || false);
       }
 
-      if (data?.bill_prefix) {
-        setBillPrefix(data.bill_prefix);
+      if ((data as any)?.business_id) {
+        setBusinessId((data as any).business_id);
+      }
+
+      if ((data as any)?.bill_prefix) {
+        setBillPrefix((data as any).bill_prefix);
       } else {
         setBillPrefix(null);
       }
 
-      return data?.role as AppRole | null;
+      return (data as any)?.role as AppRole | null;
     } catch (error) {
       console.error('Error fetching user role:', error);
       return null;
@@ -286,6 +293,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setBusinessInfo(null);
       setSubscription(null);
       setNeedsBusinessSetup(false);
+      setIsManagerFullAccess(false);
     }
 
     // Check for custom admin session if not already a super admin
@@ -444,12 +452,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     joinBusiness,
     refreshBusinessInfo,
     refreshSubscription,
-    isAdmin: userRole === 'owner',
+    isAdmin: userRole === 'owner' || (userRole === 'manager' && isManagerFullAccess),
     isManager: userRole === 'manager',
     isCashier: userRole === 'cashier',
     isSalesman: userRole === 'salesman',
     isStaff: userRole === 'manager', // backwards compat
     isViewer: userRole === 'cashier', // backwards compat
+    isManagerFullAccess,
     error: null,
   };
 
