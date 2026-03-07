@@ -273,6 +273,14 @@ export default function Billing() {
 
   // Add to cart - round prices to avoid floating point issues
   const addToCart = (product: typeof products[0]) => {
+    // 💡 NEW: Respect "Ask quantity first" setting
+    if (settings?.ask_quantity_first) {
+      setQuantityDialogProduct(product);
+      setQuantityDialogValue('');
+      setQuantityDialogOpen(true);
+      return;
+    }
+
     // Stock validation: available = total stock - reserved by all drafts
     const available = product.stock_quantity - (product.reserved_quantity || 0);
     const existing = cart.find((item) => item.productId === product.id);
@@ -397,6 +405,8 @@ export default function Billing() {
           name: product.name,
           unitPrice: Number(product.selling_price),
           costPrice: Number(product.cost_price),
+          mrpPrice: Number((product as any).mrp_price || product.selling_price),
+          itemsPerCase: Number((product as any).items_per_case || 0),
           quantity,
         },
       ];
@@ -936,9 +946,8 @@ export default function Billing() {
   });
 
   const renderPaymentSelector = () => (
-    <div className="pt-2 border-t text-left">
-      <p className="text-[10px] font-bold text-muted-foreground mb-1 uppercase tracking-wide">Payment Method</p>
-      <div className="grid grid-cols-4 gap-1 p-0.5 bg-muted/50 rounded-lg border border-border">
+    <div className="pt-1.5 border-t border-dashed text-left">
+      <div className="grid grid-cols-4 gap-1 p-0.5 bg-muted/30 rounded-lg border border-border/50">
         {availablePaymentMethods.map((pm) => (
           <button
             key={pm.id}
@@ -949,9 +958,9 @@ export default function Billing() {
               setPaidAmount('');
             }}
             className={cn(
-              'py-1.5 rounded-md text-[10px] font-bold transition-all uppercase',
+              'py-1 rounded-md text-[9px] font-bold transition-all uppercase',
               paymentType === pm.id
-                ? 'bg-primary text-primary-foreground shadow-md'
+                ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
@@ -961,98 +970,78 @@ export default function Billing() {
       </div>
 
       {paymentType === 'split' && (
-        <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div className="mt-2 space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
           <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1 text-left">
-              <Label className="text-[10px] uppercase text-muted-foreground">Cash Amount</Label>
+            <div className="space-y-0.5 text-left">
+              <Label className="text-[9px] uppercase text-muted-foreground ml-1">Cash</Label>
               <div className="relative">
-                <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
+                <span className="absolute left-1.5 top-1 text-[10px] text-muted-foreground">{currencySymbol}</span>
                 <Input
                   type="number"
                   placeholder="0"
                   value={cashAmount}
                   onChange={(e) => setCashAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="h-8 pl-5 text-sm font-bold bg-emerald-50/30 border-emerald-100 focus-visible:ring-emerald-500"
+                  className="h-7 pl-4 text-xs font-bold bg-emerald-50/30 border-emerald-100/50"
                 />
               </div>
             </div>
-            <div className="space-y-1 text-left">
-              <Label className="text-[10px] uppercase text-muted-foreground">Online Amount</Label>
+            <div className="space-y-0.5 text-left">
+              <Label className="text-[9px] uppercase text-muted-foreground ml-1">Online</Label>
               <div className="relative">
-                <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
+                <span className="absolute left-1.5 top-1 text-[10px] text-muted-foreground">{currencySymbol}</span>
                 <Input
                   type="number"
                   placeholder="0"
                   value={onlineAmount}
                   onChange={(e) => setOnlineAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="h-8 pl-5 text-sm font-bold bg-blue-50/30 border-blue-100 focus-visible:ring-blue-500"
+                  className="h-7 pl-4 text-xs font-bold bg-blue-50/30 border-blue-100/50"
                 />
               </div>
             </div>
-          </div>
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/10">
-              <span className="text-[10px] uppercase font-bold text-muted-foreground">Total Entered</span>
-              <span className={cn(
-                "text-sm font-black",
-                (Number(cashAmount || 0) + Number(onlineAmount || 0)) === cartCalculations.total ? "text-emerald-600" : "text-amber-600"
-              )}>
-                {currencySymbol}{(Number(cashAmount || 0) + Number(onlineAmount || 0)).toFixed(2)} / {cartCalculations.total.toFixed(2)}
-              </span>
-            </div>
-            {cartCalculations.total - (Number(cashAmount || 0) + Number(onlineAmount || 0)) > 0 && (
-              <div className="flex items-center justify-between p-2 rounded-lg bg-destructive/5 border border-destructive/10 animate-in fade-in zoom-in duration-200">
-                <span className="text-[10px] uppercase font-bold text-destructive">Remaining Due</span>
-                <span className="text-sm font-black text-destructive">
-                  {currencySymbol}{(cartCalculations.total - (Number(cashAmount || 0) + Number(onlineAmount || 0))).toFixed(2)}
-                </span>
-              </div>
-            )}
           </div>
         </div>
       )}
 
       {paymentType === 'online' && (
-        <div className="mt-3 p-3 rounded-lg bg-blue-50/50 border border-blue-100 flex items-center gap-3 animate-in fade-in duration-200 text-left">
-          <Smartphone className="h-5 w-5 text-blue-500" />
-          <div>
-            <p className="text-[10px] uppercase font-bold text-blue-700">Online Payment (UPI/Card)</p>
-            <p className="text-xs text-blue-600/80">Full amount ₹{cartCalculations.total.toFixed(2)}</p>
-          </div>
+        <div className="mt-2 p-1.5 rounded-lg bg-blue-50/30 border border-blue-100/50 flex items-center gap-2 animate-in fade-in duration-200 text-left">
+          <Smartphone className="h-3.5 w-3.5 text-blue-500" />
+          <p className="text-[9px] uppercase font-bold text-blue-700">Online Full Payment: {currencySymbol}{cartCalculations.total.toFixed(2)}</p>
         </div>
       )}
 
       {paymentType === 'due' && (
-        <div className="mt-3 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-          <div className="flex items-center justify-between gap-2">
-            <Label className="text-[10px] uppercase text-muted-foreground">Paid Now</Label>
-            <div className="relative">
-              <span className="absolute left-2 top-1.5 text-xs text-muted-foreground">₹</span>
+        <div className="mt-2 space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-0.5">
+              <Label className="text-[9px] uppercase text-muted-foreground ml-1">Paid Now</Label>
+              <div className="relative">
+                <span className="absolute left-1.5 top-1 text-[10px] text-muted-foreground">{currencySymbol}</span>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="h-7 pl-4 text-xs font-bold"
+                  max={cartCalculations.total}
+                />
+              </div>
+            </div>
+            <div className="space-y-0.5">
+              <Label className="text-[9px] uppercase text-muted-foreground ml-1">Due Date</Label>
               <Input
-                type="number"
-                placeholder="0"
-                value={paidAmount}
-                onChange={(e) => setPaidAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-32 h-8 pl-5 text-right text-sm font-bold"
-                max={cartCalculations.total}
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="h-7 text-[9px] px-1"
+                min={new Date().toISOString().split('T')[0]}
               />
             </div>
           </div>
-          <div className="flex items-center justify-between p-2 rounded-lg bg-destructive/5 border border-destructive/10">
-            <span className="text-[10px] uppercase font-bold text-muted-foreground">Due Amount</span>
-            <span className="text-sm font-black text-destructive">
+          <div className="flex items-center justify-between px-2 py-1 rounded bg-destructive/5 border border-destructive/10">
+            <span className="text-[9px] uppercase font-bold text-muted-foreground">Due Amount</span>
+            <span className="text-xs font-black text-destructive">
               {currencySymbol}{(cartCalculations.total - Number(paidAmount || 0)).toFixed(2)}
             </span>
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <Label className="text-[10px] uppercase text-muted-foreground">Due Date</Label>
-            <Input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              className="w-36 h-8 text-[10px]"
-              min={new Date().toISOString().split('T')[0]}
-            />
           </div>
         </div>
       )}
@@ -1747,37 +1736,39 @@ export default function Billing() {
               )}
             </ScrollArea>
 
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal</span>
+            <div className="space-y-1 py-1">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span className="font-medium">Subtotal</span>
                 <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
               </div>
 
-              {/* Optional GST Display (Static) */}
               {(settings?.show_gst_in_billing ?? true) && taxRate > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">GST ({taxRate}%)</span>
-                  <span>
-                    {currencySymbol}{cartCalculations.calculatedTax.toFixed(2)}
-                  </span>
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground/70">
+                  <span>GST ({taxRate}%)</span>
+                  <span>{currencySymbol}{cartCalculations.calculatedTax.toFixed(2)}</span>
                 </div>
               )}
               {(settings?.show_discount_in_billing ?? true) && (
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Discount</span>
-                  <Input
-                    type="number"
-                    value={discountValue || ''}
-                    onChange={(e) => setDiscountValue(Number(e.target.value))}
-                    className="w-24 h-8"
-                    min={0}
-                  />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-medium text-muted-foreground">Discount</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">{currencySymbol}</span>
+                    <Input
+                      type="number"
+                      value={discountValue || ''}
+                      onChange={(e) => setDiscountValue(Number(e.target.value))}
+                      className="w-16 h-6 text-[10px] text-right p-1"
+                      min={0}
+                    />
+                  </div>
                 </div>
               )}
 
-              <div className="flex justify-between text-lg font-bold pt-2 border-t">
-                <span>Total</span>
-                <span className="text-primary">{currencySymbol}{cartCalculations.total.toFixed(2)}</span>
+              <div className="flex justify-between items-end pt-1 border-t border-dashed">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Payable</span>
+                <span className="text-xl font-black text-primary leading-none">
+                  {currencySymbol}{cartCalculations.total.toFixed(2)}
+                </span>
               </div>
             </div>
 
@@ -1796,37 +1787,37 @@ export default function Billing() {
                 </Button>
               ) : (
                 <>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     {(settings?.checkout_save_enabled ?? true) && (
                       <Button
                         variant="outline"
-                        className="flex-1"
+                        className="flex-1 h-8 text-[11px]"
                         disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
                         onClick={() => createBillMutation.mutate(false)}
                       >
-                        <Save className="mr-1.5 h-3.5 w-3.5" />
+                        <Save className="mr-1 h-3 w-3" />
                         Save
                       </Button>
                     )}
                     {(settings?.checkout_print_enabled ?? true) && (
                       <Button
-                        className="flex-1"
+                        className="flex-1 h-8 text-[11px]"
                         disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
                         onClick={() => createBillMutation.mutate(true)}
                       >
-                        <Printer className="mr-1.5 h-3.5 w-3.5" />
+                        <Printer className="mr-1 h-3 w-3" />
                         Print
                       </Button>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1.5">
                     {(settings?.checkout_save_print_enabled ?? true) && (
                       <Button
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+                        className="flex-1 h-8 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white"
                         disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
                         onClick={() => createBillMutation.mutate('save-print')}
                       >
-                        <Printer className="mr-1.5 h-3.5 w-3.5" />
+                        <Printer className="mr-1 h-3 w-3" />
                         Save & Print
                       </Button>
                     )}
@@ -1835,12 +1826,12 @@ export default function Billing() {
                       const hasPhone = !!(customer?.phone?.trim());
                       return (
                         <Button
-                          className="flex-1 bg-[#25D366] hover:bg-[#128C7E] text-white"
+                          className="flex-1 h-8 text-[11px] bg-[#25D366] hover:bg-[#128C7E] text-white"
                           disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill || !hasPhone}
                           onClick={() => createBillMutation.mutate('whatsapp')}
                           title={hasPhone ? 'Send via WhatsApp' : 'Select customer with phone'}
                         >
-                          <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
+                          <MessageCircle className="mr-1 h-3 w-3" />
                           WhatsApp
                         </Button>
                       );
@@ -1849,11 +1840,11 @@ export default function Billing() {
                   {(settings?.checkout_draft_enabled ?? true) && (
                     <Button
                       variant="outline"
-                      className="w-full border-amber-300 text-amber-700 hover:bg-amber-50"
+                      className="w-full h-8 text-[11px] border-amber-300 text-amber-700 hover:bg-amber-50"
                       disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
                       onClick={() => createBillMutation.mutate('draft')}
                     >
-                      <FileText className="mr-1.5 h-3.5 w-3.5" />
+                      <FileText className="mr-1 h-3 w-3" />
                       Save as Draft
                     </Button>
                   )}

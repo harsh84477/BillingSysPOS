@@ -82,6 +82,7 @@ export interface BusinessSettings {
   checkout_save_print_enabled?: boolean;
   checkout_whatsapp_enabled?: boolean;
   checkout_draft_enabled?: boolean;
+  ask_quantity_first?: boolean;
   default_payment_method?: string;
   enable_payment_cash?: boolean;
   enable_payment_online?: boolean;

@@ -440,6 +440,11 @@ export default function Settings() {
                   }} disabled={!isAdmin} />} />
                 <InfoBox bg={op('#10b981', 8)} border={`1px solid ${op('#10b981', 25)}`} icon="💡" title="Tip" titleColor="#10b981" value="At least one checkout button must stay enabled. Salesmen always see Draft button only." />
               </SettingsCard>
+              <SettingsCard title="Product Selection" subtitle="Manage how products are added to the cart" icon="👆" accent="#3b82f6">
+                <SectionLabel text="Click Behavior" />
+                <SettingRow label="Ask Quantity First" desc="Open a pop-up to enter quantity instead of auto-adding 1 item when clicking a product" noBorder
+                  right={<Toggle on={settings?.ask_quantity_first ?? false} onChange={(v) => u({ ask_quantity_first: v })} disabled={!isAdmin} />} />
+              </SettingsCard>
               <SettingsCard title="Payment Methods" subtitle="Configure accepted payment methods and defaults" icon="💳" accent="#8b5cf6">
                 <SectionLabel text="Default Payment Method" />
                 <SettingRow label="Default Method" desc="Automatically selected when starting a new bill"
