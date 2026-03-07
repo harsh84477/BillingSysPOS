@@ -147,15 +147,17 @@ export function ProductImporter() {
             />
             <Button
                 variant="outline"
+                size="sm"
                 onClick={handleClick}
                 disabled={isLoading}
             >
                 {isLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-1 sm:mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    <FileSpreadsheet className="mr-1 sm:mr-2 h-4 w-4" />
                 )}
-                Import Excel
+                <span className="hidden sm:inline">Import Excel</span>
+                <span className="sm:hidden">Import</span>
             </Button>
         </>
     );

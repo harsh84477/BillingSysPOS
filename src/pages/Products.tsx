@@ -295,7 +295,7 @@ export default function Products() {
           <p className="spos-page-subhead" style={{ marginBottom: 0 }}>Manage your product inventory</p>
         </div>
 
-        <div className="flex gap-2 items-center">
+        <div className="flex flex-wrap gap-2 items-center">
           {isAdmin && selectedProductIds.size > 0 && (
             <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
               <Trash2 className="mr-2 h-4 w-4" />
@@ -305,9 +305,10 @@ export default function Products() {
 
           {isAdmin && <ProductImporter />}
 
-          <Button onClick={handleExportExcel} variant="outline">
+          <Button onClick={handleExportExcel} variant="outline" size="sm">
             <Download className="mr-2 h-4 w-4" />
-            Export Excel
+            <span className="hidden sm:inline">Export Excel</span>
+            <span className="sm:hidden">Export</span>
           </Button>
 
           {isAdmin && (
@@ -319,143 +320,146 @@ export default function Products() {
               }
             }}>
               <DialogTrigger asChild>
-                <Button onClick={() => openDialog()}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Product
+                <Button size="sm">
+                  <Plus className="mr-1 sm:mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Add Product</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md w-[95vw] max-h-[85vh] flex flex-col p-4 sm:p-6 overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>
                     {editingProduct ? 'Edit Product' : 'Add Product'}
                   </DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name *</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      defaultValue={editingProduct?.name}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      defaultValue={editingProduct?.description || ''}
-                      rows={2}
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1 overflow-hidden mt-2">
+                  <div className="overflow-y-auto pr-1 space-y-4 flex-1 custom-scrollbar">
                     <div className="space-y-2">
-                      <Label htmlFor="mrp_price">MRP</Label>
+                      <Label htmlFor="name">Name *</Label>
                       <Input
-                        id="mrp_price"
-                        name="mrp_price"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        defaultValue={editingProduct?.mrp_price || 0}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="selling_price">Rate (Sell) *</Label>
-                      <Input
-                        id="selling_price"
-                        name="selling_price"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        defaultValue={editingProduct?.selling_price || 0}
+                        id="name"
+                        name="name"
+                        defaultValue={editingProduct?.name}
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="cost_price">Cost Price</Label>
-                      <Input
-                        id="cost_price"
-                        name="cost_price"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        defaultValue={editingProduct?.cost_price || 0}
+                      <Label htmlFor="description">Description</Label>
+                      <Textarea
+                        id="description"
+                        name="description"
+                        defaultValue={editingProduct?.description || ''}
+                        rows={2}
                       />
                     </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="mrp_price">MRP</Label>
+                        <Input
+                          id="mrp_price"
+                          name="mrp_price"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          defaultValue={editingProduct?.mrp_price || 0}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="selling_price">Rate (Sell) *</Label>
+                        <Input
+                          id="selling_price"
+                          name="selling_price"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          defaultValue={editingProduct?.selling_price || 0}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cost_price">Cost Price</Label>
+                        <Input
+                          id="cost_price"
+                          name="cost_price"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          defaultValue={editingProduct?.cost_price || 0}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="stock_quantity">Total Stock</Label>
+                        <Input
+                          id="stock_quantity"
+                          name="stock_quantity"
+                          type="number"
+                          min="0"
+                          defaultValue={editingProduct?.stock_quantity || 0}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="items_per_case">PCS per Case</Label>
+                        <Input
+                          id="items_per_case"
+                          name="items_per_case"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="e.g. 12"
+                          defaultValue={editingProduct?.items_per_case || 0}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="low_stock_threshold">Low Stock Alert</Label>
+                        <Input
+                          id="low_stock_threshold"
+                          name="low_stock_threshold"
+                          type="number"
+                          min="0"
+                          defaultValue={editingProduct?.low_stock_threshold || 10}
+                        />
+                      </div>
+                    </div>
                     <div className="space-y-2">
-                      <Label htmlFor="stock_quantity">Total Stock</Label>
-                      <Input
-                        id="stock_quantity"
-                        name="stock_quantity"
-                        type="number"
-                        min="0"
-                        defaultValue={editingProduct?.stock_quantity || 0}
-                      />
+                      <Label htmlFor="category_id">Category</Label>
+                      <Select name="category_id" defaultValue={editingProduct?.category_id || ''}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="items_per_case">PCS per Case</Label>
-                      <Input
-                        id="items_per_case"
-                        name="items_per_case"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="e.g. 12"
-                        defaultValue={editingProduct?.items_per_case || 0}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="low_stock_threshold">Low Stock Alert</Label>
-                      <Input
-                        id="low_stock_threshold"
-                        name="low_stock_threshold"
-                        type="number"
-                        min="0"
-                        defaultValue={editingProduct?.low_stock_threshold || 10}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="category_id">Category</Label>
-                    <Select name="category_id" defaultValue={editingProduct?.category_id || ''}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Icon</Label>
-                    <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto p-1 border rounded-md">
-                      {PRODUCT_ICONS.map((iconName) => {
-                        const IconComponent = icons[iconName as keyof typeof icons];
-                        return IconComponent ? (
-                          <button
-                            key={iconName}
-                            type="button"
-                            onClick={() => setSelectedIcon(iconName)}
-                            className={`p-2 rounded-md flex items-center justify-center transition-colors ${selectedIcon === iconName
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted hover:bg-muted/80'
-                              }`}
-                          >
-                            <IconComponent className="h-5 w-5" />
-                          </button>
-                        ) : null;
-                      })}
+                      <Label>Icon</Label>
+                      <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto p-1 border rounded-md">
+                        {PRODUCT_ICONS.map((iconName) => {
+                          const IconComponent = icons[iconName as keyof typeof icons];
+                          return IconComponent ? (
+                            <button
+                              key={iconName}
+                              type="button"
+                              onClick={() => setSelectedIcon(iconName)}
+                              className={`p-2 rounded-md flex items-center justify-center transition-colors ${selectedIcon === iconName
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted hover:bg-muted/80'
+                                }`}
+                            >
+                              <IconComponent className="h-5 w-5" />
+                            </button>
+                          ) : null;
+                        })}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-end gap-2 pt-4 border-t shrink-0 mt-auto">
                     <Button
                       type="button"
                       variant="outline"
@@ -472,7 +476,7 @@ export default function Products() {
             </Dialog>
           )}
         </div>
-      </div>
+      </div >
 
       <Card>
         <CardHeader>
@@ -683,6 +687,6 @@ export default function Products() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }

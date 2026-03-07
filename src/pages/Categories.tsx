@@ -185,13 +185,13 @@ export default function Categories() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="spos-page-heading">Categories</h1>
           <p className="spos-page-subhead" style={{ marginBottom: 0 }}>Organize your products into categories</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={handleExportExcel} variant="outline">
+        <div className="flex flex-wrap gap-2 items-center">
+          <Button onClick={handleExportExcel} variant="outline" size="sm">
             <Download className="mr-2 h-4 w-4" />
             Export Excel
           </Button>
@@ -201,48 +201,50 @@ export default function Categories() {
               if (!open) setEditingCategory(null);
             }}>
               <DialogTrigger asChild>
-                <Button>
+                <Button size="sm">
                   <Plus className="mr-2 h-4 w-4" />
                   Add Category
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-md w-[95vw] max-h-[85vh] flex flex-col p-4 sm:p-6 overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>
                     {editingCategory ? 'Edit Category' : 'Add Category'}
                   </DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      defaultValue={editingCategory?.name}
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1 overflow-hidden mt-2">
+                  <div className="overflow-y-auto pr-1 space-y-4 flex-1 custom-scrollbar">
                     <div className="space-y-2">
-                      <Label htmlFor="color">Color</Label>
+                      <Label htmlFor="name">Name</Label>
                       <Input
-                        id="color"
-                        name="color"
-                        type="color"
-                        defaultValue={editingCategory?.color || '#3B82F6'}
+                        id="name"
+                        name="name"
+                        defaultValue={editingCategory?.name}
+                        required
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="icon">Icon</Label>
-                      <Input
-                        id="icon"
-                        name="icon"
-                        defaultValue={editingCategory?.icon || 'Package'}
-                        placeholder="Lucide icon name"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="color">Color</Label>
+                        <Input
+                          id="color"
+                          name="color"
+                          type="color"
+                          defaultValue={editingCategory?.color || '#3B82F6'}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="icon">Icon</Label>
+                        <Input
+                          id="icon"
+                          name="icon"
+                          defaultValue={editingCategory?.icon || 'Package'}
+                          placeholder="Lucide icon name"
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-2">
+                  <div className="flex justify-end gap-2 pt-4 border-t shrink-0 mt-auto">
                     <Button
                       type="button"
                       variant="outline"
@@ -265,7 +267,7 @@ export default function Categories() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Card className="p-4">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">

@@ -82,10 +82,14 @@ export default function DueBills() {
 
             // Update customer current_due
             if (bill.customer_id) {
-                await supabase.rpc('update_customer_due', {
-                    _customer_id: bill.customer_id,
-                    _delta: -amount,
-                }).catch(() => { }); // non-critical
+                try {
+                    await supabase.rpc('update_customer_due', {
+                        _customer_id: bill.customer_id,
+                        _delta: -amount,
+                    });
+                } catch (e) {
+                    // non-critical
+                }
             }
         },
         onSuccess: () => {
