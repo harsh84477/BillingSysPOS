@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollText, ShieldCheck, UserX, CreditCard, Settings, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ACTION_META: Record<string, { label: string; color: string; icon: React.ElementType }> = {
     assign_subscription: { label: 'Assign Plan', color: 'bg-green-100 text-green-700', icon: CreditCard },
@@ -19,7 +20,9 @@ const ACTION_META: Record<string, { label: string; color: string; icon: React.El
     delete_business: { label: 'Delete Biz', color: 'bg-red-100 text-red-700', icon: Trash2 },
 };
 
-function XIcon(props: any) { return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>; }
+function XIcon(props: any) {
+    return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>;
+}
 
 export default function LogsTab() {
     const { data: logs = [], isLoading } = useQuery({
@@ -45,7 +48,9 @@ export default function LogsTab() {
                 </CardHeader>
                 <CardContent className="p-0">
                     {isLoading ? (
-                        <div className="py-12 text-center text-sm text-muted-foreground">Loading logs...</div>
+                        <div className="p-6 space-y-3">
+                            {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
+                        </div>
                     ) : logs.length === 0 ? (
                         <div className="py-16 text-center space-y-2 text-muted-foreground">
                             <ScrollText className="h-10 w-10 mx-auto opacity-20" />
@@ -53,49 +58,72 @@ export default function LogsTab() {
                             <p className="text-xs">Actions like assigning plans, blocking users, and editing plans will appear here.</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-muted/40">
-                                        <TableHead>Timestamp</TableHead>
-                                        <TableHead>Action</TableHead>
-                                        <TableHead>Target Type</TableHead>
-                                        <TableHead>Target ID</TableHead>
-                                        <TableHead>Details</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {logs.map((log) => {
-                                        const meta = ACTION_META[log.action] || { label: log.action, color: 'bg-gray-100 text-gray-700', icon: ScrollText };
-                                        const Icon = meta.icon;
-                                        return (
-                                            <TableRow key={log.id}>
-                                                <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">
-                                                    {format(new Date(log.created_at), 'MMM dd, HH:mm:ss')}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge className={cn('text-[10px] gap-1 font-semibold', meta.color)}>
-                                                        <Icon className="h-3 w-3" />
-                                                        {meta.label}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="text-xs capitalize text-muted-foreground">
-                                                    {log.target_type || '—'}
-                                                </TableCell>
-                                                <TableCell className="text-xs font-mono text-muted-foreground">
-                                                    {log.target_id ? `${log.target_id.slice(0, 12)}...` : '—'}
-                                                </TableCell>
-                                                <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
-                                                    {log.details && Object.keys(log.details).length > 0
-                                                        ? JSON.stringify(log.details)
-                                                        : '—'}
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </div>
+                        <>
+                            {/* Desktop Table */}
+                            <div className="hidden sm:block overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-muted/40">
+                                            <TableHead>Timestamp</TableHead>
+                                            <TableHead>Action</TableHead>
+                                            <TableHead>Target Type</TableHead>
+                                            <TableHead>Target ID</TableHead>
+                                            <TableHead>Details</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {logs.map((log) => {
+                                            const meta = ACTION_META[log.action] || { label: log.action, color: 'bg-muted text-muted-foreground', icon: ScrollText };
+                                            const Icon = meta.icon;
+                                            return (
+                                                <TableRow key={log.id}>
+                                                    <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">
+                                                        {format(new Date(log.created_at), 'MMM dd, HH:mm:ss')}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge className={cn('text-[10px] gap-1 font-semibold', meta.color)}>
+                                                            <Icon className="h-3 w-3" />{meta.label}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell className="text-xs capitalize text-muted-foreground">{log.target_type || '—'}</TableCell>
+                                                    <TableCell className="text-xs font-mono text-muted-foreground">{log.target_id ? `${log.target_id.slice(0, 12)}...` : '—'}</TableCell>
+                                                    <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                                                        {log.details && Object.keys(log.details).length > 0 ? JSON.stringify(log.details) : '—'}
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Mobile Card List */}
+                            <div className="sm:hidden divide-y divide-border">
+                                {logs.map((log) => {
+                                    const meta = ACTION_META[log.action] || { label: log.action, color: 'bg-muted text-muted-foreground', icon: ScrollText };
+                                    const Icon = meta.icon;
+                                    return (
+                                        <div key={log.id} className="px-4 py-3 space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <Badge className={cn('text-[10px] gap-1 font-semibold', meta.color)}>
+                                                    <Icon className="h-3 w-3" />{meta.label}
+                                                </Badge>
+                                                <span className="text-[10px] text-muted-foreground font-mono">
+                                                    {format(new Date(log.created_at), 'MMM dd, HH:mm')}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-muted-foreground">
+                                                <span className="capitalize">{log.target_type || '—'}</span>
+                                                {log.target_id && <span className="font-mono ml-1">· {log.target_id.slice(0, 8)}...</span>}
+                                            </div>
+                                            {log.details && Object.keys(log.details).length > 0 && (
+                                                <p className="text-[10px] text-muted-foreground/70 truncate">{JSON.stringify(log.details)}</p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
                     )}
                 </CardContent>
             </Card>

@@ -135,7 +135,7 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                     </button>
                     <h2 className="text-2xl font-black tracking-tight">{business?.business_name}</h2>
                     <p className="text-sm text-muted-foreground mt-1">
-                        📞 {business?.mobile_number} · joined {format(new Date(business?.created_at), 'MMM dd, yyyy')}
+                        📞 {business?.mobile_number} · joined {business?.created_at ? format(new Date(business.created_at), 'MMM dd, yyyy') : '—'}
                     </p>
                 </div>
                 {sub ? getStatusBadge(sub.status) : <Badge variant="outline">No Subscription</Badge>}

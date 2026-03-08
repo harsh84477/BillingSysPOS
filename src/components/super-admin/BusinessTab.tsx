@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Globe, Building2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Search, Building2, Globe, Eye, MapPin, Phone, Mail } from 'lucide-react';
+import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 import BusinessProfile from './BusinessProfile';
 
 interface Props {
@@ -17,183 +17,160 @@ interface Props {
 
 export default function BusinessTab({ plans }: Props) {
     const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
+    const [selectedBiz, setSelectedBiz] = useState<any>(null);
 
     const { data: businesses = [], isLoading } = useQuery({
-        queryKey: ['super-admin-businesses'],
-        retry: 1,
+        queryKey: ['super-admin-all-businesses'],
         queryFn: async () => {
-            // Try SECURITY DEFINER RPC first (bypasses RLS → all businesses)
-            try {
-                const { data, error } = await (supabase.rpc as any)('get_all_businesses_admin');
-                if (!error && data) {
-                    return (data as any[]).map((row) => ({
-                        id: row.id,
-                        business_name: row.business_name,
-                        mobile_number: row.mobile_number,
-                        join_code: row.join_code,
-                        created_at: row.created_at,
-                        business_settings: [{ address: row.address }],
-                        subscriptions: row.sub_id
-                            ? [{
-                                id: row.sub_id,
-                                status: row.sub_status,
-                                trial_end: row.sub_trial_end,
-                                current_period_end: row.sub_period_end,
-                                plan: row.plan_id
-                                    ? { id: row.plan_id, name: row.plan_name, price: row.plan_price }
-                                    : null,
-                            }]
-                            : [],
-                    }));
-                }
-            } catch (_) {
-                // RPC not deployed yet — fall through to direct query
-            }
-
-            // Fallback: direct table query (works with whatever RLS allows)
             const { data, error } = await supabase
-                .from('businesses')
-                .select(`
-                    *,
-                    business_settings (address),
-                    subscriptions (
-                        id,
-                        status,
-                        trial_end,
-                        current_period_end,
-                        plan:subscription_plans (id, name, price)
-                    )
-                `);
+                .from('business_settings')
+                .select('*')
+                .order('created_at', { ascending: false });
             if (error) throw error;
             return data || [];
         },
     });
 
-    const getSubStatus = (biz: any) => {
-        const sub = biz.subscriptions?.[0];
-        if (!sub) return 'none';
-        const now = new Date();
-        if (sub.status === 'active' && sub.current_period_end && new Date(sub.current_period_end) < now) return 'expired';
-        if (sub.status === 'trialing' && sub.trial_end && new Date(sub.trial_end) < now) return 'expired';
-        return sub.status;
-    };
+    const filtered = businesses.filter(b =>
+        b.business_name?.toLowerCase().includes(search.toLowerCase()) ||
+        b.email?.toLowerCase().includes(search.toLowerCase()) ||
+        b.phone?.includes(search)
+    );
 
-    const filtered = businesses.filter((b: any) => {
-        const matchSearch =
-            b.business_name?.toLowerCase().includes(search.toLowerCase()) ||
-            b.mobile_number?.includes(search) ||
-            b.join_code?.toLowerCase().includes(search.toLowerCase());
-        const status = getSubStatus(b);
-        const matchStatus = statusFilter === 'all' || status === statusFilter;
-        return matchSearch && matchStatus;
-    });
-
-    const getStatusBadge = (biz: any) => {
-        const status = getSubStatus(biz);
-        switch (status) {
-            case 'active': return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 text-[10px]">Active</Badge>;
-            case 'trialing': return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-[10px]">Trial</Badge>;
-            case 'expired': return <Badge className="bg-red-100 text-red-700 hover:bg-red-100 text-[10px]">Expired</Badge>;
-            default: return <Badge variant="outline" className="text-[10px]">No Sub</Badge>;
-        }
-    };
-
-    const selectedBiz = businesses.find((b: any) => b.id === selectedBusinessId);
+    if (selectedBiz) {
+        return (
+            <BusinessProfile
+                businessId={selectedBiz.id}
+                business={selectedBiz}
+                plans={plans}
+                onBack={() => setSelectedBiz(null)}
+            />
+        );
+    }
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[600px]">
-            {/* Business List Sidebar */}
-            <div className="lg:col-span-4">
-                <Card className="flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
-                    <CardHeader className="pb-3 shrink-0">
-                        <CardTitle className="text-base flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-primary" />
-                            All Businesses
-                            <Badge variant="outline" className="text-xs ml-auto">{filtered.length}</Badge>
-                        </CardTitle>
-                        <div className="relative mt-2">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                                placeholder="Name, phone, join code..."
-                                className="pl-9 h-9"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="h-8 text-xs mt-1">
-                                <SelectValue placeholder="All Statuses" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Statuses</SelectItem>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="trialing">Trialing</SelectItem>
-                                <SelectItem value="expired">Expired</SelectItem>
-                                <SelectItem value="none">No Subscription</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </CardHeader>
-                    <ScrollArea className="flex-1 overflow-y-auto">
-                        <div className="px-4 pb-4 space-y-2">
-                            {isLoading ? (
-                                <div className="text-center py-8 text-sm text-muted-foreground">Loading businesses...</div>
-                            ) : (
-                                filtered.map((biz: any) => (
-                                    <button
-                                        key={biz.id}
-                                        onClick={() => setSelectedBusinessId(biz.id)}
-                                        className={cn(
-                                            'w-full text-left p-3 rounded-lg border transition-all hover:border-primary/50',
-                                            selectedBusinessId === biz.id
-                                                ? 'bg-primary/5 border-primary ring-1 ring-primary/20'
-                                                : 'border-transparent bg-muted/30 hover:bg-muted/50'
-                                        )}
-                                    >
-                                        <div className="flex items-center justify-between mb-1">
-                                            <span className="font-bold text-sm truncate max-w-[150px]">{biz.business_name}</span>
-                                            {getStatusBadge(biz)}
-                                        </div>
-                                        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                                            <span>{biz.mobile_number}</span>
-                                            <span className="font-mono">{biz.join_code}</span>
-                                        </div>
-                                        {biz.subscriptions?.[0]?.plan && (
-                                            <p className="text-[10px] text-primary font-medium mt-1">{biz.subscriptions[0].plan.name}</p>
-                                        )}
-                                    </button>
-                                ))
-                            )}
-                            {!isLoading && filtered.length === 0 && (
-                                <div className="text-center py-12 text-muted-foreground">
-                                    <Building2 className="h-8 w-8 mx-auto opacity-20 mb-2" />
-                                    <p className="text-sm">No businesses found</p>
-                                </div>
-                            )}
-                        </div>
-                    </ScrollArea>
-                </Card>
+        <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                        placeholder="Search by name, email, or phone..."
+                        className="pl-9"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
+                <Badge variant="outline" className="self-center text-xs shrink-0">
+                    {filtered.length} business{filtered.length !== 1 ? 'es' : ''}
+                </Badge>
             </div>
 
-            {/* Detail Panel */}
-            <div className="lg:col-span-8">
-                {!selectedBusinessId ? (
-                    <Card className="flex flex-col items-center justify-center border-dashed text-muted-foreground bg-muted/10"
-                        style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
-                        <Globe className="h-14 w-14 opacity-10 mb-4" />
-                        <h3 className="font-bold text-lg text-foreground">Select a Business</h3>
-                        <p className="text-sm mt-1">Click a business on the left to view its full profile.</p>
-                    </Card>
-                ) : selectedBiz ? (
-                    <BusinessProfile
-                        businessId={selectedBusinessId}
-                        business={selectedBiz}
-                        plans={plans}
-                        onBack={() => setSelectedBusinessId(null)}
-                    />
-                ) : null}
-            </div>
+            <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-primary" />
+                        All Businesses
+                    </CardTitle>
+                    <CardDescription>Registered businesses on the platform</CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {isLoading ? (
+                        <div className="p-6 space-y-3">
+                            {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                            <Globe className="h-12 w-12 opacity-10 mb-4" />
+                            <p className="font-semibold text-foreground">No Businesses Found</p>
+                            <p className="text-sm mt-1">
+                                {search ? 'Try a different search term.' : 'No businesses registered yet.'}
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Desktop Table */}
+                            <div className="hidden sm:block overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-muted/40">
+                                            <TableHead>Business</TableHead>
+                                            <TableHead>Contact</TableHead>
+                                            <TableHead>Currency</TableHead>
+                                            <TableHead>Registered</TableHead>
+                                            <TableHead className="text-right">Action</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filtered.map((biz) => (
+                                            <TableRow key={biz.id} className="hover:bg-muted/30">
+                                                <TableCell>
+                                                    <div>
+                                                        <p className="font-semibold text-sm">{biz.business_name}</p>
+                                                        {biz.address && (
+                                                            <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                                <MapPin className="h-2.5 w-2.5" />{biz.address}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="space-y-0.5">
+                                                        {biz.phone && <p className="text-xs flex items-center gap-1"><Phone className="h-3 w-3 text-muted-foreground" />{biz.phone}</p>}
+                                                        {biz.email && <p className="text-xs flex items-center gap-1"><Mail className="h-3 w-3 text-muted-foreground" />{biz.email}</p>}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="text-[10px]">
+                                                        {biz.currency_symbol} {biz.currency}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-xs text-muted-foreground">
+                                                    {format(new Date(biz.created_at), 'MMM dd, yyyy')}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="h-7 text-xs gap-1"
+                                                        onClick={() => setSelectedBiz(biz)}
+                                                    >
+                                                        <Eye className="h-3 w-3" />View
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Mobile Card List */}
+                            <div className="sm:hidden divide-y divide-border">
+                                {filtered.map((biz) => (
+                                    <button
+                                        key={biz.id}
+                                        onClick={() => setSelectedBiz(biz)}
+                                        className="w-full text-left px-4 py-3 hover:bg-muted/30 transition-colors"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="font-semibold text-sm truncate">{biz.business_name}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    {biz.phone && <span className="text-[10px] text-muted-foreground">{biz.phone}</span>}
+                                                    <Badge variant="outline" className="text-[9px] h-4">{biz.currency_symbol}</Badge>
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground mt-0.5">
+                                                    {format(new Date(biz.created_at), 'MMM dd, yyyy')}
+                                                </p>
+                                            </div>
+                                            <Eye className="h-4 w-4 text-muted-foreground shrink-0 ml-2" />
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 }

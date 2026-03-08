@@ -1,52 +1,45 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Users, ShieldAlert, Shield, User } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Search, Users, Shield, User, ChevronDown, ChevronRight, Building2, UserCheck } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function UsersTab() {
-    const { user } = useAuth();
-    const queryClient = useQueryClient();
     const [search, setSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
+    const [expandedBiz, setExpandedBiz] = useState<Set<string>>(new Set());
 
     const { data: users = [], isLoading } = useQuery({
         queryKey: ['all-platform-users'],
         queryFn: async () => {
-            const { data, error } = await (supabase.rpc as any)('get_all_platform_users');
-            if (error) throw error;
-            return data as any[];
-        },
-    });
+            const [{ data: profiles, error: pErr }, { data: roles, error: rErr }, { data: businesses, error: bErr }] = await Promise.all([
+                supabase.from('profiles').select('*'),
+                supabase.from('user_roles').select('*'),
+                supabase.from('business_settings').select('id, business_name'),
+            ]);
 
-    const blockMutation = useMutation({
-        mutationFn: async ({ userId, block }: { userId: string; block: boolean }) => {
-            const fn = block ? 'block_user' : 'unblock_user';
-            const { error } = await (supabase.rpc as any)(fn, { p_user_id: userId });
-            if (error) throw error;
-            // Log the action
-            await (supabase.rpc as any)('log_admin_action', {
-                p_admin_id: user?.id || 'super-admin',
-                p_action: block ? 'block_user' : 'unblock_user',
-                p_target_id: userId,
-                p_target_type: 'user',
-                p_details: {},
+            if (pErr || rErr || bErr) throw pErr || rErr || bErr;
+
+            return (profiles || []).map((p: any) => {
+                const r = (roles || []).find((rr: any) => rr.user_id === p.user_id);
+                const biz = (businesses || []).find((b: any) => b.id === p.business_id) || null;
+                return {
+                    user_id: p.user_id,
+                    display_name: p.display_name,
+                    role: r?.role || 'viewer',
+                    joined_at: p.created_at,
+                    business_name: biz?.business_name || '—',
+                    business_id: biz?.id || 'unknown',
+                };
             });
         },
-        onSuccess: (_, vars) => {
-            toast.success(vars.block ? 'User blocked' : 'User unblocked');
-            queryClient.invalidateQueries({ queryKey: ['all-platform-users'] });
-        },
-        onError: (err: any) => toast.error(err.message),
     });
 
     const filtered = users.filter(u => {
@@ -57,14 +50,44 @@ export default function UsersTab() {
         return matchSearch && matchRole;
     });
 
+    // Group by business
+    const grouped = useMemo(() => {
+        const map = new Map<string, { name: string; id: string; users: typeof filtered }>();
+        filtered.forEach(u => {
+            const key = u.business_id || 'unknown';
+            if (!map.has(key)) {
+                map.set(key, { name: u.business_name || '—', id: key, users: [] });
+            }
+            map.get(key)!.users.push(u);
+        });
+        return Array.from(map.values()).sort((a, b) => b.users.length - a.users.length);
+    }, [filtered]);
+
+    const toggleBiz = (id: string) => {
+        setExpandedBiz(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
     const getRoleBadge = (role: string) => {
         switch (role) {
-            case 'owner': return <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100 gap-1"><Shield className="h-3 w-3" />Owner</Badge>;
-            case 'manager': return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 gap-1"><Users className="h-3 w-3" />Manager</Badge>;
-            case 'cashier': return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 gap-1"><User className="h-3 w-3" />Cashier</Badge>;
-            default: return <Badge variant="secondary">{role}</Badge>;
+            case 'owner':
+            case 'admin':
+                return <Badge className="bg-violet-100 text-violet-700 hover:bg-violet-100 gap-1 text-[10px]"><Shield className="h-3 w-3" />Admin</Badge>;
+            case 'manager':
+            case 'staff':
+                return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 gap-1 text-[10px]"><UserCheck className="h-3 w-3" />Staff</Badge>;
+            case 'cashier':
+            case 'viewer':
+                return <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-100 gap-1 text-[10px]"><User className="h-3 w-3" />Viewer</Badge>;
+            default: return <Badge variant="secondary" className="text-[10px]">{role}</Badge>;
         }
     };
+
+    const getRoleCount = (users: typeof filtered, role: string) => users.filter(u => u.role === role).length;
 
     return (
         <div className="space-y-4">
@@ -84,82 +107,105 @@ export default function UsersTab() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">All Roles</SelectItem>
-                        <SelectItem value="owner">Owner</SelectItem>
-                        <SelectItem value="manager">Manager</SelectItem>
-                        <SelectItem value="cashier">Cashier</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="staff">Staff</SelectItem>
+                        <SelectItem value="viewer">Viewer</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
 
             <Card>
                 <CardHeader className="pb-3">
-                    <CardTitle className="text-base">
-                        Platform Users
-                        <Badge variant="outline" className="ml-2 text-xs">{filtered.length}</Badge>
+                    <CardTitle className="text-base flex items-center gap-2">
+                        <Users className="h-4 w-4 text-primary" />
+                        Users by Business
+                        <Badge variant="outline" className="ml-1 text-xs">{filtered.length} users</Badge>
                     </CardTitle>
-                    <CardDescription>Manage users across all registered businesses</CardDescription>
+                    <CardDescription>Click a business to expand and see its team members</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                     {isLoading ? (
-                        <div className="flex justify-center py-12 text-muted-foreground text-sm">Loading users...</div>
+                        <div className="p-6 space-y-3">
+                            {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+                        </div>
+                    ) : grouped.length === 0 ? (
+                        <div className="text-center py-16 text-muted-foreground">
+                            <Users className="h-12 w-12 mx-auto opacity-10 mb-4" />
+                            <p className="font-semibold text-foreground">No users found</p>
+                            <p className="text-sm mt-1">Try adjusting your search or filters.</p>
+                        </div>
                     ) : (
-                        <div className="rounded-b-lg overflow-hidden">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-muted/40">
-                                        <TableHead>User</TableHead>
-                                        <TableHead>Business</TableHead>
-                                        <TableHead>Role</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Joined</TableHead>
-                                        <TableHead className="text-right">Action</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filtered.map((u) => (
-                                        <TableRow key={`${u.user_id}-${u.business_id}`} className={cn(u.is_blocked && 'opacity-50')}>
-                                            <TableCell>
-                                                <div>
-                                                    <p className="font-semibold text-sm">{u.display_name || 'Unknown'}</p>
-                                                    <p className="text-[10px] text-muted-foreground font-mono">{u.user_id?.slice(0, 12)}...</p>
+                        <div className="divide-y divide-border">
+                            {grouped.map((biz) => {
+                                const isOpen = expandedBiz.has(biz.id);
+                                const adminCount = getRoleCount(biz.users, 'admin');
+                                const staffCount = getRoleCount(biz.users, 'staff');
+                                const viewerCount = getRoleCount(biz.users, 'viewer');
+
+                                return (
+                                    <Collapsible key={biz.id} open={isOpen} onOpenChange={() => toggleBiz(biz.id)}>
+                                        <CollapsibleTrigger asChild>
+                                            <button className="w-full text-left px-4 sm:px-6 py-4 hover:bg-muted/30 transition-colors">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                                            <Building2 className="h-5 w-5 text-primary" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="font-bold text-sm truncate">{biz.name}</p>
+                                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                                <Badge variant="outline" className="text-[10px] h-5">
+                                                                    {biz.users.length} user{biz.users.length !== 1 ? 's' : ''}
+                                                                </Badge>
+                                                                {adminCount > 0 && (
+                                                                    <span className="text-[10px] text-violet-600">{adminCount} admin{adminCount > 1 ? 's' : ''}</span>
+                                                                )}
+                                                                {staffCount > 0 && (
+                                                                    <span className="text-[10px] text-blue-600">{staffCount} staff</span>
+                                                                )}
+                                                                {viewerCount > 0 && (
+                                                                    <span className="text-[10px] text-slate-500">{viewerCount} viewer{viewerCount > 1 ? 's' : ''}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {isOpen ? (
+                                                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                                                    ) : (
+                                                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                                                    )}
                                                 </div>
-                                            </TableCell>
-                                            <TableCell className="text-sm">{u.business_name}</TableCell>
-                                            <TableCell>{getRoleBadge(u.role)}</TableCell>
-                                            <TableCell>
-                                                {u.is_blocked ? (
-                                                    <Badge className="bg-red-100 text-red-700 hover:bg-red-100 gap-1">
-                                                        <ShieldAlert className="h-3 w-3" />Blocked
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Active</Badge>
-                                                )}
-                                            </TableCell>
-                                            <TableCell className="text-xs text-muted-foreground">
-                                                {u.joined_at ? format(new Date(u.joined_at), 'MMM dd, yyyy') : '—'}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button
-                                                    size="sm"
-                                                    variant={u.is_blocked ? 'outline' : 'destructive'}
-                                                    className="h-7 text-xs"
-                                                    disabled={blockMutation.isPending}
-                                                    onClick={() => blockMutation.mutate({ userId: u.user_id, block: !u.is_blocked })}
-                                                >
-                                                    {u.is_blocked ? 'Unblock' : 'Block'}
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {filtered.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                                                No users found.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                                            </button>
+                                        </CollapsibleTrigger>
+                                        <CollapsibleContent>
+                                            <div className="bg-muted/20 border-t border-border">
+                                                {biz.users.map((u, idx) => (
+                                                    <div
+                                                        key={u.user_id}
+                                                        className={cn(
+                                                            'px-4 sm:px-6 py-3 flex items-center justify-between gap-3',
+                                                            idx < biz.users.length - 1 && 'border-b border-border/50'
+                                                        )}
+                                                    >
+                                                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                            <div className="h-8 w-8 rounded-full bg-background border border-border flex items-center justify-center shrink-0">
+                                                                <User className="h-4 w-4 text-muted-foreground" />
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <p className="font-semibold text-sm truncate">{u.display_name || 'Unknown'}</p>
+                                                                <p className="text-[10px] text-muted-foreground">
+                                                                    Joined {u.joined_at ? format(new Date(u.joined_at), 'MMM dd, yyyy') : '—'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        {getRoleBadge(u.role)}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </CollapsibleContent>
+                                    </Collapsible>
+                                );
+                            })}
                         </div>
                     )}
                 </CardContent>

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CreditCard, DollarSign, PlusCircle, XCircle } from 'lucide-react';
 import { format, addMonths, addYears } from 'date-fns';
 import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SubscriptionTab() {
     const { user } = useAuth();
@@ -50,10 +51,7 @@ export default function SubscriptionTab() {
         onError: (err: any) => toast.error(err.message),
     });
 
-    const filtered = subscriptions.filter(s => {
-        if (statusFilter === 'all') return true;
-        return s.status === statusFilter;
-    });
+    const filtered = subscriptions.filter(s => statusFilter === 'all' || s.status === statusFilter);
 
     const getStatusBadge = (s: any) => {
         const now = new Date();
@@ -74,15 +72,13 @@ export default function SubscriptionTab() {
         <div className="space-y-4">
             {/* Revenue summary banner */}
             <Card className="bg-gradient-to-r from-emerald-500/10 to-transparent border-emerald-500/20">
-                <CardContent className="pt-4 pb-4 flex items-center gap-4">
-                    <DollarSign className="h-6 w-6 text-emerald-500" />
-                    <div>
+                <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                    <DollarSign className="h-6 w-6 text-emerald-500 shrink-0" />
+                    <div className="flex-1">
                         <p className="text-sm font-bold">Total MRR Estimate</p>
-                        <p className="text-2xl font-extrabold">
-                            ₹{totalRevenue.toLocaleString('en-IN')}
-                        </p>
+                        <p className="text-2xl font-extrabold">₹{totalRevenue.toLocaleString('en-IN')}</p>
                     </div>
-                    <div className="ml-auto text-right">
+                    <div className="sm:text-right">
                         <p className="text-sm text-muted-foreground">{subscriptions.length} subscriptions</p>
                     </div>
                 </CardContent>
@@ -91,7 +87,7 @@ export default function SubscriptionTab() {
             {/* Filter */}
             <div className="flex justify-end">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-48">
+                    <SelectTrigger className="w-full sm:w-48">
                         <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -114,96 +110,115 @@ export default function SubscriptionTab() {
                 </CardHeader>
                 <CardContent className="p-0">
                     {isLoading ? (
-                        <div className="py-12 text-center text-sm text-muted-foreground">Loading...</div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-muted/40">
-                                        <TableHead>Business</TableHead>
-                                        <TableHead>Plan</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Expiry</TableHead>
-                                        <TableHead>Price</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filtered.map((s) => (
-                                        <TableRow key={s.subscription_id}>
-                                            <TableCell>
-                                                <p className="font-semibold text-sm">{s.business_name}</p>
-                                            </TableCell>
-                                            <TableCell className="text-sm">{s.plan_name}</TableCell>
-                                            <TableCell>{getStatusBadge(s)}</TableCell>
-                                            <TableCell className="text-xs text-muted-foreground">
-                                                {s.current_period_end
-                                                    ? format(new Date(s.current_period_end), 'MMM dd, yyyy HH:mm')
-                                                    : s.trial_end
-                                                        ? format(new Date(s.trial_end), 'MMM dd, yyyy HH:mm') + ' (trial)'
-                                                        : '—'}
-                                            </TableCell>
-                                            <TableCell className="font-semibold text-sm">₹{s.plan_price}</TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex gap-1.5 justify-end flex-wrap">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="h-7 text-xs px-2"
-                                                        disabled={manageSubMutation.isPending}
-                                                        onClick={() => manageSubMutation.mutate({
-                                                            bizId: s.business_id,
-                                                            planId: s.plan_id,
-                                                            status: 'active',
-                                                            periodEnd: addMonths(new Date(s.current_period_end || new Date()), 1).toISOString(),
-                                                        })}
-                                                        title="Extend by 1 month"
-                                                    >
-                                                        <PlusCircle className="h-3 w-3 mr-1" />+1M
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="h-7 text-xs px-2"
-                                                        disabled={manageSubMutation.isPending}
-                                                        onClick={() => manageSubMutation.mutate({
-                                                            bizId: s.business_id,
-                                                            planId: s.plan_id,
-                                                            status: 'active',
-                                                            periodEnd: addYears(new Date(s.current_period_end || new Date()), 1).toISOString(),
-                                                        })}
-                                                        title="Extend by 1 year"
-                                                    >
-                                                        <PlusCircle className="h-3 w-3 mr-1" />+1Y
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="destructive"
-                                                        className="h-7 text-xs px-2"
-                                                        disabled={manageSubMutation.isPending}
-                                                        onClick={() => manageSubMutation.mutate({
-                                                            bizId: s.business_id,
-                                                            planId: s.plan_id,
-                                                            status: 'expired',
-                                                            periodEnd: new Date().toISOString(),
-                                                        })}
-                                                    >
-                                                        <XCircle className="h-3 w-3 mr-1" />Cancel
-                                                    </Button>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {filtered.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                                                No subscriptions found.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                        <div className="p-6 space-y-3">
+                            {[1, 2, 3].map(i => <Skeleton key={i} className="h-14 w-full" />)}
                         </div>
+                    ) : (
+                        <>
+                            {/* Desktop Table */}
+                            <div className="hidden sm:block overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-muted/40">
+                                            <TableHead>Business</TableHead>
+                                            <TableHead>Plan</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Expiry</TableHead>
+                                            <TableHead>Price</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filtered.map((s) => (
+                                            <TableRow key={s.subscription_id}>
+                                                <TableCell><p className="font-semibold text-sm">{s.business_name}</p></TableCell>
+                                                <TableCell className="text-sm">{s.plan_name}</TableCell>
+                                                <TableCell>{getStatusBadge(s)}</TableCell>
+                                                <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                                    {s.current_period_end
+                                                        ? format(new Date(s.current_period_end), 'MMM dd, yyyy')
+                                                        : s.trial_end
+                                                            ? format(new Date(s.trial_end), 'MMM dd, yyyy') + ' (trial)'
+                                                            : '—'}
+                                                </TableCell>
+                                                <TableCell className="font-semibold text-sm">₹{s.plan_price}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex gap-1.5 justify-end flex-wrap">
+                                                        <Button size="sm" variant="outline" className="h-7 text-xs px-2" disabled={manageSubMutation.isPending}
+                                                            onClick={() => manageSubMutation.mutate({
+                                                                bizId: s.business_id, planId: s.plan_id, status: 'active',
+                                                                periodEnd: addMonths(new Date(s.current_period_end || new Date()), 1).toISOString(),
+                                                            })}>
+                                                            <PlusCircle className="h-3 w-3 mr-1" />+1M
+                                                        </Button>
+                                                        <Button size="sm" variant="outline" className="h-7 text-xs px-2" disabled={manageSubMutation.isPending}
+                                                            onClick={() => manageSubMutation.mutate({
+                                                                bizId: s.business_id, planId: s.plan_id, status: 'active',
+                                                                periodEnd: addYears(new Date(s.current_period_end || new Date()), 1).toISOString(),
+                                                            })}>
+                                                            <PlusCircle className="h-3 w-3 mr-1" />+1Y
+                                                        </Button>
+                                                        <Button size="sm" variant="destructive" className="h-7 text-xs px-2" disabled={manageSubMutation.isPending}
+                                                            onClick={() => manageSubMutation.mutate({
+                                                                bizId: s.business_id, planId: s.plan_id, status: 'expired',
+                                                                periodEnd: new Date().toISOString(),
+                                                            })}>
+                                                            <XCircle className="h-3 w-3 mr-1" />Cancel
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {filtered.length === 0 && (
+                                            <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">No subscriptions found.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Mobile Card List */}
+                            <div className="sm:hidden divide-y divide-border">
+                                {filtered.length === 0 ? (
+                                    <div className="text-center py-10 text-muted-foreground text-sm">No subscriptions found.</div>
+                                ) : (
+                                    filtered.map((s) => (
+                                        <div key={s.subscription_id} className="px-4 py-3 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <p className="font-semibold text-sm">{s.business_name}</p>
+                                                {getStatusBadge(s)}
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                <span>{s.plan_name}</span>
+                                                <span className="font-semibold text-foreground">₹{s.plan_price}</span>
+                                            </div>
+                                            <div className="flex gap-1.5">
+                                                <Button size="sm" variant="outline" className="h-7 text-xs px-2 flex-1" disabled={manageSubMutation.isPending}
+                                                    onClick={() => manageSubMutation.mutate({
+                                                        bizId: s.business_id, planId: s.plan_id, status: 'active',
+                                                        periodEnd: addMonths(new Date(s.current_period_end || new Date()), 1).toISOString(),
+                                                    })}>
+                                                    +1M
+                                                </Button>
+                                                <Button size="sm" variant="outline" className="h-7 text-xs px-2 flex-1" disabled={manageSubMutation.isPending}
+                                                    onClick={() => manageSubMutation.mutate({
+                                                        bizId: s.business_id, planId: s.plan_id, status: 'active',
+                                                        periodEnd: addYears(new Date(s.current_period_end || new Date()), 1).toISOString(),
+                                                    })}>
+                                                    +1Y
+                                                </Button>
+                                                <Button size="sm" variant="destructive" className="h-7 text-xs px-2" disabled={manageSubMutation.isPending}
+                                                    onClick={() => manageSubMutation.mutate({
+                                                        bizId: s.business_id, planId: s.plan_id, status: 'expired',
+                                                        periodEnd: new Date().toISOString(),
+                                                    })}>
+                                                    Cancel
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </>
                     )}
                 </CardContent>
             </Card>
