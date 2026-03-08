@@ -455,8 +455,8 @@ export function MobileQuickBilling() {
                   <div className="flex justify-center py-10"><Loader2 className="animate-spin text-primary" /></div>
                 ) : filteredProducts.length === 0 ? (
                   <div className="text-center py-20 text-muted-foreground/50 font-bold opacity-30">No products found</div>
-                ) : (
-                  <div className={`grid ${mobileColsClass} pb-28`} style={{ gridGap: `${settings?.mobile_grid_gap ?? settings?.grid_gap ?? 8}px` }}>
+                  ) : (
+                  <div className={`grid ${mobileColsClass} pb-52`} style={{ gridGap: `${settings?.mobile_grid_gap ?? settings?.grid_gap ?? 8}px` }}>
                     {filteredProducts.map((product) => {
                       const available = product.stock_quantity - (product.reserved_quantity || 0);
                       const isLow = available <= product.low_stock_threshold;
@@ -511,8 +511,8 @@ export function MobileQuickBilling() {
             </TabsContent>
 
             {/* Checkout Tab */}
-            <TabsContent value="cart" className="flex-1 overflow-hidden flex flex-col m-0 p-0 bg-muted/10">
-              <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar pb-28">
+              <TabsContent value="cart" className="flex-1 overflow-hidden flex flex-col m-0 p-0 bg-muted/10">
+              <div className="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar pb-52">
                 {cart.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground/40 text-center space-y-4">
                     <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center mb-2 border border-border/50">
@@ -610,7 +610,7 @@ export function MobileQuickBilling() {
                     >
                       <Trash2 className="w-6 h-6" />
                     </Button>
-                    <Button
+                      <Button
                       className="col-span-3 rounded-2xl h-14 bg-primary font-black text-sm tracking-widest shadow-xl shadow-primary/20 active:scale-[0.98] transition-all"
                       disabled={cart.length === 0 || createDraftMutation.isPending}
                       onClick={() => createDraftMutation.mutate()}
@@ -620,7 +620,7 @@ export function MobileQuickBilling() {
                       ) : (
                         <Check className="w-6 h-6 mr-3" />
                       )}
-                      {createDraftMutation.isPending ? 'PROCESSING...' : `SAVE DRAFT - ₹${total.toFixed(0)}`}
+                      {createDraftMutation.isPending ? 'PROCESSING...' : `SAVE DRAFT - ₹${memoizedTotal.toFixed(0)}`}
                     </Button>
                   </div>
                 )}
