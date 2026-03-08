@@ -470,6 +470,28 @@ export default function Settings() {
                 <SettingRow label="Due Bill" desc="Allow bills to be marked as unpaid/due" noBorder
                   right={<Toggle on={settings?.enable_payment_due ?? true} onChange={(v) => u({ enable_payment_due: v })} disabled={!isAdmin} />} />
               </SettingsCard>
+              <SettingsCard title="Mobile View" subtitle="Configure product grid and sizes for mobile POS" icon="📱" accent="#3b82f6">
+                <SectionLabel text="Mobile View" />
+                <SettingRow label="Product Button Size" desc="Controls product card size in mobile POS"
+                  right={<SelectInput
+                    value={settings?.mobile_product_button_size ?? settings?.product_button_size ?? 'medium'}
+                    onChange={(v) => u({ mobile_product_button_size: v })}
+                    disabled={!isAdmin}
+                    options={[
+                      { value: 'small', label: 'Small' },
+                      { value: 'medium', label: 'Medium' },
+                      { value: 'large', label: 'Large' },
+                    ]}
+                  />} />
+
+                <SettingRow label="Product Columns" desc="Number of product columns visible on mobile screen"
+                  right={<Counter value={settings?.mobile_product_columns ?? settings?.product_columns ?? 3} min={2} max={4} onChange={(v) => u({ mobile_product_columns: v })} disabled={!isAdmin} />} />
+
+                <SettingRow label="Grid Gap" desc="Spacing between product cards (px)"
+                  right={<Counter value={settings?.mobile_grid_gap ?? settings?.grid_gap ?? 8} min={2} max={16} onChange={(v) => u({ mobile_grid_gap: v })} disabled={!isAdmin} />} />
+
+                <InfoBox bg={op('#3b82f6', 8)} border={`1px solid ${op('#3b82f6', 20)}`} icon="💡" title="Admin Control" titleColor="#3b82f6" value="Only admins can change mobile view settings." />
+              </SettingsCard>
             </ColStack>
           )}
 

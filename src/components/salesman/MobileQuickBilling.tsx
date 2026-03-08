@@ -49,6 +49,9 @@ export function MobileQuickBilling() {
   const [activeTab, setActiveTab] = useState('products');
   const { data: settings } = useBusinessSettings();
 
+  const mobileCols = settings?.mobile_product_columns ?? settings?.product_columns ?? 2;
+  const mobileColsClass = `grid-cols-${mobileCols}`;
+
   // Quantity dialog state
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
   const [quantityDialogProduct, setQuantityDialogProduct] = useState<any>(null);
@@ -443,7 +446,7 @@ export function MobileQuickBilling() {
                 ) : filteredProducts.length === 0 ? (
                   <div className="text-center py-20 text-muted-foreground/50 font-bold opacity-30">No products found</div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-3 pb-28">
+                  <div className={`grid ${mobileColsClass} pb-28`} style={{ gridGap: `${settings?.mobile_grid_gap ?? settings?.grid_gap ?? 8}px` }}>
                     {filteredProducts.map((product) => {
                       const available = product.stock_quantity - (product.reserved_quantity || 0);
                       const isLow = available <= product.low_stock_threshold;
@@ -477,6 +480,24 @@ export function MobileQuickBilling() {
                   </div>
                 )}
               </div>
+
+              {/* Floating View Cart Button (visible on product screen) */}
+              {cart.length > 0 && (
+                <div className="fixed bottom-16 left-0 right-0 mx-3 mb-3 z-40 pointer-events-auto">
+                  <div className="max-w-xl mx-auto flex items-center justify-between bg-primary text-primary-foreground rounded-2xl px-4 py-2 shadow-lg active:scale-95 transition-transform">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg bg-white/10 flex items-center justify-center">
+                        <ShoppingCart className="w-5 h-5" />
+                      </div>
+                      <div className="font-bold">View Cart</div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-7 min-w-[32px] px-2 bg-white/10 rounded-full flex items-center justify-center text-sm font-black">{cart.reduce((a, b) => a + b.quantity, 0)}</div>
+                      <div className="font-bold">₹{memoizedTotal.toFixed(0)}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             {/* Checkout Tab */}
@@ -494,45 +515,41 @@ export function MobileQuickBilling() {
                   <>
                     <div className="space-y-2.5">
                       {cart.map((item) => (
-                        <div key={item.product_id} className="bg-background p-4 rounded-2xl shadow-sm border border-border/50 animate-in fade-in slide-in-from-bottom-2">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <p className="font-bold text-sm tracking-tight leading-[1.1] mb-1">{item.product_name}</p>
-                              <div className="flex items-center gap-2">
-                                <p className="text-primary font-black">₹{item.unit_price}</p>
-                                <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-                                <p className="text-[10px] font-bold text-muted-foreground/60">Total: ₹{(item.unit_price * item.quantity).toFixed(0)}</p>
-                              </div>
+                        <div key={item.product_id} className="flex items-center justify-between gap-3 p-2 rounded-lg border border-border/50 bg-card shadow-sm animate-in fade-in slide-in-from-bottom-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-sm truncate leading-tight">{item.product_name}</p>
+                            <div className="text-[12px] text-muted-foreground mt-0.5">
+                              ₹{item.unit_price} × {item.quantity} = <span className="text-primary font-semibold">₹{(item.unit_price * item.quantity).toFixed(0)}</span>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground/30 hover:text-red-500"
-                              onClick={() => removeFromCart(item.product_id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
                           </div>
-                          <div className="flex items-center justify-between mt-3 bg-muted/20 p-1.5 rounded-xl">
-                            <div className="flex items-center gap-6 w-full px-2 justify-between">
-                              <Button
-                                variant="secondary"
-                                size="icon"
-                                className="h-8 w-8 rounded-full bg-background shadow-xs ring-1 ring-border/20"
+
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center rounded-md bg-muted/30 px-1 py-0.5 gap-1">
+                              <button
+                                aria-label="decrease"
                                 onClick={() => setCart(cart.map(i => i.product_id === item.product_id && i.quantity > 1 ? { ...i, quantity: i.quantity - 1 } : i))}
+                                className="h-6 w-6 flex items-center justify-center rounded-md bg-transparent text-muted-foreground hover:text-primary active:scale-95"
+                                style={{ touchAction: 'manipulation' }}
                               >
                                 <Minus className="w-3 h-3" />
-                              </Button>
-                              <span className="font-black text-lg">{item.quantity}</span>
-                              <Button
-                                variant="secondary"
-                                size="icon"
-                                className="h-8 w-8 rounded-full bg-background shadow-xs ring-1 ring-border/20"
+                              </button>
+                              <div className="px-3 text-sm font-black select-none">{item.quantity}</div>
+                              <button
+                                aria-label="increase"
                                 onClick={() => setCart(cart.map(i => i.product_id === item.product_id ? { ...i, quantity: i.quantity + 1 } : i))}
+                                className="h-6 w-6 flex items-center justify-center rounded-md bg-transparent text-muted-foreground hover:text-primary active:scale-95"
                               >
                                 <Plus className="w-3 h-3" />
-                              </Button>
+                              </button>
                             </div>
+
+                            <button
+                              onClick={() => removeFromCart(item.product_id)}
+                              className="h-8 w-8 flex items-center justify-center rounded-full text-muted-foreground/60 hover:text-destructive hover:bg-destructive/5"
+                              aria-label="remove"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -541,11 +558,11 @@ export function MobileQuickBilling() {
                     <div className="bg-primary/5 border border-primary/10 p-4 rounded-2xl space-y-3 mt-4">
                       <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase tracking-widest leading-none">
                         <span>Sum Total</span>
-                        <span className="text-foreground">₹{subtotal.toFixed(0)}</span>
+                        <span className="text-foreground">₹{memoizedSubtotal.toFixed(0)}</span>
                       </div>
                       <div className="flex justify-between font-black text-2xl pt-4 border-t border-primary/5 text-primary leading-none items-end">
                         <span className="text-[10px] uppercase tracking-[0.2em] mb-1">Payable Now</span>
-                        <span>₹{total.toFixed(0)}</span>
+                        <span>₹{memoizedTotal.toFixed(0)}</span>
                       </div>
                     </div>
 

@@ -72,6 +72,10 @@ export interface BusinessSettings {
   product_button_size?: 'small' | 'medium' | 'large' | 'xlarge';
   product_columns?: number;
   grid_gap?: number;
+  // Mobile-specific product display settings (new)
+  mobile_product_button_size?: 'small' | 'medium' | 'large';
+  mobile_product_columns?: number;
+  mobile_grid_gap?: number;
   show_stock_badge?: boolean;
   show_product_code?: boolean;
   show_cost_price?: boolean;
