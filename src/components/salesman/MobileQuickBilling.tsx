@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -90,6 +90,9 @@ export function MobileQuickBilling() {
   const subtotal = cart.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
   const total = subtotal; // Simplified for quick billing, tax logic can be added
 
+  const memoizedSubtotal = useMemo(() => subtotal, [cart]);
+  const memoizedTotal = useMemo(() => total, [memoizedSubtotal]);
+
   const addToCart = (product: any, quantity: number = 1) => {
     try {
       if (!product) throw new Error('Invalid product');
@@ -170,10 +173,10 @@ export function MobileQuickBilling() {
         _bill_number: `DFT-${Date.now().toString().slice(-6)}`, // Temporary bill number
         _customer_id: selectedCustomerId,
         _salesman_name: salesmanName,
-        _subtotal: subtotal,
+        _subtotal: memoizedSubtotal,
         _discount_amount: 0,
         _tax_amount: 0,
-        _total_amount: total,
+        _total_amount: memoizedTotal,
         _items: items
       });
 
