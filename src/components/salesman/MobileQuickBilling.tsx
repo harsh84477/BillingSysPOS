@@ -91,26 +91,36 @@ export function MobileQuickBilling() {
   const total = subtotal; // Simplified for quick billing, tax logic can be added
 
   const addToCart = (product: any, quantity: number = 1) => {
-    const existing = cart.find((item) => item.product_id === product.id);
-    if (existing) {
-      setCart(
-        cart.map((item) =>
-          item.product_id === product.id ? { ...item, quantity: item.quantity + quantity } : item
-        )
-      );
-    } else {
-      setCart([
-        ...cart,
-        {
-          product_id: product.id,
-          product_name: product.name,
-          quantity: quantity,
-          unit_price: Number(product.selling_price),
-          cost_price: Number(product.cost_price),
-        },
-      ]);
+    try {
+      if (!product) throw new Error('Invalid product');
+      const id = product.id ?? product.product_id;
+      if (!id) throw new Error('Product id missing');
+
+      const unitPrice = Number(product.selling_price ?? product.unit_price ?? 0) || 0;
+      const costPrice = Number(product.cost_price ?? 0) || 0;
+
+      setCart((prev) => {
+        const existing = prev.find((item) => item.product_id === id);
+        if (existing) {
+          return prev.map((item) => (item.product_id === id ? { ...item, quantity: item.quantity + quantity } : item));
+        }
+        return [
+          ...prev,
+          {
+            product_id: id,
+            product_name: product.name ?? product.product_name ?? 'Unknown',
+            quantity,
+            unit_price: unitPrice,
+            cost_price: costPrice,
+          },
+        ];
+      });
+
+      try { toast.success(`${product.name ?? product.product_name ?? 'Item'} added`); } catch (e) { /* ignore toast errors */ }
+    } catch (err: any) {
+      console.error('addToCart error:', err);
+      try { toast.error(err?.message || 'Failed to add item'); } catch (e) {}
     }
-    toast.success(`${product.name} added`);
   };
 
   const handleProductClick = (product: any) => {
