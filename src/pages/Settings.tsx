@@ -8,7 +8,7 @@ import { useBusinessSettings, useUpdateBusinessSettings } from '@/hooks/useBusin
 import { toast } from 'sonner';
 import { RandomSeeder } from '@/components/RandomSeeder';
 import SubscriptionManagement from '@/components/settings/SubscriptionManagement';
-import InvoicesTab from '@/components/settings/InvoicesTab';
+import PrintSettingsTab from '@/components/settings/PrintSettingsTab';
 import {
   SettingsCard, Toggle, Counter, SettingRow, SectionLabel, TextInput, TextArea,
   FieldLabel, ButtonGroup, SelectInput, SaveBtn, InfoBox, TabBar, TwoColGrid,
@@ -47,9 +47,9 @@ const TABS = [
   { id: 'billing', label: 'Billing', icon: '💳' },
   { id: 'categories', label: 'Categories', icon: '📁' },
   { id: 'staff', label: 'Staff', icon: '👥' },
-  { id: 'invoices', label: 'Invoices', icon: '🧾' },
+  { id: 'print', label: 'Print Config', icon: '🖨️' },
   { id: 'pos', label: 'POS', icon: '🖥️' },
-  { id: 'appearance', label: 'Appearance', icon: '🎨' },
+  { id: 'appearance', label: 'App Theme', icon: '🎨' },
 ];
 
 export default function Settings() {
@@ -207,7 +207,7 @@ export default function Settings() {
 
       {/* Content */}
       <div className="pb-10">
-        <div className="max-w-[1100px] mx-auto">
+        <div className={activeTab === 'print' ? '' : 'max-w-[1100px] mx-auto'}>
 
           {/* ═══ BUSINESS ═══ */}
           {activeTab === 'business' && (
@@ -316,8 +316,8 @@ export default function Settings() {
             </ColStack>
           )}
 
-          {/* ═══ INVOICES ═══ */}
-          {activeTab === 'invoices' && <InvoicesTab />}
+          {/* ═══ PRINT ═══ */}
+          {activeTab === 'print' && <PrintSettingsTab />}
 
           {/* ═══ CATEGORIES ═══ */}
           {activeTab === 'categories' && (

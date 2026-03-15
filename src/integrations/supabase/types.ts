@@ -196,6 +196,17 @@ export type Database = {
           tax_rate: number
           theme: string
           updated_at: string
+          gstin: string | null
+          business_category: string | null
+          business_type: string | null
+          state: string | null
+          pincode: string | null
+          signature_url: string | null
+          bank_name: string | null
+          bank_account_number: string | null
+          bank_ifsc: string | null
+          bank_branch: string | null
+          terms_and_conditions: string | null
         }
         Insert: {
           address?: string | null
@@ -222,6 +233,17 @@ export type Database = {
           tax_rate?: number
           theme?: string
           updated_at?: string
+          gstin?: string | null
+          business_category?: string | null
+          business_type?: string | null
+          state?: string | null
+          pincode?: string | null
+          signature_url?: string | null
+          bank_name?: string | null
+          bank_account_number?: string | null
+          bank_ifsc?: string | null
+          bank_branch?: string | null
+          terms_and_conditions?: string | null
         }
         Update: {
           address?: string | null
@@ -248,6 +270,17 @@ export type Database = {
           tax_rate?: number
           theme?: string
           updated_at?: string
+          gstin?: string | null
+          business_category?: string | null
+          business_type?: string | null
+          state?: string | null
+          pincode?: string | null
+          signature_url?: string | null
+          bank_name?: string | null
+          bank_account_number?: string | null
+          bank_ifsc?: string | null
+          bank_branch?: string | null
+          terms_and_conditions?: string | null
         }
         Relationships: [
           {
@@ -411,6 +444,23 @@ export type Database = {
           selling_price: number
           stock_quantity: number
           updated_at: string
+          item_code: string | null
+          sku: string | null
+          hsn_code: string | null
+          wholesale_price: number
+          discount_percent: number
+          tax_type: string
+          batch_number: string | null
+          expiry_date: string | null
+          manufacturing_date: string | null
+          serial_number: string | null
+          model_number: string | null
+          size: string | null
+          product_image_url: string | null
+          barcode: string | null
+          base_unit: string
+          secondary_unit: string | null
+          unit_conversion_ratio: number
         }
         Insert: {
           business_id?: string | null
@@ -427,6 +477,23 @@ export type Database = {
           selling_price?: number
           stock_quantity?: number
           updated_at?: string
+          item_code?: string | null
+          sku?: string | null
+          hsn_code?: string | null
+          wholesale_price?: number
+          discount_percent?: number
+          tax_type?: string
+          batch_number?: string | null
+          expiry_date?: string | null
+          manufacturing_date?: string | null
+          serial_number?: string | null
+          model_number?: string | null
+          size?: string | null
+          product_image_url?: string | null
+          barcode?: string | null
+          base_unit?: string
+          secondary_unit?: string | null
+          unit_conversion_ratio?: number
         }
         Update: {
           business_id?: string | null
@@ -443,6 +510,23 @@ export type Database = {
           selling_price?: number
           stock_quantity?: number
           updated_at?: string
+          item_code?: string | null
+          sku?: string | null
+          hsn_code?: string | null
+          wholesale_price?: number
+          discount_percent?: number
+          tax_type?: string
+          batch_number?: string | null
+          expiry_date?: string | null
+          manufacturing_date?: string | null
+          serial_number?: string | null
+          model_number?: string | null
+          size?: string | null
+          product_image_url?: string | null
+          barcode?: string | null
+          base_unit?: string
+          secondary_unit?: string | null
+          unit_conversion_ratio?: number
         }
         Relationships: [
           {
@@ -454,6 +538,41 @@ export type Database = {
           },
           {
             foreignKeyName: "products_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      units: {
+        Row: {
+          id: string
+          business_id: string | null
+          name: string
+          abbreviation: string
+          is_default: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          business_id?: string | null
+          name: string
+          abbreviation: string
+          is_default?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          business_id?: string | null
+          name?: string
+          abbreviation?: string
+          is_default?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "units_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"

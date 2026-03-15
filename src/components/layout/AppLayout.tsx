@@ -38,6 +38,7 @@ import {
   Search,
   ChevronRight,
   ChevronsUpDown,
+  PieChart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -90,6 +91,7 @@ const navSections: NavSection[] = [
     label: 'FINANCE',
     items: [
       { name: 'Expenses', href: '/expenses', icon: BarChart2, roles: ['owner', 'manager'] },
+      { name: 'Reports', href: '/reports', icon: PieChart, roles: ['owner', 'manager'] },
       { name: 'Activity Log', href: '/activity-logs', icon: Activity, roles: ['owner', 'manager'] },
     ],
   },
@@ -125,6 +127,7 @@ const pageTitleMap: Record<string, string> = {
   '/products': 'Products',
   '/categories': 'Categories',
   '/expenses': 'Expenses',
+  '/reports': 'Reports',
   '/activity-logs': 'Activity Log',
   '/customers': 'Customers',
   '/settings': 'Settings',
@@ -149,7 +152,7 @@ export default function AppLayout() {
     navigate('/auth');
   };
 
-  const roleLabel = isSuperAdmin ? 'Super Admin' : (userRole === 'owner' ? 'Owner' : (userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'User'));
+  const roleLabel = userRole === 'owner' ? 'Owner' : (isSuperAdmin ? 'Super Admin' : (userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'User'));
   const displayName = user?.email?.split('@')[0] || (isSuperAdmin ? 'Admin' : 'User');
   const currentPageTitle = pageTitleMap[location.pathname] || 'Dashboard';
   const isBillingPage = location.pathname === '/billing' || location.pathname === '/salesman-billing';

@@ -40,7 +40,7 @@ export default function BusinessTab({ plans }: Props) {
     if (selectedBiz) {
         return (
             <BusinessProfile
-                businessId={selectedBiz.id}
+                businessId={selectedBiz.business_id || selectedBiz.id}
                 business={selectedBiz}
                 plans={plans}
                 onBack={() => setSelectedBiz(null)}

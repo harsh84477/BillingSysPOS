@@ -23,6 +23,7 @@ import Expenses from "./pages/Expenses";
 import ActivityLogs from "./pages/ActivityLogs";
 import SalesmanBilling from "./pages/SalesmanBilling";
 import DraftBills from "./pages/DraftBills";
+import Reports from "./pages/Reports";
 
 import NotFound from "./pages/NotFound";
 
@@ -66,6 +67,7 @@ const App = () => (
                 <Route path="/expenses" element={<Expenses />} />
                 <Route path="/activity-logs" element={<ActivityLogs />} />
                 <Route path="/draft-bills" element={<DraftBills />} />
+                <Route path="/reports" element={<Reports />} />
                 <Route path="/salesman-billing" element={<SalesmanBilling />} />
               </Route>
 

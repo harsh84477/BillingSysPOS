@@ -8,7 +8,7 @@ export default function Expenses() {
     if (!businessId) return null;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="w-full space-y-3">
             <div>
                 <h1 className="spos-page-heading">Expense Management</h1>
                 <p className="spos-page-subhead">

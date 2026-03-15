@@ -1,0 +1,52 @@
+-- Add print settings columns to business_settings
+-- Regular Printer settings
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_regular_layout text DEFAULT 'gst_theme_6';
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_regular_default boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_repeat_header boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_company_name boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_company_name_text text;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_company_logo boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_show_address boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_show_email boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_show_phone boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_show_gstin boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_paper_size text DEFAULT 'A4';
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_orientation text DEFAULT 'portrait';
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_company_name_size text DEFAULT 'large';
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_invoice_text_size text DEFAULT 'medium';
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_total_item_quantity boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_amount_decimal boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_received_amount boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_balance_amount boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_current_balance boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_tax_details boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_you_saved boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_amount_grouping boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_amount_words boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_amount_words_format text DEFAULT 'indian';
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_description boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_terms_conditions text;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_received_by boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_delivered_by boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_signature_text text DEFAULT 'Authorized Signatory';
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_payment_mode boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_acknowledgement boolean DEFAULT true;
+
+-- Thermal Printer settings
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_layout text DEFAULT 'theme_1';
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_default boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_page_size text DEFAULT '4inch';
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_page_width integer DEFAULT 80;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_printing_type text DEFAULT 'text';
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_bold boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_auto_cut boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_open_drawer boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_extra_lines integer DEFAULT 0;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_copies integer DEFAULT 1;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_company_name boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_company_name_text text;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_company_logo boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_show_address boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_show_email boolean DEFAULT false;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_show_phone boolean DEFAULT true;
+ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS print_thermal_show_gstin boolean DEFAULT true;
