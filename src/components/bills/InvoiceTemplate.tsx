@@ -102,6 +102,11 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const theme = s?.print_regular_layout || 'gst_theme_6';
   const paperSize = s?.print_paper_size || 'A4';
 
+  // --- Print pagination logic ---
+  const itemCount = dataItems.length;
+  const singlePage = itemCount <= 12;
+  const printClass = singlePage ? 'single-page-invoice' : 'multi-page-invoice';
+
   // Helper styles based on theme
   const isFrench = theme === 'french_elite';
   const isDouble = theme === 'double_divine';
@@ -138,8 +143,14 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
     borderRight: isGst6 ? '1px solid #e5e7eb' : 'none',
   };
 
+  // Compact spacing for single page invoices during print
+  const sectionGap = singlePage && !isPreview ? '8px' : '16px';
+  const tableMarginBottom = singlePage && !isPreview ? '8px' : '16px';
+  const footerMarginTop = singlePage && !isPreview ? '8px' : '16px';
+  const sigMarginTop = singlePage && !isPreview ? '12px' : '30px';
+
   return (
-    <div className="invoice-template-root" style={{ 
+    <div className={`invoice-template-root ${printClass}`} style={{ 
       background: '#fff', 
       color: '#1a1a1a', 
       fontFamily: fontFam, 
@@ -230,7 +241,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       </div>
 
       {/* Items Table */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px', fontSize: textSize, border: isGst6 ? '1px solid #111' : 'none' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: tableMarginBottom, fontSize: textSize, border: isGst6 ? '1px solid #111' : 'none' }}>
         <thead>
           <tr style={tableHeaderStyle}>
             {showHash && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'left', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>#</th>}
@@ -275,8 +286,14 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
         </tbody>
       </table>
 
+      {/* Footer section: avoid break so it stays on same page as table */}
+      <div className="invoice-footer-block" style={{
+        breakInside: 'avoid' as any,
+        pageBreakInside: 'avoid' as any,
+      }}>
+
       {/* Two Column Layout for the bottom area */}
-      <div style={{ display: 'flex', gap: '24px', flexDirection: isFrench ? 'row-reverse' : 'row' }}>
+      <div style={{ display: 'flex', gap: singlePage && !isPreview ? '12px' : '24px', flexDirection: isFrench ? 'row-reverse' : 'row' }}>
           
           {/* Right/Left Side: Totals & Summaries */}
           <div style={{ flex: '0 0 240px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -378,7 +395,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       </div>
 
       {/* Description & Terms */}
-      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ marginTop: footerMarginTop, display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {showDesc && (
             <div style={{ fontSize: '9px' }}>
                 <span style={{ fontWeight: 700, color: isFrench ? accent : '#555' }}>Description:</span> <span style={{ color: '#333' }}>Standard sale description for professional recording.</span>
@@ -392,7 +409,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       </div>
 
       {/* Signature Area */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '30px', paddingTop: '16px', borderTop: isDouble ? `2px solid ${accent}` : '1px solid #e5e7eb' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: sigMarginTop, paddingTop: singlePage && !isPreview ? '8px' : '16px', borderTop: isDouble ? `2px solid ${accent}` : '1px solid #e5e7eb' }}>
          <div style={{ textAlign: 'center', width: '180px' }}>
              <div style={{ fontSize: '8.5px', color: '#666', marginBottom: '32px' }}>For {companyName}</div>
              <div style={{ borderBottom: '1px solid #111', width: '100%', marginBottom: '4px' }}></div>
@@ -424,6 +441,8 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
               </div>
           </div>
       )}
+
+      </div>{/* end .invoice-footer-block */}
 
     </div>
   );

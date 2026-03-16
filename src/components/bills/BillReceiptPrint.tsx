@@ -52,13 +52,51 @@ export function printBillReceipt(bill: Bill, items: BillItem[], settings?: any) 
             color-adjust: exact !important;
           }
           @page {
-            /* Standard margins, top margin can be controlled by settings in InvoiceTemplate */
             margin: 5mm; 
           }
           /* Ensure backgrounds print correctly */
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+          }
+
+          /* ===== SINGLE PAGE MODE (≤12 items) ===== */
+          .single-page-invoice {
+            /* Prevent the entire invoice from breaking across pages */
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .single-page-invoice table tbody tr td {
+            padding-top: 3px !important;
+            padding-bottom: 3px !important;
+          }
+          .single-page-invoice table thead tr th {
+            padding-top: 5px !important;
+            padding-bottom: 5px !important;
+          }
+          .single-page-invoice .invoice-footer-block {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+
+          /* ===== MULTI PAGE MODE (>12 items) ===== */
+          .multi-page-invoice table thead {
+            display: table-header-group; /* Repeat header on each printed page */
+          }
+          .multi-page-invoice table tbody tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .multi-page-invoice .invoice-footer-block {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+
+          /* General print resets */
+          @media print {
+            .invoice-template-root {
+              padding: 0 !important;
+            }
           }
         </style>
       </head>
