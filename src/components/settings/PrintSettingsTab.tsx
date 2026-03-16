@@ -508,9 +508,11 @@ export default function PrintSettingsTab() {
                   <CheckRow checked={settings?.print_show_item_number ?? true} onChange={(v) => u({ print_show_item_number: v })} label="#" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_hsn_sac ?? true} onChange={(v) => u({ print_show_hsn_sac: v })} label="HSN/SAC" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_quantity ?? true} onChange={(v) => u({ print_show_quantity: v })} label="Quantity" disabled={!isAdmin} />
+                  <CheckRow checked={settings?.print_show_mrp ?? false} onChange={(v) => u({ print_show_mrp: v })} label="MRP" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_price_unit ?? true} onChange={(v) => u({ print_show_price_unit: v })} label="Price/unit" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_discount ?? true} onChange={(v) => u({ print_show_discount: v })} label="Discount" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_show_gst ?? true} onChange={(v) => u({ print_show_gst: v })} label="GST" disabled={!isAdmin} />
+                  <CheckRow checked={settings?.print_show_tax_pct ?? false} onChange={(v) => u({ print_show_tax_pct: v })} label="Tax %" disabled={!isAdmin} />
+                  <CheckRow checked={settings?.print_show_gst ?? true} onChange={(v) => u({ print_show_gst: v })} label="Tax Amt" disabled={!isAdmin} />
                 </div>
               </div>
             </SettingsCard>

@@ -22,10 +22,11 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const custAddr = isMock ? 'Plot No. 1, Shop No. 8, Koramangala, Banglore, 560034' : (bill?.customers?.address || '');
   const custPhone = isMock ? '8888888888' : (bill?.customers?.phone || '');
 
-  const dataItems = isMock ? Array.from({ length: 20 }, (_, i) => ({
+  const dataItems = isMock ? Array.from({ length: 12 }, (_, i) => ({
     name: `ITEM ${i + 1} - Sample Product Description`, 
     hsn: '1234', 
     qty: 2, 
+    mrp: 15.00 + (i * 2.50),
     price: 10.00 + (i * 2.50), 
     discount: 0.10, 
     gstAmt: 0.50, 
@@ -35,10 +36,11 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
     name: i.product_name,
     hsn: i.hsn_code || '-',
     qty: Number(i.quantity) || 0,
+    mrp: Number(i.mrp_price) || Number(i.unit_price) || 0,
     price: Number(i.unit_price) || 0,
     discount: Number(i.discount_amount) || 0,
-    gstAmt: 0, // Real printing logic will need to calculate GST per item if tracked
-    gstPct: 0,
+    gstAmt: Number(i.tax_amount) || 0, // Used as absolute Tax Amt
+    gstPct: 0, // Placeholder if item-level tax % not tracked directly in items array
     total: Number(i.total_price) || 0
   }));
 
@@ -86,9 +88,11 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const showHash = s?.print_show_item_number ?? true;
   const showHsn = s?.print_show_hsn_sac ?? true;
   const showQty = s?.print_show_quantity ?? true;
+  const showMrp = s?.print_show_mrp ?? false; // new
   const showPrice = s?.print_show_price_unit ?? true;
   const showDisc = s?.print_show_discount ?? true;
-  const showGstCol = s?.print_show_gst ?? true;
+  const showTaxPct = s?.print_show_tax_pct ?? false; // new
+  const showTaxAmt = s?.print_show_gst ?? true; // Reusing print_show_gst logically for Tax Amt
 
   const showBank = s?.print_bank_details ?? true;
   const marginTopPx = (s?.print_extra_space_top || 0) * 3.77; // 1mm ≈ 3.77px
@@ -230,9 +234,11 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
             <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'left', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>Item name</th>
             {showHsn && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'center', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>HSC/SAC</th>}
             {showQty && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'center', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>Qty</th>}
+            {showMrp && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>MRP</th>}
             {showPrice && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>Price/unit</th>}
             {showDisc && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>Disc</th>}
-            {showGstCol && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>GST</th>}
+            {showTaxPct && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>Tax %</th>}
+            {showTaxAmt && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>Tax Amt</th>}
             <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right' }}>Amt</th>
           </tr>
         </thead>
@@ -243,9 +249,11 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
                  <td style={{ ...tdStyle, fontWeight: 600, color: '#111' }}>{item.name}</td>
                  {showHsn && <td style={{ ...tdStyle, textAlign: 'center' }}>{item.hsn}</td>}
                  {showQty && <td style={{ ...tdStyle, textAlign: 'center' }}>{item.qty}</td>}
+                 {showMrp && <td style={{ ...tdStyle, textAlign: 'right' }}>{fmt(item.mrp)}</td>}
                  {showPrice && <td style={{ ...tdStyle, textAlign: 'right' }}>{fmt(item.price)}</td>}
                  {showDisc && <td style={{ ...tdStyle, textAlign: 'right' }}>{fmt(item.discount)}</td>}
-                 {showGstCol && <td style={{ ...tdStyle, textAlign: 'right' }}>{item.gstAmt > 0 ? `${fmt(item.gstAmt)} (${item.gstPct}%)` : '-'}</td>}
+                 {showTaxPct && <td style={{ ...tdStyle, textAlign: 'right' }}>{item.gstPct > 0 ? `${item.gstPct}%` : '-'}</td>}
+                 {showTaxAmt && <td style={{ ...tdStyle, textAlign: 'right' }}>{item.gstAmt > 0 ? fmt(item.gstAmt) : '-'}</td>}
                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600 }}>{fmt(item.total)}</td>
              </tr>
           ))}
@@ -254,9 +262,11 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
           <tr style={{ fontWeight: 700, borderTop: isGst6 ? '2px solid #111' : '2px solid #d1d5db', background: isFrench ? '#f8fafc' : 'transparent' }}>
             <td colSpan={1 + (showHash ? 1 : 0) + (showHsn ? 1 : 0)} style={{ padding: '8px 10px', textTransform: 'uppercase', color: isFrench ? accent : '#111' }}>Total</td>
             {showQty && <td style={{ padding: '8px 10px', textAlign: 'center' }}>{dataItems.reduce((acc: number, item: any) => acc + item.qty, 0)}</td>}
+            {showMrp && <td style={{ padding: '8px 10px', textAlign: 'right' }}></td>}
             <td colSpan={(showPrice ? 1 : 0)} style={{ padding: '8px 10px', textAlign: 'right' }}></td>
             {showDisc && <td style={{ padding: '8px 10px', textAlign: 'right' }}>{fmt(totalDisc)}</td>}
-            {showGstCol && <td style={{ padding: '8px 10px', textAlign: 'right' }}>{fmt(totalTax)}</td>}
+            {showTaxPct && <td style={{ padding: '8px 10px', textAlign: 'right' }}></td>}
+            {showTaxAmt && <td style={{ padding: '8px 10px', textAlign: 'right' }}>{fmt(totalTax)}</td>}
             <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '11px', color: isFrench ? accent : '#111' }}>{fmt(grandTotal)}</td>
           </tr>
         </tbody>
