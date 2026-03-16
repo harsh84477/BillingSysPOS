@@ -60,7 +60,7 @@ export function printBillReceipt(bill: Bill, items: BillItem[], settings?: any) 
             print-color-adjust: exact !important;
           }
 
-          /* ===== COMPACT TABLE STYLES — APPLIED TO ALL INVOICES ===== */
+          /* ===== COMPACT TABLE STYLES ===== */
           .invoice-template-root table tbody tr td {
             padding: 2px 6px !important;
             font-size: 9px !important;
@@ -74,19 +74,20 @@ export function printBillReceipt(bill: Bill, items: BillItem[], settings?: any) 
             padding: 4px 6px !important;
           }
 
-          /* ===== SINGLE PAGE (≤12 items): prevent ALL page breaks ===== */
-          .single-page-invoice {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-
-          /* ===== MULTI PAGE (>12 items): allow table to flow, repeat headers ===== */
-          .multi-page-invoice table thead {
+          /* ===== NATURAL PRINT FLOW ===== */
+          /* Repeat table headers on every printed page */
+          .invoice-template-root table thead {
             display: table-header-group;
           }
-          .multi-page-invoice table tbody tr {
+          /* Individual table rows should not split */
+          .invoice-template-root table tbody tr {
             page-break-inside: avoid;
             break-inside: avoid;
+          }
+          /* Container allows natural page flow — NO forced breaks */
+          .invoice-template-root {
+            page-break-inside: auto !important;
+            break-inside: auto !important;
           }
 
           /* General print resets */

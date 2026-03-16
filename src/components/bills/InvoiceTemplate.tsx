@@ -1,4 +1,4 @@
-import React, { useRef, useState, useLayoutEffect } from 'react';
+import React from 'react';
 import { format } from 'date-fns';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -10,32 +10,6 @@ export interface InvoiceTemplateProps {
 }
 
 export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }: InvoiceTemplateProps) {
-  // --- Refs for programmatic page-break calculation ---
-  const contentRef = useRef<HTMLDivElement>(null);
-  const footerRef = useRef<HTMLDivElement>(null);
-  const [footerBreak, setFooterBreak] = useState(false);
-
-  // A4 at 96 DPI = 1123px, minus @page 5mm margins top+bottom (~38px) = ~1085px usable
-  const PAGE_HEIGHT = 1085;
-
-  useLayoutEffect(() => {
-    if (isPreview) return; // Skip measurement in preview mode
-    const contentEl = contentRef.current;
-    const footerEl = footerRef.current;
-    if (!contentEl || !footerEl) return;
-
-    const usedHeight = contentEl.offsetHeight;
-    const footerHeight = footerEl.offsetHeight;
-    const remainingSpace = PAGE_HEIGHT - usedHeight;
-
-    if (remainingSpace >= footerHeight) {
-      // Footer fits on current page — render on same page
-      setFooterBreak(false);
-    } else {
-      // Footer doesn't fit — push it to the next page
-      setFooterBreak(true);
-    }
-  });
 
   // --- Data Resolvers ---
   // If isPreview is true, we use dummy data. Otherwise we use the real bill object.
@@ -131,8 +105,6 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
 
   // --- Print pagination logic ---
   const itemCount = dataItems.length;
-  const singlePage = itemCount <= 12;
-  const printClass = singlePage ? 'single-page-invoice' : 'multi-page-invoice';
 
   // Helper styles based on theme
   const isFrench = theme === 'french_elite';
@@ -186,7 +158,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const headerPb = cp ? '6px' : '14px';
 
   return (
-    <div className={`invoice-template-root ${printClass}`} style={{ 
+    <div className="invoice-template-root" style={{ 
       background: '#fff', 
       color: '#1a1a1a', 
       fontFamily: fontFam, 
@@ -199,8 +171,6 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       width: '100%',
       minHeight: '100%'
     }}>
-      {/* Content area measured for pagination */}
-      <div ref={contentRef}>
       
       {/* Document Title Header Block */}
       {docTitle && (
@@ -323,12 +293,9 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
           </tr>
         </tbody>
       </table>
-      </div>{/* end contentRef wrapper */}
 
-      {/* Footer section: programmatic page-break decision */}
-      <div ref={footerRef} className="invoice-footer-block" style={{
-        pageBreakBefore: footerBreak ? 'always' as any : 'auto' as any,
-      }}>
+      {/* Footer section — no forced page breaks, browser fills remaining space naturally */}
+      <div className="invoice-footer-block">
 
       {/* Two Column Layout for the bottom area — this section avoids breaking internally */}
       <div style={{ display: 'flex', gap: footerGap, flexDirection: isFrench ? 'row-reverse' : 'row', breakInside: 'avoid' as any, pageBreakInside: 'avoid' as any }}>
