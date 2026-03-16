@@ -22,10 +22,16 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const custAddr = isMock ? 'Plot No. 1, Shop No. 8, Koramangala, Banglore, 560034' : (bill?.customers?.address || '');
   const custPhone = isMock ? '8888888888' : (bill?.customers?.phone || '');
 
-  const dataItems = isMock ? [
-    { name: 'ITEM 1', hsn: '1234', qty: 2, price: 10.00, discount: 0.10, gstAmt: 0.50, gstPct: 5, total: 10.40 },
-    { name: 'ITEM 2', hsn: '6325', qty: 1, price: 30.00, discount: 0.00, gstAmt: 5.40, gstPct: 18, total: 35.40 }
-  ] : (items || []).map((i: any) => ({
+  const dataItems = isMock ? Array.from({ length: 20 }, (_, i) => ({
+    name: `ITEM ${i + 1} - Sample Product Description`, 
+    hsn: '1234', 
+    qty: 2, 
+    price: 10.00 + (i * 2.50), 
+    discount: 0.10, 
+    gstAmt: 0.50, 
+    gstPct: 5, 
+    total: 20.00 + (i * 5.00)
+  })) : (items || []).map((i: any) => ({
     name: i.product_name,
     hsn: i.hsn_code || '-',
     qty: Number(i.quantity) || 0,
