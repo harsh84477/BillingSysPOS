@@ -153,8 +153,10 @@ export interface BusinessSettings {
   print_show_item_number?: boolean;
   print_show_hsn_sac?: boolean;
   print_show_quantity?: boolean;
+  print_show_mrp?: boolean;
   print_show_price_unit?: boolean;
   print_show_discount?: boolean;
+  print_show_tax_pct?: boolean;
   print_show_gst?: boolean;
   print_bank_details?: boolean;
   print_bank_name?: string;

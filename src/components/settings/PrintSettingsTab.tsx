@@ -666,7 +666,7 @@ export default function PrintSettingsTab() {
         </div>
 
         {/* ═══ RIGHT: Live Preview (Sticky with clean bounds) ═══ */}
-        <div style={{ position: 'sticky' as const, top: '20px', alignSelf: 'start', height: 'calc(100vh - 40px)' }}>
+        <div style={{ position: 'sticky', top: '24px', height: 'calc(100vh - 48px)' }}>
           <div style={{
             background: T.color.cardBg, borderRadius: '14px',
             border: `1px solid ${T.color.border}`, boxShadow: T.shadow.card,
