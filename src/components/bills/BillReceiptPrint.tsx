@@ -60,49 +60,38 @@ export function printBillReceipt(bill: Bill, items: BillItem[], settings?: any) 
             print-color-adjust: exact !important;
           }
 
-          /* ===== SINGLE PAGE MODE (≤12 items) — AGGRESSIVE COMPACTION ===== */
-          .single-page-invoice {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-          /* Tighter table rows */
-          .single-page-invoice table tbody tr td {
+          /* ===== COMPACT TABLE STYLES — APPLIED TO ALL INVOICES ===== */
+          .invoice-template-root table tbody tr td {
             padding: 2px 6px !important;
             font-size: 9px !important;
             line-height: 1.25 !important;
           }
-          .single-page-invoice table thead tr th {
+          .invoice-template-root table thead tr th {
             padding: 4px 6px !important;
             font-size: 8px !important;
           }
-          /* Tighter totals row */
-          .single-page-invoice table tbody tr:last-child td {
+          .invoice-template-root table tbody tr:last-child td {
             padding: 4px 6px !important;
           }
-          /* Footer must NOT break */
-          .single-page-invoice .invoice-footer-block {
+          /* Footer never splits */
+          .invoice-footer-block {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
-          /* Shrink QR code in single page */
-          .single-page-invoice .invoice-footer-block img,
-          .single-page-invoice .invoice-footer-block svg {
-            max-width: 44px !important;
-            max-height: 44px !important;
+
+          /* ===== SINGLE PAGE (≤12 items): prevent ALL page breaks ===== */
+          .single-page-invoice {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
 
-          /* ===== MULTI PAGE MODE (>12 items) ===== */
+          /* ===== MULTI PAGE (>12 items): allow table to flow, repeat headers ===== */
           .multi-page-invoice table thead {
             display: table-header-group;
           }
           .multi-page-invoice table tbody tr {
             page-break-inside: avoid;
             break-inside: avoid;
-          }
-          .multi-page-invoice .invoice-footer-block {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            page-break-before: auto;
           }
 
           /* General print resets */

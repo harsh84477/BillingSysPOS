@@ -143,8 +143,9 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
     borderRight: isGst6 ? '1px solid #e5e7eb' : 'none',
   };
 
-  // cp = compact print mode (single page, not preview)
-  const cp = singlePage && !isPreview;
+  // cp = compact mode for ALL print outputs (not preview)
+  // singlePage only controls whether page breaks are prevented
+  const cp = !isPreview;
   const headerMb = cp ? '6px' : '16px';
   const billToMb = cp ? '6px' : '20px';
   const tableMb = cp ? '4px' : '16px';
@@ -152,7 +153,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const footerMt = cp ? '4px' : '16px';
   const sigMt = cp ? '6px' : '30px';
   const sigPt = cp ? '4px' : '16px';
-  const sigSpace = cp ? '12px' : '32px'; // space for signature line
+  const sigSpace = cp ? '12px' : '32px';
   const ackMt = cp ? '12px' : '40px';
   const ackPt = cp ? '8px' : '20px';
   const headerPb = cp ? '6px' : '14px';
