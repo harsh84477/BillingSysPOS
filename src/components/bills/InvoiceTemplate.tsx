@@ -143,11 +143,19 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
     borderRight: isGst6 ? '1px solid #e5e7eb' : 'none',
   };
 
-  // Compact spacing for single page invoices during print
-  const sectionGap = singlePage && !isPreview ? '8px' : '16px';
-  const tableMarginBottom = singlePage && !isPreview ? '8px' : '16px';
-  const footerMarginTop = singlePage && !isPreview ? '8px' : '16px';
-  const sigMarginTop = singlePage && !isPreview ? '12px' : '30px';
+  // cp = compact print mode (single page, not preview)
+  const cp = singlePage && !isPreview;
+  const headerMb = cp ? '6px' : '16px';
+  const billToMb = cp ? '6px' : '20px';
+  const tableMb = cp ? '4px' : '16px';
+  const footerGap = cp ? '8px' : '24px';
+  const footerMt = cp ? '4px' : '16px';
+  const sigMt = cp ? '6px' : '30px';
+  const sigPt = cp ? '4px' : '16px';
+  const sigSpace = cp ? '12px' : '32px'; // space for signature line
+  const ackMt = cp ? '12px' : '40px';
+  const ackPt = cp ? '8px' : '20px';
+  const headerPb = cp ? '6px' : '14px';
 
   return (
     <div className={`invoice-template-root ${printClass}`} style={{ 
@@ -155,7 +163,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       color: '#1a1a1a', 
       fontFamily: fontFam, 
       fontSize: textSize, 
-      lineHeight: 1.5, 
+      lineHeight: cp ? 1.3 : 1.5, 
       padding: containerPad, 
       paddingTop: isPreview ? `${28 + marginTopPx}px` : `${marginTopPx}px`, 
       position: 'relative',
@@ -166,7 +174,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       
       {/* Document Title Header Block */}
       {docTitle && (
-        <div style={{ textAlign: isFrench ? 'center' : 'center', marginBottom: '16px', borderBottom: isDouble ? `3px double ${accent}` : 'none', paddingBottom: isDouble ? '8px' : '0' }}>
+        <div style={{ textAlign: isFrench ? 'center' : 'center', marginBottom: headerMb, borderBottom: isDouble ? `3px double ${accent}` : 'none', paddingBottom: isDouble ? '8px' : '0' }}>
             <span style={{ 
                 fontSize: isFrench ? '16px' : '14px', 
                 fontWeight: 800, 
@@ -196,12 +204,12 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
             flexDirection: isFrench ? 'column' : 'row',
             textAlign: isFrench ? 'center' : (isDouble ? 'left' : 'right'), 
             borderBottom: isFrench ? '1px solid #e5e7eb' : isGst6 ? '2px solid #111' : '1px solid #e5e7eb', 
-            paddingBottom: '14px', 
-            marginBottom: '16px',
+            paddingBottom: headerPb, 
+            marginBottom: headerMb,
             gap: isDouble ? '24px' : '0'
         }}>
           {isDouble && (
-             <div style={{ width: '60px', height: '60px', background: `${accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', color: accent, fontSize: '24px', fontWeight: 900 }}>
+             <div style={{ width: cp ? '40px' : '60px', height: cp ? '40px' : '60px', background: `${accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', color: accent, fontSize: cp ? '16px' : '24px', fontWeight: 900 }}>
                  {companyName.charAt(0)}
              </div>
           )}
@@ -216,7 +224,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       )}
 
       {/* Bill To / Shipping / Invoice Details */}
-      <div style={{ display: 'grid', gridTemplateColumns: isDouble ? '1.5fr 1fr' : '1fr 1fr 1fr', gap: '12px', marginBottom: '20px', fontSize: '9.5px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isDouble ? '1.5fr 1fr' : '1fr 1fr 1fr', gap: cp ? '6px' : '12px', marginBottom: billToMb, fontSize: '9.5px' }}>
         <div style={{ background: isGst6 ? '#f9fafb' : 'transparent', padding: isGst6 ? '12px' : '0', border: isGst6 ? '1px solid #e5e7eb' : 'none', borderRadius: '6px' }}>
           <div style={{ fontWeight: 700, fontSize: '10px', marginBottom: '4px', color: isFrench ? accent : '#374151', textTransform: isFrench ? 'uppercase' : 'none' }}>Bill To:</div>
           <div style={{ fontWeight: 600, fontSize: '11px', color: '#111' }}>{custName}</div>
@@ -241,7 +249,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       </div>
 
       {/* Items Table */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: tableMarginBottom, fontSize: textSize, border: isGst6 ? '1px solid #111' : 'none' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: tableMb, fontSize: textSize, border: isGst6 ? '1px solid #111' : 'none' }}>
         <thead>
           <tr style={tableHeaderStyle}>
             {showHash && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'left', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>#</th>}
@@ -293,7 +301,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       }}>
 
       {/* Two Column Layout for the bottom area */}
-      <div style={{ display: 'flex', gap: singlePage && !isPreview ? '12px' : '24px', flexDirection: isFrench ? 'row-reverse' : 'row' }}>
+      <div style={{ display: 'flex', gap: footerGap, flexDirection: isFrench ? 'row-reverse' : 'row' }}>
           
           {/* Right/Left Side: Totals & Summaries */}
           <div style={{ flex: '0 0 240px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -395,7 +403,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       </div>
 
       {/* Description & Terms */}
-      <div style={{ marginTop: footerMarginTop, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ marginTop: footerMt, display: 'flex', flexDirection: 'column', gap: cp ? '4px' : '8px' }}>
         {showDesc && (
             <div style={{ fontSize: '9px' }}>
                 <span style={{ fontWeight: 700, color: isFrench ? accent : '#555' }}>Description:</span> <span style={{ color: '#333' }}>Standard sale description for professional recording.</span>
@@ -409,9 +417,9 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       </div>
 
       {/* Signature Area */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: sigMarginTop, paddingTop: singlePage && !isPreview ? '8px' : '16px', borderTop: isDouble ? `2px solid ${accent}` : '1px solid #e5e7eb' }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: sigMt, paddingTop: sigPt, borderTop: isDouble ? `2px solid ${accent}` : '1px solid #e5e7eb' }}>
          <div style={{ textAlign: 'center', width: '180px' }}>
-             <div style={{ fontSize: '8.5px', color: '#666', marginBottom: '32px' }}>For {companyName}</div>
+             <div style={{ fontSize: '8.5px', color: '#666', marginBottom: sigSpace }}>For {companyName}</div>
              <div style={{ borderBottom: '1px solid #111', width: '100%', marginBottom: '4px' }}></div>
              <div style={{ fontSize: '9px', fontWeight: 600 }}>{sigText}</div>
          </div>
@@ -420,12 +428,12 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       {/* Acknowledgement Tear-off */}
       {showAck && (
           <div style={{ 
-              marginTop: '40px', 
+              marginTop: ackMt, 
               borderTop: '1px dashed #94a3b8', 
-              paddingTop: '20px',
+              paddingTop: ackPt,
               pageBreakInside: 'avoid'
           }}>
-              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+              <div style={{ textAlign: 'center', marginBottom: cp ? '6px' : '16px' }}>
                   <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Acknowledgement / Return Slip</div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px' }}>
