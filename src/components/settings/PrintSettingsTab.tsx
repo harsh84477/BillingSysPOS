@@ -347,19 +347,17 @@ export default function PrintSettingsTab() {
   const [regularSubTab, setRegularSubTab] = useState<'layout' | 'colors'>('layout');
 
   return (
-    <div style={{ width: '100%' }}>
-      {/* Printer Type Switcher — Left aligned */}
-      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-         <PrinterTabBar active={printerTab} onSelect={setPrinterTab} />
-      </div>
-
-      {/* Two-column layout: Controls left (fixed width), Preview right (expanding) */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '480px 1fr',
-        gap: '24px', marginTop: '20px', alignItems: 'start',
-      }} className="print-settings-grid">
-        {/* ═══ LEFT: Controls ═══ */}
-        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '20px' }}>
+    <div style={{
+      display: 'grid', gridTemplateColumns: '1fr 450px',
+      gap: '24px', alignItems: 'start', width: '100%'
+    }} className="print-settings-grid">
+      
+      {/* ═══ LEFT: Controls ═══ */}
+      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '20px' }}>
+        {/* Printer Type Switcher — Left aligned */}
+        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+           <PrinterTabBar active={printerTab} onSelect={setPrinterTab} />
+        </div>
 
           {/* ─── REGULAR CONTROLS ─── */}
           {printerTab === 'regular' && (<>
@@ -667,7 +665,6 @@ export default function PrintSettingsTab() {
             </div>
           </div>
         </div>
-      </div>
 
       {/* Responsive: hide preview on mobile, stack on tablet */}
       <style>{`
