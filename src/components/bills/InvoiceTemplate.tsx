@@ -62,6 +62,8 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const showAck = s?.print_acknowledgement ?? true;
   const showTerms = (s?.print_terms_conditions || '').trim().length > 0;
   const sigText = s?.print_signature_text || 'Authorized Signatory';
+  const showEmail = s?.print_show_email ?? true;
+  const showGstin = s?.print_show_gstin ?? true;
   
   const nameSize = s?.print_company_name_size === 'v.small' ? '12px' : s?.print_company_name_size === 'small' ? '14px' : s?.print_company_name_size === 'medium' ? '17px' : '20px';
   const textSize = s?.print_invoice_text_size === 'small' ? '9px' : s?.print_invoice_text_size === 'large' ? '12px' : '10.5px';
@@ -70,7 +72,10 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   
   const accent = s?.print_accent_color || 'hsl(var(--primary))';
   const showCopyInfo = s?.print_original_duplicate ?? true;
-  const copyLabel = showCopyInfo ? (s?.print_copy_original ? 'ORIGINAL FOR RECIPIENT' : 'DUPLICATE') : '';
+  
+  // Accept copyLabel as prop if provided by the multi-page wrapper, otherwise fallback to the default logic
+  const copyLabelOverride = (s as any)?._forceCopyLabel;
+  const copyLabel = showCopyInfo ? (copyLabelOverride || (s?.print_copy_original ? 'ORIGINAL FOR RECIPIENT' : 'DUPLICATE')) : '';
   
   const showHash = s?.print_show_item_number ?? true;
   const showHsn = s?.print_show_hsn_sac ?? true;
@@ -81,12 +86,13 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
 
   const showBank = s?.print_bank_details ?? true;
   const marginTopPx = (s?.print_extra_space_top || 0) * 3.77; // 1mm ≈ 3.77px
-  const theme = s?.print_regular_layout || 'theme-1';
+  const theme = s?.print_regular_layout || 'gst_theme_6';
+  const paperSize = s?.print_paper_size || 'A4';
 
   // Helper styles based on theme
-  const isFrench = theme === 'french-elite';
-  const isDouble = theme === 'double-divine';
-  const isGst6 = theme === 'gst-6';
+  const isFrench = theme === 'french_elite';
+  const isDouble = theme === 'double_divine';
+  const isGst6 = theme === 'gst_theme_6';
   
   const fontFam = isFrench ? "'Playfair Display', 'Merriweather', serif" : "'Inter', 'Segoe UI', sans-serif";
   const headerBg = isDouble ? accent : isGst6 ? '#f3f4f6' : isFrench ? 'transparent' : `${accent}1A`; // 1A is ~10% opacity in hex
@@ -119,6 +125,20 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
     borderRight: isGst6 ? '1px solid #e5e7eb' : 'none',
   };
 
+  // Provide accurate aspect ratios for the live preview A4 vs A5 constraint
+  const paperWrapperStyle: React.CSSProperties = isPreview ? {
+    width: '100%',
+    aspectRatio: paperSize === 'A4' ? '1 / 1.414' : paperSize === 'A5' ? '1.414 / 1' : 'auto',
+    maxWidth: paperSize === 'A5' ? '600px' : '800px', // A5 is wider/shorter in landscape typically or just smaller
+    minHeight: paperSize === 'A4' ? '1050px' : paperSize === 'A5' ? '700px' : 'auto',
+    margin: '0 auto',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+    borderRadius: '4px',
+    overflow: 'hidden' // clip content cleanly
+  } : {
+    width: '100%'
+  };
+
   return (
     <div className="invoice-template-root" style={{ 
       background: '#fff', 
@@ -129,8 +149,8 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       padding: containerPad, 
       paddingTop: isPreview ? `${28 + marginTopPx}px` : `${marginTopPx}px`, 
       position: 'relative',
-      minHeight: isPreview ? '600px' : 'auto',
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      ...paperWrapperStyle
     }}>
       
       {/* Document Title Header Block */}
@@ -177,7 +197,9 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: isFrench ? 'center' : (isDouble ? 'flex-start' : 'flex-end') }}>
             <div style={{ fontSize: nameSize, fontWeight: 800, color: '#111', letterSpacing: isFrench ? '0.05em' : 'normal' }}>{companyName}</div>
             {showPhone && <div style={{ fontSize: '10px', color: '#666' }}>Ph.no: {phone}</div>}
-            {(isFrench || isDouble) && showAddr && <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>{address}</div>}
+            {showEmail && email && <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>Email: {email}</div>}
+            {showGstin && s?.gst_number && <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>GSTIN: {s.gst_number}</div>}
+            {showAddr && address && <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>{address}</div>}
           </div>
         </div>
       )}

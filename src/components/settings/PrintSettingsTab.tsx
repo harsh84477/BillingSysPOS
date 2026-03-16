@@ -199,14 +199,31 @@ function PageSizeSelector({ value, onChange, disabled }: {
    LIVE INVOICE PREVIEW — Regular
    ═══════════════════════════════════════════════════════════════ */
 function RegularPreview({ s }: { s: any }) {
-  // We use the unified InvoiceTemplate that powers the actual print operation
+  // Determine how many pages to render based on copy settings
+  const copies = s?.print_original_duplicate ? [
+    s?.print_copy_original ?? true ? 'ORIGINAL FOR RECIPIENT' : null,
+    s?.print_copy_duplicate ?? true ? 'DUPLICATE FOR TRANSPORTER' : null,
+    s?.print_copy_triplicate ?? true ? 'TRIPLICATE FOR SUPPLIER' : null
+  ].filter(Boolean) : [null];
+  
+  const finalCopies = copies.length > 0 ? copies : [null];
+
   return (
-    <InvoiceTemplate 
-      settings={s} 
-      isPreview={true} 
-      bill={null} 
-      items={[]} 
-    />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {finalCopies.map((label, idx) => (
+        <React.Fragment key={idx}>
+          <InvoiceTemplate 
+            settings={{ ...s, _forceCopyLabel: label }} 
+            isPreview={true} 
+            bill={null} 
+            items={[]} 
+          />
+          {idx < finalCopies.length - 1 && (
+            <div style={{ width: '100%', borderBottom: '2px dashed #ccc', opacity: 0.5 }}></div>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
   );
 }
 
@@ -399,13 +416,16 @@ export default function PrintSettingsTab() {
                 label="Company Logo" disabled={!isAdmin} />
               <CheckRow checked={settings?.print_show_address ?? true} onChange={(v) => u({ print_show_address: v })}
                 label="Address" inputPlaceholder="Business address"
-                inputValue={settings?.address || ''} disabled={!isAdmin} />
+                inputValue={settings?.print_address_text || settings?.address || ''} 
+                onInputChange={(v) => u({ print_address_text: v })} disabled={!isAdmin} />
               <CheckRow checked={settings?.print_show_email ?? true} onChange={(v) => u({ print_show_email: v })}
                 label="Email" inputPlaceholder="email@example.com"
-                inputValue={settings?.email || ''} disabled={!isAdmin} />
+                inputValue={settings?.print_email_text || settings?.email || ''} 
+                onInputChange={(v) => u({ print_email_text: v })} disabled={!isAdmin} />
               <CheckRow checked={settings?.print_show_phone ?? true} onChange={(v) => u({ print_show_phone: v })}
                 label="Phone Number" inputPlaceholder="Phone number"
-                inputValue={settings?.phone || ''} disabled={!isAdmin} />
+                inputValue={settings?.print_phone_text || settings?.phone || ''} 
+                onInputChange={(v) => u({ print_phone_text: v })} disabled={!isAdmin} />
               <CheckRow checked={settings?.print_show_gstin ?? true} onChange={(v) => u({ print_show_gstin: v })}
                 label="GSTIN on Sale" disabled={!isAdmin} />
 

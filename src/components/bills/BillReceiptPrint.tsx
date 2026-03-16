@@ -80,14 +80,29 @@ export function printBillReceipt(bill: Bill, items: BillItem[], settings?: any) 
       clearInterval(checkReady);
       const root = createRoot(rootEl);
       
-      // Render our new unified InvoiceTemplate component
+      // Determine how many pages to render based on copy settings
+      const copies = settings?.print_original_duplicate ? [
+        settings?.print_copy_original ?? true ? 'ORIGINAL FOR RECIPIENT' : null,
+        settings?.print_copy_duplicate ?? true ? 'DUPLICATE FOR TRANSPORTER' : null,
+        settings?.print_copy_triplicate ?? true ? 'TRIPLICATE FOR SUPPLIER' : null
+      ].filter(Boolean) : [null];
+      
+      const finalCopies = copies.length > 0 ? copies : [null];
+
+      // Render our new unified InvoiceTemplate components with page breaks
       root.render(
-        <InvoiceTemplate 
-          bill={bill} 
-          items={items} 
-          settings={settings} 
-          isPreview={false}
-        />
+        <React.Fragment>
+          {finalCopies.map((label, idx) => (
+            <div key={idx} style={{ pageBreakAfter: idx < finalCopies.length - 1 ? 'always' : 'auto' }}>
+              <InvoiceTemplate 
+                bill={bill} 
+                items={items} 
+                settings={{ ...settings, _forceCopyLabel: label }} 
+                isPreview={false}
+              />
+            </div>
+          ))}
+        </React.Fragment>
       );
 
       // Trigger print after rendering and fonts have loaded
