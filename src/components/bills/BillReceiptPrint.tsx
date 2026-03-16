@@ -73,11 +73,6 @@ export function printBillReceipt(bill: Bill, items: BillItem[], settings?: any) 
           .invoice-template-root table tbody tr:last-child td {
             padding: 4px 6px !important;
           }
-          /* Footer never splits */
-          .invoice-footer-block {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
 
           /* ===== SINGLE PAGE (≤12 items): prevent ALL page breaks ===== */
           .single-page-invoice {
