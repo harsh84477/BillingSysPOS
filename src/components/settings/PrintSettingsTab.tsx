@@ -513,6 +513,7 @@ export default function PrintSettingsTab() {
                   <CheckRow checked={settings?.print_show_discount ?? true} onChange={(v) => u({ print_show_discount: v })} label="Discount" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_tax_pct ?? false} onChange={(v) => u({ print_show_tax_pct: v })} label="Tax %" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_gst ?? true} onChange={(v) => u({ print_show_gst: v })} label="Tax Amt" disabled={!isAdmin} />
+                  <CheckRow checked={settings?.print_show_currency ?? true} onChange={(v) => u({ print_show_currency: v })} label="Currency Symbol (₹)" disabled={!isAdmin} />
                 </div>
               </div>
             </SettingsCard>

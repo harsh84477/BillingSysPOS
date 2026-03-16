@@ -1,5 +1,6 @@
 import React from 'react';
 import { format } from 'date-fns';
+import { QRCodeSVG } from 'qrcode.react';
 
 export interface InvoiceTemplateProps {
   bill?: any;
@@ -76,7 +77,9 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const nameSize = s?.print_company_name_size === 'v.small' ? '12px' : s?.print_company_name_size === 'small' ? '14px' : s?.print_company_name_size === 'medium' ? '17px' : '20px';
   const textSize = s?.print_invoice_text_size === 'small' ? '9px' : s?.print_invoice_text_size === 'large' ? '12px' : '10.5px';
   const showDecimal = s?.print_amount_decimal ?? true;
-  const fmt = (n: number) => showDecimal ? `₹ ${Number(n).toFixed(2)}` : `₹ ${Math.round(n)}`;
+  const showCurrency = s?.print_show_currency ?? true;
+  const currSym = showCurrency ? '₹ ' : '';
+  const fmt = (n: number) => showDecimal ? `${currSym}${Number(n).toFixed(2)}` : `${currSym}${Math.round(n)}`;
   
   const accent = s?.print_accent_color || 'hsl(var(--primary))';
   const showCopyInfo = s?.print_original_duplicate ?? true;
@@ -351,14 +354,10 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
 
               {showBank && (
                   <div style={{ border: isFrench ? '1px dashed #ccc' : `1px solid ${accent}4D`, background: isFrench ? 'transparent' : `${accent}0A`, padding: '10px', borderRadius: '6px', display: 'flex', gap: '16px' }}>
-                      {(s?.print_upi_qr ?? true) && (
+                      {(s?.print_upi_qr ?? true) && s?.upi_id && (
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                             <div style={{ width: '56px', height: '56px', background: '#fff', padding: '4px', borderRadius: '4px', border: '1px solid #ddd' }}>
-                                 <svg viewBox="0 0 10 10" style={{ width: '100%', height: '100%' }}>
-                                    <rect x="1" y="1" width="3" height="3" fill="#000"/><rect x="6" y="1" width="3" height="3" fill="#000"/>
-                                    <rect x="1" y="6" width="3" height="3" fill="#000"/><rect x="6" y="6" width="1" height="1" fill="#000"/>
-                                    <rect x="5" y="4" width="2" height="1" fill="#000"/><rect x="8" y="5" width="1" height="3" fill="#000"/>
-                                 </svg>
+                             <div style={{ width: '56px', height: '56px', background: '#fff', padding: '4px', borderRadius: '4px', border: '1px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                 <QRCodeSVG value={`upi://pay?pa=${s.upi_id}&pn=${encodeURIComponent(companyName)}&am=${grandTotal}&cu=INR`} size={46} />
                              </div>
                              {(s?.print_pay_now_btn ?? true) && (
                                  <div style={{ fontSize: '7px', fontWeight: 800, background: '#16a34a', color: '#fff', padding: '2px 8px', borderRadius: '12px', whiteSpace: 'nowrap' }}>PAY NOW</div>

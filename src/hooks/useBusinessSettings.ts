@@ -158,6 +158,7 @@ export interface BusinessSettings {
   print_show_discount?: boolean;
   print_show_tax_pct?: boolean;
   print_show_gst?: boolean;
+  print_show_currency?: boolean;
   print_bank_details?: boolean;
   print_bank_name?: string;
   print_bank_account?: string;
