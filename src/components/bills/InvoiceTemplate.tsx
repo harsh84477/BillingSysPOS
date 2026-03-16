@@ -125,20 +125,6 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
     borderRight: isGst6 ? '1px solid #e5e7eb' : 'none',
   };
 
-  // Provide accurate aspect ratios for the live preview A4 vs A5 constraint
-  const paperWrapperStyle: React.CSSProperties = isPreview ? {
-    width: '100%',
-    aspectRatio: paperSize === 'A4' ? '1 / 1.414' : paperSize === 'A5' ? '1.414 / 1' : 'auto',
-    maxWidth: paperSize === 'A5' ? '600px' : '800px', // A5 is wider/shorter in landscape typically or just smaller
-    minHeight: paperSize === 'A4' ? '1050px' : paperSize === 'A5' ? '700px' : 'auto',
-    margin: '0 auto',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-    borderRadius: '4px',
-    overflow: 'hidden' // clip content cleanly
-  } : {
-    width: '100%'
-  };
-
   return (
     <div className="invoice-template-root" style={{ 
       background: '#fff', 
@@ -150,7 +136,8 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       paddingTop: isPreview ? `${28 + marginTopPx}px` : `${marginTopPx}px`, 
       position: 'relative',
       boxSizing: 'border-box',
-      ...paperWrapperStyle
+      width: '100%',
+      minHeight: '100%'
     }}>
       
       {/* Document Title Header Block */}

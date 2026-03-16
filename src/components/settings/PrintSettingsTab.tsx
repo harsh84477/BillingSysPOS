@@ -205,6 +205,18 @@ function RegularPreview({ s }: { s: any }) {
   
   const finalCopies = copies.length > 0 ? copies : [null];
 
+  const paperSize = s?.print_paper_size || 'A4';
+  const isA5 = paperSize === 'A5';
+  
+  // Real dimensions for paper at 96 DPI
+  const paperWidth = isA5 ? 560 : 794;
+  const paperHeight = isA5 ? 794 : 1123;
+  
+  // Container width is roughly 418px (450px column minus 32px paddings)
+  const containerWidth = 418;
+  const scale = containerWidth / paperWidth;
+  const scaledHeight = paperHeight * scale;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', padding: '24px 16px', background: '#e5e7eb', minHeight: '100%' }}>
       {finalCopies.map((label, idx) => (
@@ -212,13 +224,31 @@ function RegularPreview({ s }: { s: any }) {
           <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', letterSpacing: '0.05em' }}>
             PAGE {idx + 1} OF {finalCopies.length} {label ? `— ${label}` : ''}
           </div>
-          <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-            <InvoiceTemplate 
-              settings={{ ...s, _forceCopyLabel: label }} 
-              isPreview={true} 
-              bill={null} 
-              items={[]} 
-            />
+          <div style={{ 
+            width: `${containerWidth}px`, 
+            height: `${scaledHeight}px`,
+            position: 'relative',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+            borderRadius: '4px',
+            overflow: 'hidden',
+            background: '#fff'
+          }}>
+            <div style={{
+              width: `${paperWidth}px`,
+              minHeight: `${paperHeight}px`,
+              transform: `scale(${scale})`,
+              transformOrigin: 'top left',
+              position: 'absolute',
+              top: 0,
+              left: 0
+            }}>
+              <InvoiceTemplate 
+                settings={{ ...s, _forceCopyLabel: label }} 
+                isPreview={true} 
+                bill={null} 
+                items={[]} 
+              />
+            </div>
           </div>
         </div>
       ))}
