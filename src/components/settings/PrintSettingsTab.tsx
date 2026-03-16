@@ -30,8 +30,8 @@ const THERMAL_LAYOUTS = [
 function PrinterTabBar({ active, onSelect }: { active: 'regular' | 'thermal'; onSelect: (v: 'regular' | 'thermal') => void }) {
   return (
     <div style={{
-      display: 'flex', gap: '0', background: T.color.cardBg,
-      borderRadius: '12px', overflow: 'hidden',
+      display: 'inline-flex', gap: '0', background: T.color.cardBg,
+      borderRadius: '8px', overflow: 'hidden',
       border: `1.5px solid ${T.color.border}`, boxShadow: T.shadow.card,
     }}>
       {([
@@ -41,9 +41,9 @@ function PrinterTabBar({ active, onSelect }: { active: 'regular' | 'thermal'; on
         const isActive = tab.id === active;
         return (
           <button key={tab.id} type="button" onClick={() => onSelect(tab.id)} style={{
-            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: '8px', padding: '14px 20px',
-            fontSize: '12.5px', fontWeight: isActive ? 700 : 500,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: '8px', padding: '10px 18px',
+            fontSize: '11.5px', fontWeight: isActive ? 700 : 500,
             letterSpacing: '0.04em', textTransform: 'uppercase' as const,
             color: isActive ? '#fff' : T.color.textSec,
             background: isActive
@@ -55,7 +55,7 @@ function PrinterTabBar({ active, onSelect }: { active: 'regular' | 'thermal'; on
             borderBottom: isActive ? '3px solid hsl(var(--primary))' : '3px solid transparent',
             boxShadow: isActive ? `0 2px 12px ${op('hsl(var(--primary))', 25)}` : 'none',
           }}>
-            <span style={{ fontSize: '16px' }}>{tab.icon}</span>
+            <span style={{ fontSize: '15px' }}>{tab.icon}</span>
             {tab.label}
           </button>
         );
@@ -195,9 +195,6 @@ function PageSizeSelector({ value, onChange, disabled }: {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   LIVE INVOICE PREVIEW — Regular
-   ═══════════════════════════════════════════════════════════════ */
 function RegularPreview({ s }: { s: any }) {
   // Determine how many pages to render based on copy settings
   const copies = s?.print_original_duplicate ? [
@@ -209,23 +206,26 @@ function RegularPreview({ s }: { s: any }) {
   const finalCopies = copies.length > 0 ? copies : [null];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', padding: '24px 16px', background: '#e5e7eb', minHeight: '100%' }}>
       {finalCopies.map((label, idx) => (
-        <React.Fragment key={idx}>
-          <InvoiceTemplate 
-            settings={{ ...s, _forceCopyLabel: label }} 
-            isPreview={true} 
-            bill={null} 
-            items={[]} 
-          />
-          {idx < finalCopies.length - 1 && (
-            <div style={{ width: '100%', borderBottom: '2px dashed #ccc', opacity: 0.5 }}></div>
-          )}
-        </React.Fragment>
+        <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', letterSpacing: '0.05em' }}>
+            PAGE {idx + 1} OF {finalCopies.length} {label ? `— ${label}` : ''}
+          </div>
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <InvoiceTemplate 
+              settings={{ ...s, _forceCopyLabel: label }} 
+              isPreview={true} 
+              bill={null} 
+              items={[]} 
+            />
+          </div>
+        </div>
       ))}
     </div>
   );
 }
+
 
 
 /* ═══════════════════════════════════════════════════════════════
@@ -246,8 +246,10 @@ function ThermalPreview({ s }: { s: any }) {
     <div style={{
       background: '#fff', color: '#111', fontFamily: "'Courier New', monospace",
       fontSize: '11px', lineHeight: 1.6, padding: '20px 16px',
-      maxWidth: maxW, margin: '0 auto', minHeight: '400px',
+      maxWidth: maxW, margin: '20px auto', minHeight: '400px',
       fontWeight: isBold ? 700 : 400,
+      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+      borderRadius: '2px'
     }}>
       {/* Header */}
       <div style={{ textAlign: 'center', borderBottom: '2px dashed #aaa', paddingBottom: '10px', marginBottom: '10px' }}>
@@ -346,12 +348,14 @@ export default function PrintSettingsTab() {
 
   return (
     <div style={{ width: '100%' }}>
-      {/* Printer Type Switcher — full width */}
-      <PrinterTabBar active={printerTab} onSelect={setPrinterTab} />
+      {/* Printer Type Switcher — Left aligned */}
+      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+         <PrinterTabBar active={printerTab} onSelect={setPrinterTab} />
+      </div>
 
-      {/* Two-column layout: Controls left, Preview right */}
+      {/* Two-column layout: Controls left (fixed width), Preview right (expanding) */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 420px',
+        display: 'grid', gridTemplateColumns: '480px 1fr',
         gap: '24px', marginTop: '20px', alignItems: 'start',
       }} className="print-settings-grid">
         {/* ═══ LEFT: Controls ═══ */}
@@ -631,18 +635,18 @@ export default function PrintSettingsTab() {
           </>)}
         </div>
 
-        {/* ═══ RIGHT: Live Preview (Sticky with fading edges) ═══ */}
-        <div style={{ position: 'sticky' as const, top: '20px', alignSelf: 'start' }}>
+        {/* ═══ RIGHT: Live Preview (Sticky with clean bounds) ═══ */}
+        <div style={{ position: 'sticky' as const, top: '20px', alignSelf: 'start', height: 'calc(100vh - 40px)' }}>
           <div style={{
             background: T.color.cardBg, borderRadius: '14px',
             border: `1px solid ${T.color.border}`, boxShadow: T.shadow.card,
-            overflow: 'hidden',
+            overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column'
           }}>
             {/* Preview Header */}
             <div style={{
               padding: '12px 16px', borderBottom: `1px solid ${T.color.border}`,
               background: `linear-gradient(135deg, ${op('hsl(var(--primary))', 6)} 0%, transparent 100%)`,
-              display: 'flex', alignItems: 'center', gap: '8px',
+              display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0
             }}>
               <span style={{ fontSize: '14px' }}>👁️</span>
               <span style={{ fontSize: '12.5px', fontWeight: 700, color: T.color.textPri, letterSpacing: '-0.01em' }}>
@@ -650,36 +654,16 @@ export default function PrintSettingsTab() {
               </span>
             </div>
 
-            {/* Preview Content with fading edges */}
-            <div style={{ position: 'relative' as const }}>
-              {/* Top fade */}
-              <div style={{
-                position: 'absolute' as const, top: 0, left: 0, right: 0, height: '30px', zIndex: 2,
-                background: 'linear-gradient(to bottom, #f8f9fa, transparent)',
-                borderRadius: '0', pointerEvents: 'none' as const,
-              }} />
-
-              {/* Scrollable preview */}
-              <div style={{
-                maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' as const,
-                padding: '8px', background: '#f8f9fa',
-              }} className="custom-scrollbar">
-                <div style={{
-                  borderRadius: '8px', overflow: 'hidden',
-                  boxShadow: '0 2px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05)',
-                  transform: 'scale(0.92)', transformOrigin: 'top center',
-                  transition: 'all 0.3s ease',
-                }}>
-                  {printerTab === 'regular' ? <RegularPreview s={settings} /> : <ThermalPreview s={settings} />}
-                </div>
-              </div>
-
-              {/* Bottom fade */}
-              <div style={{
-                position: 'absolute' as const, bottom: 0, left: 0, right: 0, height: '40px', zIndex: 2,
-                background: 'linear-gradient(to top, #f8f9fa, transparent)',
-                pointerEvents: 'none' as const,
-              }} />
+            {/* Scrollable preview occupying all remaining card space */}
+            <div style={{
+              flex: 1, overflowY: 'auto' as const,
+              background: '#e5e7eb', // subtle dim outline behind paper
+              position: 'relative',
+              width: '100%',
+              overflowX: 'hidden'
+            }} className="custom-scrollbar">
+               {/* We remove transform: scale(0.92) so the preview fully fills the available wide container */}
+               {printerTab === 'regular' ? <RegularPreview s={settings} /> : <ThermalPreview s={settings} />}
             </div>
           </div>
         </div>
