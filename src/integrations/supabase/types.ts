@@ -207,6 +207,8 @@ export type Database = {
           bank_ifsc: string | null
           bank_branch: string | null
           terms_and_conditions: string | null
+          print_primary_color: string | null
+          print_secondary_color: string | null
         }
         Insert: {
           address?: string | null
@@ -244,6 +246,8 @@ export type Database = {
           bank_ifsc?: string | null
           bank_branch?: string | null
           terms_and_conditions?: string | null
+          print_primary_color?: string | null
+          print_secondary_color?: string | null
         }
         Update: {
           address?: string | null
@@ -281,6 +285,8 @@ export type Database = {
           bank_ifsc?: string | null
           bank_branch?: string | null
           terms_and_conditions?: string | null
+          print_primary_color?: string | null
+          print_secondary_color?: string | null
         }
         Relationships: [
           {

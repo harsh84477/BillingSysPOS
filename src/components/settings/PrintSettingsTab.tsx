@@ -414,7 +414,7 @@ export default function PrintSettingsTab() {
                       <div>
                         <SectionLabel text="Primary Invoice Color (Top Banner, Highlights)" />
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
-                          {['#242B3E', '#18181A', '#0D3B66', '#4F46E5', '#16A34A', '#D97706', '#E11D48'].map(color => {
+                          {['#242B3E', '#2563EB', '#7F1D1D', '#1E3A8A', '#172554', '#000000'].map(color => {
                             const isActive = (settings?.print_primary_color || '#242B3E') === color;
                             return (
                               <button key={color} type="button" 
@@ -436,8 +436,8 @@ export default function PrintSettingsTab() {
                       <div>
                         <SectionLabel text="Secondary Accent Color (Buttons, Accents)" />
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
-                          {['#E96020', '#38BDF8', '#FACC15', '#A78BFA', '#F43F5E', '#10B981'].map(color => {
-                            const isActive = (settings?.print_secondary_color || '#E96020') === color;
+                          {['#E11D48', '#F97316', '#EA580C', '#10B981', '#A78BFA', '#E96020'].map(color => {
+                            const isActive = (settings?.print_secondary_color || '#E11D48') === color;
                             return (
                               <button key={color} type="button" 
                                 onClick={() => u({ print_secondary_color: color })}

@@ -414,10 +414,10 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
                   </div>
                   {(s?.print_pay_now_btn ?? true) && (
                     <div style={{ 
-                      backgroundColor: secondaryColor, color: secondaryText, fontSize: '8px', fontWeight: 800, 
-                      padding: '4px 12px', borderRadius: '12px', letterSpacing: '0.05em'
+                      backgroundColor: '#22C55E', color: '#fff', fontSize: '9px', fontWeight: 800, 
+                      padding: '4px 12px', borderRadius: '4px', letterSpacing: '0.05em', border: '1px solid #16A34A'
                     }}>
-                      SCAN TO PAY
+                      <span style={{ fontStyle: 'italic', paddingRight: '4px' }}>UPI</span>PAY NOW
                     </div>
                   )}
                 </div>
