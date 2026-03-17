@@ -647,19 +647,15 @@ export default function PrintSettingsTab() {
                 right={<Toggle on={settings?.print_received_by ?? true} onChange={(v) => u({ print_received_by: v })} disabled={!isAdmin} />} />
               <SettingRow label="Print Delivered by details" desc="Add delivered by name on invoice"
                 right={<Toggle on={settings?.print_delivered_by ?? false} onChange={(v) => u({ print_delivered_by: v })} disabled={!isAdmin} />} />
-              <div style={{ padding: '10px 0', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Toggle on={settings?.print_show_signature ?? false} onChange={(v) => u({ print_show_signature: v })} disabled={!isAdmin} />
-                  <span style={{ fontSize: '13px', fontWeight: 550, color: T.color.textPri }}>Print Signature</span>
+              <SettingRow label="Authorized Signatory" desc="Show authorized signatory section on invoice"
+                right={<Toggle on={settings?.print_show_signature ?? false} onChange={(v) => u({ print_show_signature: v })} disabled={!isAdmin} />} />
+              {(settings?.print_show_signature ?? false) && (
+                <div style={{ marginLeft: '12px', paddingLeft: '16px', borderLeft: `2px solid ${T.color.border}`, marginTop: '-4px', marginBottom: '8px', paddingBottom: '8px', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
+                  <FieldLabel>Signature Text</FieldLabel>
+                  <TextInput value={settings?.print_signature_text || ''} onChange={(e) => u({ print_signature_text: e.target.value })}
+                    placeholder="Authorized Signatory" disabled={!isAdmin} />
                 </div>
-                {(settings?.print_show_signature ?? false) && (
-                  <div style={{ marginTop: '12px', paddingLeft: '56px' }}>
-                    <FieldLabel>Signature Text</FieldLabel>
-                    <TextInput value={settings?.print_signature_text || ''} onChange={(e) => u({ print_signature_text: e.target.value })}
-                      placeholder="Authorized Signatory" disabled={!isAdmin} />
-                  </div>
-                )}
-              </div>
+              )}
               <SettingRow label="Payment Mode" desc="Show payment method used on invoice"
                 right={<Toggle on={settings?.print_payment_mode ?? false} onChange={(v) => u({ print_payment_mode: v })} disabled={!isAdmin} />} />
               <SettingRow label="Print Acknowledgement" desc="Include customer acknowledgement section" noBorder
