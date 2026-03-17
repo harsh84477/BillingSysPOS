@@ -109,6 +109,7 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
   const showHash = s?.print_show_item_number ?? true;
   const showHsn = s?.print_show_hsn_sac ?? true;
   const showQty = s?.print_show_quantity ?? true;
+  const showMrp = s?.print_show_mrp ?? false;
   const showPrice = s?.print_show_price_unit ?? true;
   const showDisc = s?.print_show_discount ?? true;
   const showTaxAmt = s?.print_show_gst ?? true;
@@ -354,9 +355,10 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
           <thead>
             <tr>
               {showHash && <th style={{ width: '4%' }}>#</th>}
-              <th style={{ width: '35%' }}>Item Description</th>
+              <th style={{ width: showMrp ? '28%' : '35%' }}>Item Description</th>
               {showHsn && <th style={{ textAlign: 'center' }}>HSN/SAC</th>}
               {showQty && <th style={{ textAlign: 'center' }}>Qty</th>}
+              {showMrp && <th style={{ textAlign: 'right' }}>MRP</th>}
               {showPrice && <th style={{ textAlign: 'right' }}>Price</th>}
               {showDisc && <th style={{ textAlign: 'right' }}>Disc.</th>}
               {showTaxAmt && <th style={{ textAlign: 'right' }}>Tax</th>}
@@ -370,6 +372,7 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
                 <td style={{ fontWeight: 600, color: '#1F2937' }}>{item.name}</td>
                 {showHsn && <td style={{ textAlign: 'center', color: '#4B5563' }}>{item.hsn}</td>}
                 {showQty && <td style={{ textAlign: 'center', fontWeight: 600 }}>{item.qty}</td>}
+                {showMrp && <td style={{ textAlign: 'right', color: '#6B7280' }}>{item.mrp > 0 ? fmt(item.mrp) : '-'}</td>}
                 {showPrice && <td style={{ textAlign: 'right', color: '#4B5563' }}>{fmt(item.price)}</td>}
                 {showDisc && <td style={{ textAlign: 'right', color: '#EF4444' }}>{item.discount > 0 ? `-${fmt(item.discount)}` : '-'}</td>}
                 {showTaxAmt && <td style={{ textAlign: 'right', color: '#4B5563' }}>{item.gstAmt > 0 ? fmt(item.gstAmt) : '-'}</td>}
@@ -383,6 +386,7 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
                 Total
               </td>
               {showQty && <td style={{ textAlign: 'center', fontSize: cp ? '9px' : '11px' }}>{dataItems.reduce((acc, i) => acc + i.qty, 0)}</td>}
+              {showMrp && <td style={{ textAlign: 'right', color: '#6B7280' }}>{fmt(dataItems.reduce((acc, i) => acc + (i.mrp * i.qty), 0))}</td>}
               {showPrice && <td></td>}
               {showDisc && <td style={{ textAlign: 'right', color: '#EF4444' }}>{totalDisc > 0 ? `-${fmt(totalDisc)}` : '-'}</td>}
               {showTaxAmt && <td style={{ textAlign: 'right' }}>{totalTax > 0 ? fmt(totalTax) : '-'}</td>}
