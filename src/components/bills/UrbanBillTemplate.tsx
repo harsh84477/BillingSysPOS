@@ -89,7 +89,7 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
   const showDesc = s?.print_description ?? false;
   const showReceivedBy = s?.print_received_by ?? true;
   const showDeliveredBy = s?.print_delivered_by ?? false;
-  const showSignature = s?.print_show_signature ?? true;
+  const showSignature = s?.print_show_signature ?? false;
   const showPaymentMode = s?.print_payment_mode ?? false;
   const showAck = s?.print_acknowledgement ?? true;
   
