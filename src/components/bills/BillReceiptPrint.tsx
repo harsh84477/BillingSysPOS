@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { InvoiceTemplate } from './InvoiceTemplate';
+import { ThermalTemplate } from './ThermalTemplate';
 
 export interface BillItem {
   id: string;
@@ -159,19 +160,37 @@ export function printBillReceipt(bill: Bill, items: BillItem[], settings?: any) 
       
       const finalCopies = copies.length > 0 ? copies : [null];
 
+      // Thermal prints typically only print 1 copy by default unless multiplied
+      const isThermal = settings?.print_thermal_default ?? false;
+      const thermalCopiesCount = settings?.print_thermal_copies ?? 1;
+      const thermalCopiesArray = Array.from({ length: thermalCopiesCount });
+
       // Render our new unified InvoiceTemplate components with page breaks
       root.render(
         <React.Fragment>
-          {finalCopies.map((label, idx) => (
-            <div key={idx} style={{ pageBreakAfter: idx < finalCopies.length - 1 ? 'always' : 'auto' }}>
-              <InvoiceTemplate 
-                bill={bill} 
-                items={items} 
-                settings={{ ...settings, _forceCopyLabel: label }} 
-                isPreview={false}
-              />
-            </div>
-          ))}
+          {isThermal ? (
+            thermalCopiesArray.map((_, idx) => (
+              <div key={idx} style={{ pageBreakAfter: idx < thermalCopiesArray.length - 1 ? 'always' : 'auto' }}>
+                <ThermalTemplate 
+                  bill={bill} 
+                  items={items} 
+                  settings={settings} 
+                  isPreview={false}
+                />
+              </div>
+            ))
+          ) : (
+            finalCopies.map((label, idx) => (
+              <div key={idx} style={{ pageBreakAfter: idx < finalCopies.length - 1 ? 'always' : 'auto' }}>
+                <InvoiceTemplate 
+                  bill={bill} 
+                  items={items} 
+                  settings={{ ...settings, _forceCopyLabel: label }} 
+                  isPreview={false}
+                />
+              </div>
+            ))
+          )}
         </React.Fragment>
       );
 

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessSettings, useUpdateBusinessSettings } from '@/hooks/useBusinessSettings';
 import { InvoiceTemplate } from '../bills/InvoiceTemplate';
+import { ThermalTemplate } from '../bills/ThermalTemplate';
 import {
   SettingsCard, Toggle, Counter, SettingRow, SectionLabel, TextInput, TextArea,
   FieldLabel, ButtonGroup, SelectInput, SaveBtn, InfoBox, ColStack, TwoColGrid,
@@ -23,6 +24,7 @@ const THERMAL_LAYOUTS = [
   { id: 'theme_2', name: 'Theme 2', icon: '📜' },
   { id: 'theme_3', name: 'Theme 3', icon: '📑' },
   { id: 'theme_4', name: 'Theme 4', icon: '📃' },
+  { id: 'theme_5', name: 'Theme 5', icon: '🧾' },
 ];
 
 /* ═══════════════════════════════════════════════════
@@ -263,74 +265,23 @@ function RegularPreview({ s }: { s: any }) {
    LIVE INVOICE PREVIEW — Thermal
    ═══════════════════════════════════════════════════════════════ */
 function ThermalPreview({ s }: { s: any }) {
-  const companyName = s?.print_thermal_company_name_text || s?.business_name || 'My Company';
-  const phone = s?.phone || '9625507147';
-  const isBold = s?.print_thermal_bold ?? true;
-  const showAddr = s?.print_thermal_show_address ?? true;
-  const showPhone = s?.print_thermal_show_phone ?? true;
-  const showEmail = s?.print_thermal_show_email ?? false;
-  const showGstin = s?.print_thermal_show_gstin ?? true;
   const pageSize = s?.print_thermal_page_size || '4inch';
   const maxW = pageSize === '2inch' ? '220px' : pageSize === '3inch' ? '280px' : '340px';
 
   return (
     <div style={{
-      background: '#fff', color: '#111', fontFamily: "'Courier New', monospace",
-      fontSize: '11px', lineHeight: 1.6, padding: '20px 16px',
-      maxWidth: maxW, margin: '20px auto', minHeight: '400px',
-      fontWeight: isBold ? 700 : 400,
-      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-      borderRadius: '2px'
+      display: 'flex', flexDirection: 'column', alignItems: 'center', 
+      gap: '10px', padding: '24px 16px', background: '#e5e7eb', minHeight: '100%'
     }}>
-      {/* Header */}
-      <div style={{ textAlign: 'center', borderBottom: '2px dashed #aaa', paddingBottom: '10px', marginBottom: '10px' }}>
-        {(s?.print_thermal_company_name ?? true) && (
-          <div style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '0.02em' }}>{companyName}</div>
-        )}
-        {showPhone && <div style={{ fontSize: '10px' }}>Ph.No: {phone}</div>}
-        <div style={{ borderTop: '1px dotted #ccc', marginTop: '6px', paddingTop: '4px', fontSize: '10px' }}>
-          {showAddr && <div>Koramangala, Banglore, Karnataka</div>}
-          {showEmail && <div>{s?.email || 'email@example.com'}</div>}
-          {showGstin && s?.gst_number && <div>GSTIN: {s.gst_number}</div>}
-        </div>
-      </div>
-
-      {/* Party Info */}
-      <div style={{ fontSize: '10px', marginBottom: '8px' }}>
-        <div><strong>Vyapar tech solutions (Sample Party Name)</strong></div>
-        <div>Ph. No: +91-4356352</div>
-        <div>Date: 11/03/2020</div>
-        <div>Bill To:</div>
-        <div>Indranagar Road, Bangalore</div>
-      </div>
-
-      {/* Items */}
-      <div style={{ borderTop: '1px dashed #999', borderBottom: '1px dashed #999', padding: '6px 0', margin: '6px 0' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 50px 50px 60px', gap: '2px', fontSize: '10px', fontWeight: 800, marginBottom: '4px' }}>
-          <span>#</span><span>Name</span><span>Qty</span><span>Price</span><span style={{ textAlign: 'right' }}>Amount</span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 50px 50px 60px', gap: '2px', fontSize: '10px', padding: '4px 0' }}>
-          <span>1</span><span>Britannia Chocolate Ca...</span><span>100 + 20...</span><span>100.00</span><span style={{ textAlign: 'right' }}>10,000.00</span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 50px 50px 60px', gap: '2px', fontSize: '10px', padding: '4px 0' }}>
-          <span>2</span><span>Cadbury Chocolate</span><span>50 + 0p...</span><span>150.00</span><span style={{ textAlign: 'right' }}>7,500.00</span>
-        </div>
-      </div>
-
-      {/* Totals */}
-      <div style={{ fontSize: '10px', padding: '6px 0', borderBottom: '1px dashed #999' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total</span><span style={{ fontWeight: 800 }}>150 + 1</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Disc.(2%)</span><span>-1,500.00</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tax(5%)</span><span>500.00</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total Disc.</span><span>-1,500.00</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '12px', marginTop: '4px' }}><span>Total</span><span>20,000.00</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Received</span><span>20,000.00</span></div>
-      </div>
-
-      {/* Terms */}
-      <div style={{ textAlign: 'center', padding: '10px 0', fontSize: '10px', color: '#666' }}>
-        <div style={{ fontWeight: 700 }}>Terms & Conditions</div>
-        <div>{s?.print_terms_conditions || 'Thanks for doing business with us'}</div>
+      <div style={{
+          position: 'relative',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+          borderRadius: '4px',
+          overflow: 'hidden',
+          background: '#fff',
+          width: maxW
+      }}>
+        <ThermalTemplate settings={s} bill={null} items={[]} isPreview={true} />
       </div>
     </div>
   );
