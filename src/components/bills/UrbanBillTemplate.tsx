@@ -17,8 +17,8 @@ function getContrastColor(hexColor: string) {
   if (hex.length !== 6) return '#ffffff';
   
   const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 2), 16);
-  const b = parseInt(hex.substring(4, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
   const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
   
   return (yiq >= 128) ? '#111827' : '#ffffff';
@@ -35,11 +35,9 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
   const custName = isMock ? 'Urban Tech Solutions' : (bill?.customers?.name || 'Cash Customer');
   const custAddr = isMock ? '45, Industrial Estate, Phase 2, New Delhi, 110020' : (bill?.customers?.address || '');
   const custPhone = isMock ? '+91 9876543210' : (bill?.customers?.phone || '');
-  // Extract state assuming format like "New Delhi" or from notes, mocking for preview
   const custState = isMock ? 'Delhi' : ''; 
   const custGstin = isMock ? '07AAECU0000A1Z5' : '';
 
-  // Data mapping for items
   const dataItems = isMock ? Array.from({ length: 5 }, (_, i) => ({
     name: i === 0 ? 'Logitech MX Master 3S Wireless Mouse' : `Product Item - Series 0${i + 1}`, 
     hsn: '8471', 
@@ -66,7 +64,6 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
   const totalDisc = isMock ? 250.00 : (Number(bill?.discount_amount) || 0);
   const totalTax = isMock ? 8100.00 : (Number(bill?.tax_amount) || 0);
   const grandTotal = isMock ? 52850.00 : (Number(bill?.total_amount) || 0);
-
   const amtReceived = isMock ? 50000.00 : 0;
   const amtBalance = isMock ? 2850.00 : grandTotal;
 
@@ -113,11 +110,29 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
   const showBank = s?.print_bank_details ?? true;
   const marginTopPx = (s?.print_extra_space_top || 0) * 3.77;
 
-  // If isPreview, container uses padding so it looks like a paper on screen. 
-  // In print mode, @page handles margins.
-  const containerPad = isPreview ? '32px 32px' : '0';
+  // ── Compact mode: print uses tighter spacing, preview keeps generous spacing ──
+  const cp = !isPreview;
+  const containerPad = isPreview ? '28px 24px' : '0';
 
-  // Transport details (hardcoded mocks for representation, you could map this to extra bill fields if available)
+  // Spacing tokens: cp=compact (print), otherwise generous (preview)
+  const sectionGap = cp ? '6px' : '20px';
+  const sectionMb = cp ? '6px' : '24px';
+  const headerPad = cp ? '12px' : '24px';
+  const headerGap = cp ? '10px' : '24px';
+  const cardPad = cp ? '6px 8px' : '12px';
+  const detailGap = cp ? '8px' : '16px';
+  const footerGap = cp ? '10px' : '24px';
+  const footerInnerGap = cp ? '6px' : '16px';
+  const sigMargin = cp ? '10px' : '32px';
+  const sigLineSpace = cp ? '16px' : '36px';
+
+  // Font sizing
+  const baseFontSize = cp ? '9px' : '10px';
+  const baseLineHeight = cp ? 1.2 : 1.4;
+  const titleFontSize = cp ? '24px' : '32px';
+  const companyFontSize = cp ? '16px' : '20px';
+
+  // Transport details
   const transportName = isMock ? 'FastTrack Logistics' : '';
   const vehicleNo = isMock ? 'KA-01-AB-1234' : '';
   const deliveryDate = isMock ? '19-03-2026' : '';
@@ -128,22 +143,21 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
       background: '#fff',
       color: '#111827',
       fontFamily: "'Inter', 'Segoe UI', sans-serif",
-      fontSize: '10px',
-      lineHeight: 1.4,
+      fontSize: baseFontSize,
+      lineHeight: baseLineHeight,
       padding: containerPad,
-      paddingTop: isPreview ? `${32 + marginTopPx}px` : `${marginTopPx}px`,
+      paddingTop: isPreview ? `${28 + marginTopPx}px` : `${marginTopPx}px`,
       position: 'relative',
       boxSizing: 'border-box',
       width: '100%',
       minHeight: '100%',
-      // Defining custom properties for use in CSS/inline styles
       ['--urban-primary' as any]: primaryColor,
       ['--urban-primary-text' as any]: primaryText,
       ['--urban-secondary' as any]: secondaryColor,
       ['--urban-secondary-text' as any]: secondaryText,
     }}>
 
-      {/* Embedded CSS for styling complex pseudoelements or responsive aspects */}
+      {/* Embedded CSS */}
       <style>{`
         .urban-template-root {
           -webkit-print-color-adjust: exact !important;
@@ -151,7 +165,7 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
         }
         .urban-card {
           border: 1px solid #E5E7EB;
-          border-radius: 8px;
+          border-radius: ${cp ? '4px' : '8px'};
           overflow: hidden;
         }
         .urban-table th {
@@ -159,19 +173,21 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
           color: var(--urban-primary-text) !important;
           font-weight: 600;
           text-transform: uppercase;
-          font-size: 8.5px;
+          font-size: ${cp ? '7.5px' : '8.5px'};
           letter-spacing: 0.05em;
-          padding: 8px 10px;
+          padding: ${cp ? '4px 6px' : '8px 10px'};
           border-right: 1px solid rgba(255,255,255,0.1);
         }
         .urban-table th:last-child {
           border-right: none;
         }
         .urban-table td {
-          padding: 8px 10px;
+          padding: ${cp ? '3px 6px' : '8px 10px'};
           border-bottom: 1px solid #E5E7EB;
           border-right: 1px solid #F3F4F6;
           vertical-align: top;
+          font-size: ${cp ? '8.5px' : '10px'};
+          line-height: ${cp ? '1.2' : '1.4'};
         }
         .urban-table tr:last-child td {
           border-bottom: none;
@@ -184,12 +200,14 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
           font-weight: 700;
           color: #111827;
           border-top: 2px solid var(--urban-secondary) !important;
+          padding: ${cp ? '4px 6px' : '8px 10px'} !important;
         }
         .urban-summary-row {
           display: flex;
           justify-content: space-between;
-          padding: 6px 12px;
+          padding: ${cp ? '3px 8px' : '6px 12px'};
           border-bottom: 1px solid #F1F5F9;
+          font-size: ${cp ? '8.5px' : '10px'};
         }
         .urban-summary-label {
           color: #475569;
@@ -200,106 +218,100 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
         .urban-header-shape {
           background-color: var(--urban-primary);
           color: var(--urban-primary-text);
-          border-bottom-right-radius: 40px;
-          padding: 24px;
+          border-bottom-right-radius: ${cp ? '24px' : '40px'};
+          padding: ${cp ? '12px' : '24px'};
+        }
+        /* ── PRINT PAGINATION ── */
+        @media print {
+          .urban-template-root {
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+            padding: 0 !important;
+          }
+          .urban-template-root table thead {
+            display: table-header-group;
+          }
+          .urban-template-root table tbody tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .urban-footer-block {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
         }
       `}</style>
 
       {/* Copy Label */}
       {showCopyInfo && (
-        <div style={{ position: 'absolute', top: isPreview ? `${12 + marginTopPx}px` : `${marginTopPx}px`, right: isPreview ? '32px' : '0', fontSize: '9px', fontWeight: 600, color: '#6B7280', letterSpacing: '0.05em' }}>
+        <div style={{ position: 'absolute', top: isPreview ? `${12 + marginTopPx}px` : `${marginTopPx}px`, right: isPreview ? '24px' : '0', fontSize: '8px', fontWeight: 600, color: '#6B7280', letterSpacing: '0.05em' }}>
           {copyLabel}
         </div>
       )}
 
-      {/* 
-        ====================================================
-        A. HEADER SECTION
-        ====================================================
-      */}
-      <div style={{ display: 'flex', gap: '24px', marginBottom: '24px', alignItems: 'stretch' }}>
-        {/* Left Side: Dark Block with Logo/Company */}
+      {/* ══════ A. HEADER SECTION ══════ */}
+      <div style={{ display: 'flex', gap: headerGap, marginBottom: sectionMb, alignItems: 'stretch' }}>
         {(s?.print_company_name ?? true) && (
-          <div className="urban-header-shape" style={{ flex: '0 0 auto', minWidth: '220px', maxWidth: '300px' }}>
+          <div className="urban-header-shape" style={{ flex: '0 0 auto', minWidth: cp ? '180px' : '220px', maxWidth: '300px' }}>
             {s?.print_company_logo && s?.logo_url && (
-              <img src={s.logo_url} alt="Logo" style={{ maxHeight: '50px', maxWidth: '120px', marginBottom: '12px', borderRadius: '4px', backgroundColor: '#fff', padding: '4px' }} />
+              <img src={s.logo_url} alt="Logo" style={{ maxHeight: cp ? '36px' : '50px', maxWidth: '120px', marginBottom: cp ? '6px' : '12px', borderRadius: '4px', backgroundColor: '#fff', padding: '3px' }} />
             )}
-            <div style={{ fontSize: '20px', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+            <div style={{ fontSize: companyFontSize, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
               {companyName}
             </div>
             {showGstin && s?.gst_number && (
-              <div style={{ fontSize: '9px', opacity: 0.85, marginTop: '4px', letterSpacing: '0.02em' }}>GSTIN: {gstNumber}</div>
+              <div style={{ fontSize: cp ? '8px' : '9px', opacity: 0.85, marginTop: '3px', letterSpacing: '0.02em' }}>GSTIN: {gstNumber}</div>
             )}
-            <div style={{ marginTop: '12px', fontSize: '9px', opacity: 0.9, lineHeight: 1.5 }}>
+            <div style={{ marginTop: cp ? '6px' : '12px', fontSize: cp ? '8px' : '9px', opacity: 0.9, lineHeight: 1.4 }}>
               {showAddr && address && <div>{address}</div>}
-              {showEmail && email && <div style={{ marginTop: '2px' }}>{email}</div>}
+              {showEmail && email && <div style={{ marginTop: '1px' }}>{email}</div>}
             </div>
           </div>
         )}
 
-        {/* Right Side: Contact Capsule & Title */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: '10px' }}>
-          
-          {/* Top Contact Capsule uses Secondary Color */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: cp ? '4px' : '10px' }}>
           {showPhone && (
             <div style={{
-              backgroundColor: secondaryColor,
-              color: secondaryText,
-              padding: '6px 16px',
-              borderRadius: '20px',
-              fontSize: '11px',
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
+              backgroundColor: secondaryColor, color: secondaryText,
+              padding: cp ? '4px 12px' : '6px 16px', borderRadius: '20px',
+              fontSize: cp ? '9px' : '11px', fontWeight: 700,
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
             }}>
-              <span style={{ fontSize: '12px' }}>📞</span> {phone}
+              <span style={{ fontSize: cp ? '10px' : '12px' }}>📞</span> {phone}
             </div>
           )}
-
-          {/* Large Title */}
           <div style={{
-            fontSize: '32px',
-            fontWeight: 900,
-            color: primaryColor,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            marginTop: 'auto',
-            marginBottom: '8px'
+            fontSize: titleFontSize, fontWeight: 900, color: primaryColor,
+            textTransform: 'uppercase', letterSpacing: '0.05em',
+            marginTop: 'auto', marginBottom: cp ? '2px' : '8px'
           }}>
             {docTitle}
           </div>
         </div>
       </div>
 
-      {/* 
-        ====================================================
-        B. BUSINESS DETAILS SECTION (3 Columns)
-        ====================================================
-      */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr)', gap: '16px', marginBottom: '24px' }}>
+      {/* ══════ B. BUSINESS DETAILS (3 Columns) ══════ */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr)', gap: detailGap, marginBottom: sectionMb }}>
         
-        {/* Col 1: Bill To */}
-        <div className="urban-card" style={{ padding: '12px' }}>
-          <div style={{ color: secondaryColor, fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+        <div className="urban-card" style={{ padding: cardPad }}>
+          <div style={{ color: secondaryColor, fontSize: cp ? '8.5px' : '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: cp ? '4px' : '8px' }}>
             Bill To
           </div>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{custName}</div>
-          <div style={{ color: '#4B5563', lineHeight: 1.5 }}>
+          <div style={{ fontSize: cp ? '11px' : '13px', fontWeight: 700, color: '#111827', marginBottom: '2px' }}>{custName}</div>
+          <div style={{ color: '#4B5563', lineHeight: 1.4 }}>
             {showAddr && custAddr && <div>{custAddr}</div>}
             {custState && <div>State: {custState}</div>}
-            {showPhone && custPhone && <div style={{ marginTop: '2px' }}>Phone: <span style={{ fontWeight: 600, color: '#374151' }}>{custPhone}</span></div>}
-            {custGstin && <div style={{ marginTop: '2px' }}>GSTIN: <span style={{ fontWeight: 600, color: '#374151' }}>{custGstin}</span></div>}
+            {showPhone && custPhone && <div style={{ marginTop: '1px' }}>Phone: <span style={{ fontWeight: 600, color: '#374151' }}>{custPhone}</span></div>}
+            {custGstin && <div style={{ marginTop: '1px' }}>GSTIN: <span style={{ fontWeight: 600, color: '#374151' }}>{custGstin}</span></div>}
           </div>
         </div>
 
-        {/* Col 2: Transportation */}
-        <div className="urban-card" style={{ padding: '12px', opacity: hasTransport ? 1 : 0.6 }}>
-          <div style={{ color: secondaryColor, fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+        <div className="urban-card" style={{ padding: cardPad, opacity: hasTransport ? 1 : 0.6 }}>
+          <div style={{ color: secondaryColor, fontSize: cp ? '8.5px' : '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: cp ? '4px' : '8px' }}>
             Transportation Details
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', color: '#4B5563' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: cp ? '3px' : '6px', color: '#4B5563' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Transport:</span> <span style={{ fontWeight: 600, color: '#111827' }}>{transportName || '-'}</span>
             </div>
@@ -312,12 +324,11 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
           </div>
         </div>
 
-        {/* Col 3: Invoice Info */}
-        <div className="urban-card" style={{ padding: '12px', backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }}>
-          <div style={{ color: secondaryColor, fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+        <div className="urban-card" style={{ padding: cardPad, backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }}>
+          <div style={{ color: secondaryColor, fontSize: cp ? '8.5px' : '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: cp ? '4px' : '8px' }}>
             Invoice Info
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', color: '#4B5563' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: cp ? '3px' : '6px', color: '#4B5563' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Invoice No:</span> <span style={{ fontWeight: 700, color: '#111827' }}>{bNumber}</span>
             </div>
@@ -329,15 +340,10 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
             </div>
           </div>
         </div>
-
       </div>
 
-      {/* 
-        ====================================================
-        C. ITEM TABLE
-        ====================================================
-      */}
-      <div className="urban-card" style={{ marginBottom: '24px' }}>
+      {/* ══════ C. ITEM TABLE ══════ */}
+      <div className="urban-card" style={{ marginBottom: cp ? '4px' : '24px' }}>
         <table className="urban-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead>
             <tr>
@@ -365,102 +371,96 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
               </tr>
             ))}
             
-            {/* Table Bottom Total Row */}
+            {/* Total Row */}
             <tr className="urban-total-row">
-              <td colSpan={1 + (showHash ? 1 : 0) + (showHsn ? 1 : 0)} style={{ textTransform: 'uppercase', fontSize: '10px' }}>
-                Total Items
+              <td colSpan={1 + (showHash ? 1 : 0) + (showHsn ? 1 : 0)} style={{ textTransform: 'uppercase', fontSize: cp ? '8.5px' : '10px' }}>
+                Total
               </td>
-              {showQty && <td style={{ textAlign: 'center', fontSize: '11px' }}>{dataItems.reduce((acc, i) => acc + i.qty, 0)}</td>}
+              {showQty && <td style={{ textAlign: 'center', fontSize: cp ? '9px' : '11px' }}>{dataItems.reduce((acc, i) => acc + i.qty, 0)}</td>}
               {showPrice && <td></td>}
               {showDisc && <td style={{ textAlign: 'right', color: '#EF4444' }}>{totalDisc > 0 ? `-${fmt(totalDisc)}` : '-'}</td>}
               {showTaxAmt && <td style={{ textAlign: 'right' }}>{totalTax > 0 ? fmt(totalTax) : '-'}</td>}
-              <td style={{ textAlign: 'right', fontSize: '12px' }}>{fmt(grandTotal)}</td>
+              <td style={{ textAlign: 'right', fontSize: cp ? '10px' : '12px' }}>{fmt(grandTotal)}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      {/* 
-        ====================================================
-        D. BOTTOM SPLIT LAYOUT
-        ====================================================
+      {/* ══════ D. FOOTER — BOTTOM SPLIT LAYOUT ══════ 
+           break-inside: avoid so the browser places it on the same page if it fits,
+           or pushes it entirely to the next page if it doesn't. 
       */}
-      <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', pageBreakInside: 'avoid' }}>
+      <div className="urban-footer-block" style={{ display: 'flex', gap: footerGap, alignItems: 'flex-start' }}>
         
-        {/* Left Column: QR, Pay To, Words, Terms, Signature */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {/* Left Column */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: footerInnerGap }}>
           
           {/* Amount in words */}
           {showWords && (
             <div>
-              <div style={{ color: primaryColor, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+              <div style={{ color: primaryColor, fontSize: cp ? '8px' : '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1px' }}>
                 Invoice Amount In Words
               </div>
-              <div style={{ fontSize: '11px', fontWeight: 600, color: '#374151' }}>
+              <div style={{ fontSize: cp ? '9px' : '11px', fontWeight: 600, color: '#374151' }}>
                 Fifty Two Thousand Eight Hundred and Fifty Only
               </div>
             </div>
           )}
 
-          {/* QR and Bank Details Box */}
+          {/* QR and Bank Details */}
           {showBank && (
-            <div style={{ display: 'flex', gap: '16px', background: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-              
-              {/* QR Code */}
+            <div style={{ display: 'flex', gap: cp ? '10px' : '16px', background: '#F8FAFC', padding: cp ? '8px' : '16px', borderRadius: cp ? '4px' : '8px', border: '1px solid #E2E8F0' }}>
               {(s?.print_upi_qr ?? true) && s?.upi_id && (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ background: '#fff', padding: '6px', borderRadius: '6px', border: '1px solid #CBD5E1', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-                    <QRCodeSVG value={`upi://pay?pa=${s.upi_id}&pn=${encodeURIComponent(companyName)}&am=${grandTotal}&cu=INR`} size={64} />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: cp ? '4px' : '8px' }}>
+                  <div style={{ background: '#fff', padding: '4px', borderRadius: '4px', border: '1px solid #CBD5E1' }}>
+                    <QRCodeSVG value={`upi://pay?pa=${s.upi_id}&pn=${encodeURIComponent(companyName)}&am=${grandTotal}&cu=INR`} size={cp ? 48 : 64} />
                   </div>
                   {(s?.print_pay_now_btn ?? true) && (
                     <div style={{ 
-                      backgroundColor: '#22C55E', color: '#fff', fontSize: '9px', fontWeight: 800, 
-                      padding: '4px 12px', borderRadius: '4px', letterSpacing: '0.05em', border: '1px solid #16A34A'
+                      backgroundColor: '#22C55E', color: '#fff', fontSize: cp ? '7px' : '9px', fontWeight: 800, 
+                      padding: '3px 8px', borderRadius: '4px', letterSpacing: '0.05em', border: '1px solid #16A34A'
                     }}>
-                      <span style={{ fontStyle: 'italic', paddingRight: '4px' }}>UPI</span>PAY NOW
+                      <span style={{ fontStyle: 'italic', paddingRight: '3px' }}>UPI</span>PAY NOW
                     </div>
                   )}
                 </div>
               )}
-
-              {/* Pay To */}
               <div style={{ flex: 1 }}>
-                <div style={{ color: primaryColor, fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-                  Bank Details & Pay To
+                <div style={{ color: primaryColor, fontSize: cp ? '8.5px' : '10px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: cp ? '3px' : '6px' }}>
+                  Pay To
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '10px', color: '#4B5563' }}>
-                  <div style={{ display: 'flex' }}><span style={{ width: '80px' }}>Bank Name:</span> <strong style={{ color: '#111827' }}>{s?.print_bank_name || 'HDFC Bank Ltd.'}</strong></div>
-                  <div style={{ display: 'flex' }}><span style={{ width: '80px' }}>Account No:</span> <strong style={{ color: '#111827' }}>{s?.print_bank_account || '50200012345678'}</strong></div>
-                  <div style={{ display: 'flex' }}><span style={{ width: '80px' }}>IFSC Code:</span> <strong style={{ color: '#111827' }}>{s?.print_bank_ifsc || 'HDFC0001234'}</strong></div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: cp ? '8.5px' : '10px', color: '#4B5563' }}>
+                  <div style={{ display: 'flex' }}><span style={{ width: '70px' }}>Bank Name:</span> <strong style={{ color: '#111827' }}>{s?.print_bank_name || 'HDFC Bank Ltd.'}</strong></div>
+                  <div style={{ display: 'flex' }}><span style={{ width: '70px' }}>Account No:</span> <strong style={{ color: '#111827' }}>{s?.print_bank_account || '50200012345678'}</strong></div>
+                  <div style={{ display: 'flex' }}><span style={{ width: '70px' }}>IFSC Code:</span> <strong style={{ color: '#111827' }}>{s?.print_bank_ifsc || 'HDFC0001234'}</strong></div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Terms and Conditions */}
+          {/* Terms */}
           {showTerms && (
-            <div style={{ marginTop: '4px' }}>
-              <div style={{ color: primaryColor, fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+            <div>
+              <div style={{ color: primaryColor, fontSize: cp ? '8px' : '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
                 Terms & Conditions
               </div>
-              <div style={{ fontSize: '9px', color: '#6B7280', whiteSpace: 'pre-line', lineHeight: 1.5 }}>
+              <div style={{ fontSize: cp ? '8px' : '9px', color: '#6B7280', whiteSpace: 'pre-line', lineHeight: 1.4 }}>
                 {s?.print_terms_conditions || '1. Goods once sold will not be taken back.\n2. Subject to local jurisdiction.\n3. E.& O.E.'}
               </div>
             </div>
           )}
 
-          {/* Signature Space */}
-          <div style={{ marginTop: '32px', display: 'flex', flexDirection: 'column', width: '200px' }}>
-            <div style={{ fontSize: '9px', color: '#6B7280', marginBottom: '36px' }}>For : <span style={{ fontWeight: 700, color: '#111827' }}>{companyName}</span></div>
-            <div style={{ borderBottom: '1px solid #94A3B8', marginBottom: '6px' }}></div>
-            <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#374151', textAlign: 'center' }}>{sigText}</div>
+          {/* Signature */}
+          <div style={{ marginTop: sigMargin, display: 'flex', flexDirection: 'column', width: cp ? '160px' : '200px' }}>
+            <div style={{ fontSize: cp ? '8px' : '9px', color: '#6B7280', marginBottom: sigLineSpace }}>For : <span style={{ fontWeight: 700, color: '#111827' }}>{companyName}</span></div>
+            <div style={{ borderBottom: '1px solid #94A3B8', marginBottom: '4px' }}></div>
+            <div style={{ fontSize: cp ? '8.5px' : '9.5px', fontWeight: 700, color: '#374151', textAlign: 'center' }}>{sigText}</div>
           </div>
-
         </div>
 
         {/* Right Column: Summary Panel */}
-        <div style={{ flex: '0 0 280px' }}>
-          <div className="urban-card" style={{ overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+        <div style={{ flex: '0 0 260px' }}>
+          <div className="urban-card" style={{ overflow: 'hidden', boxShadow: cp ? 'none' : '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
             
             <div className="urban-summary-row">
               <span className="urban-summary-label">Sub Total</span>
@@ -469,7 +469,7 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
             
             {totalDisc > 0 && (
               <div className="urban-summary-row" style={{ color: '#EF4444' }}>
-                <span className="urban-summary-label" style={{ color: '#EF4444' }}>Total Discount</span>
+                <span className="urban-summary-label" style={{ color: '#EF4444' }}>Discount</span>
                 <span className="urban-summary-val">-{fmt(totalDisc)}</span>
               </div>
             )}
@@ -481,51 +481,44 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
               </div>
             )}
             
-            {/* The grand total highlighted dramatically */}
+            {/* Grand total */}
             <div style={{ 
-              display: 'flex', justifyContent: 'space-between', padding: '14px 16px', 
+              display: 'flex', justifyContent: 'space-between', 
+              padding: cp ? '6px 10px' : '14px 16px', 
               backgroundColor: primaryColor, color: primaryText,
               alignItems: 'center'
             }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Grand Total</span>
-              <span style={{ fontSize: '18px', fontWeight: 800 }}>{fmt(grandTotal)}</span>
+              <span style={{ fontSize: cp ? '10px' : '13px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total</span>
+              <span style={{ fontSize: cp ? '13px' : '18px', fontWeight: 800 }}>{fmt(grandTotal)}</span>
             </div>
 
-            {/* Received & Balance inside the box below the total */}
             {(showReceived || showBalanceMode || showYouSaved) && (
-              <div style={{ background: '#F8FAFC', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ background: '#F8FAFC', padding: cp ? '4px 8px' : '10px 12px', display: 'flex', flexDirection: 'column', gap: cp ? '3px' : '6px' }}>
                 {showReceived && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: cp ? '8.5px' : '10px' }}>
                     <span style={{ color: '#6B7280' }}>Received</span>
                     <span style={{ fontWeight: 700, color: '#10B981' }}>{fmt(amtReceived)}</span>
                   </div>
                 )}
                 {showBalanceMode && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
-                    <span style={{ color: '#6B7280' }}>Balance Due</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: cp ? '8.5px' : '10px' }}>
+                    <span style={{ color: '#6B7280' }}>Balance</span>
                     <span style={{ fontWeight: 700, color: '#EF4444' }}>{fmt(amtBalance)}</span>
                   </div>
                 )}
                 {showYouSaved && totalDisc > 0 && (
                   <div style={{ 
-                    marginTop: '8px', 
-                    background: '#DCFCE7', 
-                    color: '#166534', 
-                    padding: '6px', 
-                    borderRadius: '4px', 
-                    textAlign: 'center', 
-                    fontSize: '9.5px', 
-                    fontWeight: 700,
-                    border: '1px dashed #BBF7D0'
+                    marginTop: cp ? '2px' : '8px', background: '#DCFCE7', color: '#166534', 
+                    padding: cp ? '3px' : '6px', borderRadius: '4px', textAlign: 'center', 
+                    fontSize: cp ? '8px' : '9.5px', fontWeight: 700, border: '1px dashed #BBF7D0'
                   }}>
-                    🎉 You Saved {fmt(totalDisc)}!
+                    You Saved {fmt(totalDisc)}!
                   </div>
                 )}
               </div>
             )}
           </div>
         </div>
-
       </div>
 
     </div>

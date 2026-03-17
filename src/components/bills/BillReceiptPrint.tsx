@@ -96,6 +96,40 @@ export function printBillReceipt(bill: Bill, items: BillItem[], settings?: any) 
               padding: 0 !important;
             }
           }
+
+          /* ===== URBAN BILL STYLE — COMPACT PRINT ===== */
+          .urban-template-root table tbody tr td {
+            padding: 3px 6px !important;
+            font-size: 8.5px !important;
+            line-height: 1.2 !important;
+          }
+          .urban-template-root table thead tr th {
+            padding: 4px 6px !important;
+            font-size: 7.5px !important;
+          }
+          .urban-template-root table tbody tr:last-child td {
+            padding: 4px 6px !important;
+          }
+          .urban-template-root table thead {
+            display: table-header-group;
+          }
+          .urban-template-root table tbody tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .urban-template-root {
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+          }
+          .urban-footer-block {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          @media print {
+            .urban-template-root {
+              padding: 0 !important;
+            }
+          }
         </style>
       </head>
       <body>
