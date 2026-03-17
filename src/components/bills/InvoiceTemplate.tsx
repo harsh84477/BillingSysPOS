@@ -77,6 +77,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const showDesc = s?.print_description ?? false;
   const showAck = s?.print_acknowledgement ?? true;
   const showTerms = (s?.print_terms_conditions || '').trim().length > 0;
+  const showSignature = s?.print_show_signature ?? false;
   const sigText = s?.print_signature_text || 'Authorized Signatory';
   const showEmail = s?.print_show_email ?? true;
   const showGstin = s?.print_show_gstin ?? true;
@@ -420,13 +421,18 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       </div>
 
       {/* Signature Area */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: sigMt, paddingTop: sigPt, borderTop: isDouble ? `2px solid ${accent}` : '1px solid #e5e7eb' }}>
-         <div style={{ textAlign: 'center', width: '180px' }}>
-             <div style={{ fontSize: '8.5px', color: '#666', marginBottom: sigSpace }}>For {companyName}</div>
-             <div style={{ borderBottom: '1px solid #111', width: '100%', marginBottom: '4px' }}></div>
-             <div style={{ fontSize: '9px', fontWeight: 600 }}>{sigText}</div>
-         </div>
-      </div>
+      {showSignature && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: sigMt, paddingTop: sigPt, borderTop: isDouble ? `2px solid ${accent}` : '1px solid #e5e7eb' }}>
+           <div style={{ textAlign: 'center', width: '180px' }}>
+               <div style={{ fontSize: '8.5px', color: '#666', marginBottom: sigSpace }}>For {companyName}</div>
+               {s?.signature_url && (
+                 <img src={s.signature_url} alt="Signature" style={{ maxHeight: '40px', maxWidth: '120px', objectFit: 'contain', marginBottom: '4px' }} />
+               )}
+               <div style={{ borderBottom: '1px solid #111', width: '100%', marginBottom: '4px' }}></div>
+               <div style={{ fontSize: '9px', fontWeight: 600 }}>{sigText}</div>
+           </div>
+        </div>
+      )}
 
       {/* Acknowledgement Tear-off */}
       {showAck && (
