@@ -13,6 +13,7 @@ import {
    ═══════════════════════════════════════════════════ */
 const REGULAR_LAYOUTS = [
   { id: 'gst_theme_6', name: 'GST Theme 6', icon: '📋' },
+  { id: 'urban_bill_style', name: 'Urban Bill', icon: '🏙️' },
   { id: 'double_divine', name: 'Double Divine', icon: '✨' },
   { id: 'french_elite', name: 'French Elite', icon: '🏛️' },
   { id: 'theme_1', name: 'Theme 1', icon: '📄' },
@@ -407,24 +408,75 @@ export default function PrintSettingsTab() {
                 <LayoutPicker layouts={REGULAR_LAYOUTS} selected={settings?.print_regular_layout || 'gst_theme_6'} onSelect={(id) => u({ print_regular_layout: id })} disabled={!isAdmin} />
               )}
               {regularSubTab === 'colors' && (
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', padding: '12px 0' }}>
-                  {['#7c3aed', '#2563eb', '#ea580c', '#16a34a', '#db2777', '#475569', '#000000', '#dc2626'].map(color => {
-                    const isActive = (settings?.print_accent_color || '#7c3aed') === color;
-                    return (
-                      <button key={color} type="button" 
-                        onClick={() => u({ print_accent_color: color })}
-                        disabled={!isAdmin}
-                        style={{
-                          width: '38px', height: '38px', borderRadius: '50%',
-                          background: color, border: isActive ? '3px solid #fff' : '3px solid transparent',
-                          cursor: !isAdmin ? 'not-allowed' : 'pointer',
-                          boxShadow: isActive ? `0 0 0 2px ${color}, 0 4px 8px ${op(color, 30)}` : '0 2px 4px rgba(0,0,0,0.1)',
-                          transition: 'all 0.2s', opacity: isAdmin ? 1 : 0.5,
-                          transform: isActive ? 'scale(1.1)' : 'scale(1)',
-                        }}
-                      />
-                    );
-                  })}
+                <div style={{ padding: '12px 0' }}>
+                  {settings?.print_regular_layout === 'urban_bill_style' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      <div>
+                        <SectionLabel text="Primary Invoice Color (Top Banner, Highlights)" />
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
+                          {['#242B3E', '#18181A', '#0D3B66', '#4F46E5', '#16A34A', '#D97706', '#E11D48'].map(color => {
+                            const isActive = (settings?.print_primary_color || '#242B3E') === color;
+                            return (
+                              <button key={color} type="button" 
+                                onClick={() => u({ print_primary_color: color })}
+                                disabled={!isAdmin}
+                                style={{
+                                  width: '38px', height: '38px', borderRadius: '50%',
+                                  background: color, border: isActive ? '3px solid #fff' : '3px solid transparent',
+                                  cursor: !isAdmin ? 'not-allowed' : 'pointer',
+                                  boxShadow: isActive ? `0 0 0 2px ${color}, 0 4px 8px ${op(color, 30)}` : '0 2px 4px rgba(0,0,0,0.1)',
+                                  transition: 'all 0.2s', opacity: isAdmin ? 1 : 0.5,
+                                  transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div>
+                        <SectionLabel text="Secondary Accent Color (Buttons, Accents)" />
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
+                          {['#E96020', '#38BDF8', '#FACC15', '#A78BFA', '#F43F5E', '#10B981'].map(color => {
+                            const isActive = (settings?.print_secondary_color || '#E96020') === color;
+                            return (
+                              <button key={color} type="button" 
+                                onClick={() => u({ print_secondary_color: color })}
+                                disabled={!isAdmin}
+                                style={{
+                                  width: '38px', height: '38px', borderRadius: '50%',
+                                  background: color, border: isActive ? '3px solid #fff' : '3px solid transparent',
+                                  cursor: !isAdmin ? 'not-allowed' : 'pointer',
+                                  boxShadow: isActive ? `0 0 0 2px ${color}, 0 4px 8px ${op(color, 30)}` : '0 2px 4px rgba(0,0,0,0.1)',
+                                  transition: 'all 0.2s', opacity: isAdmin ? 1 : 0.5,
+                                  transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      {['#7c3aed', '#2563eb', '#ea580c', '#16a34a', '#db2777', '#475569', '#000000', '#dc2626'].map(color => {
+                        const isActive = (settings?.print_accent_color || '#7c3aed') === color;
+                        return (
+                          <button key={color} type="button" 
+                            onClick={() => u({ print_accent_color: color })}
+                            disabled={!isAdmin}
+                            style={{
+                              width: '38px', height: '38px', borderRadius: '50%',
+                              background: color, border: isActive ? '3px solid #fff' : '3px solid transparent',
+                              cursor: !isAdmin ? 'not-allowed' : 'pointer',
+                              boxShadow: isActive ? `0 0 0 2px ${color}, 0 4px 8px ${op(color, 30)}` : '0 2px 4px rgba(0,0,0,0.1)',
+                              transition: 'all 0.2s', opacity: isAdmin ? 1 : 0.5,
+                              transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </SettingsCard>

@@ -144,6 +144,8 @@ export interface BusinessSettings {
   print_thermal_show_gstin?: boolean;
   // Print Settings V2 — Color, Copy, Item Table, Bank Details
   print_accent_color?: string;
+  print_primary_color?: string;
+  print_secondary_color?: string;
   print_original_duplicate?: boolean;
   print_copy_original?: boolean;
   print_copy_duplicate?: boolean;

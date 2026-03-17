@@ -1,6 +1,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { QRCodeSVG } from 'qrcode.react';
+import { UrbanBillTemplate } from './UrbanBillTemplate';
 
 export interface InvoiceTemplateProps {
   bill?: any;
@@ -10,6 +11,11 @@ export interface InvoiceTemplateProps {
 }
 
 export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }: InvoiceTemplateProps) {
+
+  // Check if Urban Bill Style is selected
+  if (s?.print_regular_layout === 'urban_bill_style') {
+    return <UrbanBillTemplate bill={bill} items={items} settings={s} isPreview={isPreview} />;
+  }
 
   // --- Data Resolvers ---
   // If isPreview is true, we use dummy data. Otherwise we use the real bill object.
