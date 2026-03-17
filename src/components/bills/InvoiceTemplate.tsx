@@ -297,8 +297,8 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       {/* Footer section — no forced page breaks, browser fills remaining space naturally */}
       <div className="invoice-footer-block">
 
-      {/* Two Column Layout for the bottom area — this section avoids breaking internally */}
-      <div style={{ display: 'flex', gap: footerGap, flexDirection: isFrench ? 'row-reverse' : 'row', breakInside: 'avoid' as any, pageBreakInside: 'avoid' as any }}>
+      {/* Two Column Layout for the bottom area */}
+      <div style={{ display: 'flex', gap: footerGap, flexDirection: isFrench ? 'row-reverse' : 'row' }}>
           
           {/* Right/Left Side: Totals & Summaries */}
           <div style={{ flex: '0 0 240px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -399,8 +399,8 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
           </div>
       </div>
 
-      {/* Description & Terms — avoid breaking internally */}
-      <div style={{ marginTop: footerMt, display: 'flex', flexDirection: 'column', gap: cp ? '4px' : '8px', breakInside: 'avoid' as any, pageBreakInside: 'avoid' as any }}>
+      {/* Description & Terms */}
+      <div style={{ marginTop: footerMt, display: 'flex', flexDirection: 'column', gap: cp ? '4px' : '8px' }}>
         {showDesc && (
             <div style={{ fontSize: '9px' }}>
                 <span style={{ fontWeight: 700, color: isFrench ? accent : '#555' }}>Description:</span> <span style={{ color: '#333' }}>Standard sale description for professional recording.</span>
@@ -413,8 +413,8 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
         )}
       </div>
 
-      {/* Signature Area — avoid breaking internally */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: sigMt, paddingTop: sigPt, borderTop: isDouble ? `2px solid ${accent}` : '1px solid #e5e7eb', breakInside: 'avoid' as any, pageBreakInside: 'avoid' as any }}>
+      {/* Signature Area */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: sigMt, paddingTop: sigPt, borderTop: isDouble ? `2px solid ${accent}` : '1px solid #e5e7eb' }}>
          <div style={{ textAlign: 'center', width: '180px' }}>
              <div style={{ fontSize: '8.5px', color: '#666', marginBottom: sigSpace }}>For {companyName}</div>
              <div style={{ borderBottom: '1px solid #111', width: '100%', marginBottom: '4px' }}></div>
@@ -427,8 +427,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
           <div style={{ 
               marginTop: ackMt, 
               borderTop: '1px dashed #94a3b8', 
-              paddingTop: ackPt,
-              pageBreakInside: 'avoid'
+              paddingTop: ackPt
           }}>
               <div style={{ textAlign: 'center', marginBottom: cp ? '6px' : '16px' }}>
                   <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Acknowledgement / Return Slip</div>
