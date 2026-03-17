@@ -86,6 +86,12 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
   const sigText = s?.print_signature_text || 'Authorized Signatory';
   const showEmail = s?.print_show_email ?? true;
   const showGstin = s?.print_show_gstin ?? true;
+  const showDesc = s?.print_description ?? false;
+  const showReceivedBy = s?.print_received_by ?? true;
+  const showDeliveredBy = s?.print_delivered_by ?? false;
+  const showSignature = s?.print_show_signature ?? true;
+  const showPaymentMode = s?.print_payment_mode ?? false;
+  const showAck = s?.print_acknowledgement ?? true;
   
   const showCurrency = s?.print_show_currency ?? true;
   const currSym = showCurrency ? '₹ ' : '';
@@ -450,12 +456,17 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
             </div>
           )}
 
-          {/* Signature */}
-          <div style={{ marginTop: sigMargin, display: 'flex', flexDirection: 'column', width: cp ? '160px' : '200px' }}>
-            <div style={{ fontSize: cp ? '8px' : '9px', color: '#6B7280', marginBottom: sigLineSpace }}>For : <span style={{ fontWeight: 700, color: '#111827' }}>{companyName}</span></div>
-            <div style={{ borderBottom: '1px solid #94A3B8', marginBottom: '4px' }}></div>
-            <div style={{ fontSize: cp ? '8.5px' : '9.5px', fontWeight: 700, color: '#374151', textAlign: 'center' }}>{sigText}</div>
-          </div>
+          {/* Signature — conditionally shown */}
+          {showSignature && (
+            <div style={{ marginTop: sigMargin, display: 'flex', flexDirection: 'column', width: cp ? '160px' : '200px' }}>
+              <div style={{ fontSize: cp ? '8px' : '9px', color: '#6B7280', marginBottom: sigLineSpace }}>For : <span style={{ fontWeight: 700, color: '#111827' }}>{companyName}</span></div>
+              {s?.signature_url && (
+                <img src={s.signature_url} alt="Signature" style={{ maxHeight: cp ? '28px' : '40px', maxWidth: '120px', objectFit: 'contain', marginBottom: '4px' }} />
+              )}
+              <div style={{ borderBottom: '1px solid #94A3B8', marginBottom: '4px' }}></div>
+              <div style={{ fontSize: cp ? '8.5px' : '9.5px', fontWeight: 700, color: '#374151', textAlign: 'center' }}>{sigText}</div>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Summary Panel */}
@@ -519,7 +530,71 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
             )}
           </div>
         </div>
+      </div>{/* end urban-footer-block split layout */}
+
+      {/* ══════ E. EXTRA FOOTER SECTIONS ══════ */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: cp ? '4px' : '8px', marginTop: cp ? '4px' : '12px' }}>
+
+        {/* Description */}
+        {showDesc && (
+          <div style={{ fontSize: cp ? '8px' : '9px' }}>
+            <span style={{ fontWeight: 700, color: secondaryColor }}>Description:</span>{' '}
+            <span style={{ color: '#4B5563' }}>Standard sale description for professional recording.</span>
+          </div>
+        )}
+
+        {/* Payment Mode */}
+        {showPaymentMode && (
+          <div style={{ fontSize: cp ? '8px' : '9px' }}>
+            <span style={{ fontWeight: 700, color: secondaryColor }}>Payment Mode:</span>{' '}
+            <span style={{ color: '#374151', fontWeight: 600 }}>{isMock ? 'Cash / Online' : (bill?.payment_method || 'Cash')}</span>
+          </div>
+        )}
+
+        {/* Received By / Delivered By — side-by-side */}
+        {(showReceivedBy || showDeliveredBy) && (
+          <div style={{ display: 'flex', gap: cp ? '16px' : '32px', marginTop: cp ? '2px' : '6px' }}>
+            {showReceivedBy && (
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: cp ? '8px' : '9px', color: '#6B7280', marginBottom: cp ? '12px' : '24px' }}>Received By:</div>
+                <div style={{ borderBottom: '1px solid #94A3B8', width: cp ? '120px' : '160px' }}></div>
+              </div>
+            )}
+            {showDeliveredBy && (
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: cp ? '8px' : '9px', color: '#6B7280', marginBottom: cp ? '12px' : '24px' }}>Delivered By:</div>
+                <div style={{ borderBottom: '1px solid #94A3B8', width: cp ? '120px' : '160px' }}></div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* ══════ F. ACKNOWLEDGEMENT / RETURN SLIP ══════ */}
+      {showAck && (
+        <div style={{ 
+          marginTop: cp ? '10px' : '24px', 
+          borderTop: '1px dashed #94A3B8', 
+          paddingTop: cp ? '6px' : '14px'
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: cp ? '4px' : '12px' }}>
+            <div style={{ fontSize: cp ? '8px' : '9px', fontWeight: 700, color: '#64748B', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              Acknowledgement / Return Slip
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: cp ? '8.5px' : '9.5px' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, color: '#111827', marginBottom: cp ? '3px' : '6px' }}>Received From: {companyName}</div>
+              <div style={{ color: '#4B5563' }}>To: {custName}</div>
+              <div style={{ color: '#4B5563', marginTop: '2px' }}>Amount: <span style={{ fontWeight: 700, color: '#111827' }}>{fmt(grandTotal)}</span></div>
+            </div>
+            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+              <div style={{ width: cp ? '100px' : '140px', borderBottom: '1px solid #94A3B8', marginBottom: '4px' }}></div>
+              <div style={{ fontSize: cp ? '7px' : '8px', color: '#6B7280' }}>Receiver Signature & Seal</div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
