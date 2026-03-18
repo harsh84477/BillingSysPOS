@@ -367,7 +367,9 @@ export default function PrintSettingsTab() {
   return (
     <div style={{
       display: 'grid', gridTemplateColumns: '1fr 450px',
-      gap: '24px', alignItems: 'start', width: '100%'
+      gap: '24px', alignItems: 'start', width: '100%',
+      /* overflow must NOT be hidden/auto here — sticky needs visible overflow on the grid */
+      overflow: 'visible',
     }} className="print-settings-grid">
       
       {/* ═══ LEFT: Controls ═══ */}
@@ -790,8 +792,8 @@ export default function PrintSettingsTab() {
           </>)}
         </div>
 
-        {/* ═══ RIGHT: Live Preview (Sticky with clean bounds) ═══ */}
-        <div style={{ position: 'sticky', top: '24px', height: 'calc(100vh - 48px)' }}>
+        {/* ═══ RIGHT: Live Preview (Sticky — follows scroll) ═══ */}
+        <div style={{ position: 'sticky', top: '20px', height: 'calc(100vh - 40px)', alignSelf: 'flex-start' }}>
           <div style={{
             background: T.color.cardBg, borderRadius: '14px',
             border: `1px solid ${T.color.border}`, boxShadow: T.shadow.card,
@@ -823,11 +825,17 @@ export default function PrintSettingsTab() {
           </div>
         </div>
 
-      {/* Responsive: hide preview on mobile, stack on tablet */}
+      {/* Responsive: stack on tablet, static (not sticky) on mobile */}
       <style>{`
         @media (max-width: 1024px) {
           .print-settings-grid {
             grid-template-columns: 1fr !important;
+            overflow: visible !important;
+          }
+          /* On small screens the preview column should not be sticky so it renders naturally below */
+          .print-settings-grid > div:last-child {
+            position: static !important;
+            height: auto !important;
           }
         }
       `}</style>
