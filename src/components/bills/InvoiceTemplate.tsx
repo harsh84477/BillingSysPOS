@@ -1,7 +1,5 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { QRCodeSVG } from 'qrcode.react';
-import { UrbanBillTemplate } from './UrbanBillTemplate';
 
 export interface InvoiceTemplateProps {
   bill?: any;
@@ -11,12 +9,6 @@ export interface InvoiceTemplateProps {
 }
 
 export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }: InvoiceTemplateProps) {
-
-  // Check if Urban Bill Style is selected
-  if (s?.print_regular_layout === 'urban_bill_style') {
-    return <UrbanBillTemplate bill={bill} items={items} settings={s} isPreview={isPreview} />;
-  }
-
   // --- Data Resolvers ---
   // If isPreview is true, we use dummy data. Otherwise we use the real bill object.
   const isMock = isPreview || !bill;
@@ -30,25 +22,17 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const custAddr = isMock ? 'Plot No. 1, Shop No. 8, Koramangala, Banglore, 560034' : (bill?.customers?.address || '');
   const custPhone = isMock ? '8888888888' : (bill?.customers?.phone || '');
 
-  const dataItems = isMock ? Array.from({ length: 12 }, (_, i) => ({
-    name: `ITEM ${i + 1} - Sample Product Description`, 
-    hsn: '1234', 
-    qty: 2, 
-    mrp: 15.00 + (i * 2.50),
-    price: 10.00 + (i * 2.50), 
-    discount: 0.10, 
-    gstAmt: 0.50, 
-    gstPct: 5, 
-    total: 20.00 + (i * 5.00)
-  })) : (items || []).map((i: any) => ({
+  const dataItems = isMock ? [
+    { name: 'ITEM 1', hsn: '1234', qty: 2, price: 10.00, discount: 0.10, gstAmt: 0.50, gstPct: 5, total: 10.40 },
+    { name: 'ITEM 2', hsn: '6325', qty: 1, price: 30.00, discount: 0.00, gstAmt: 5.40, gstPct: 18, total: 35.40 }
+  ] : (items || []).map((i: any) => ({
     name: i.product_name,
     hsn: i.hsn_code || '-',
     qty: Number(i.quantity) || 0,
-    mrp: Number(i.mrp_price) || Number(i.unit_price) || 0,
     price: Number(i.unit_price) || 0,
     discount: Number(i.discount_amount) || 0,
-    gstAmt: Number(i.tax_amount) || 0, // Used as absolute Tax Amt
-    gstPct: 0, // Placeholder if item-level tax % not tracked directly in items array
+    gstAmt: 0, // Real printing logic will need to calculate GST per item if tracked
+    gstPct: 0,
     total: Number(i.total_price) || 0
   }));
 
@@ -77,46 +61,32 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const showDesc = s?.print_description ?? false;
   const showAck = s?.print_acknowledgement ?? true;
   const showTerms = (s?.print_terms_conditions || '').trim().length > 0;
-  const showSignature = s?.print_show_signature ?? false;
   const sigText = s?.print_signature_text || 'Authorized Signatory';
-  const showEmail = s?.print_show_email ?? true;
-  const showGstin = s?.print_show_gstin ?? true;
   
-  const nameSize = s?.print_company_name_size === 'v.small' ? '12px' : s?.print_company_name_size === 'small' ? '14px' : s?.print_company_name_size === 'medium' ? '17px' : s?.print_company_name_size === 'v.large' ? '24px' : s?.print_company_name_size === 'e.large' ? '28px' : '20px';
-  const textSize = s?.print_invoice_text_size === 'v.small' ? '8px' : s?.print_invoice_text_size === 'small' ? '9px' : s?.print_invoice_text_size === 'large' ? '12px' : s?.print_invoice_text_size === 'v.large' ? '14px' : s?.print_invoice_text_size === 'e.large' ? '16px' : '10.5px';
+  const nameSize = s?.print_company_name_size === 'v.small' ? '12px' : s?.print_company_name_size === 'small' ? '14px' : s?.print_company_name_size === 'medium' ? '17px' : '20px';
+  const textSize = s?.print_invoice_text_size === 'small' ? '9px' : s?.print_invoice_text_size === 'large' ? '12px' : '10.5px';
   const showDecimal = s?.print_amount_decimal ?? true;
-  const showCurrency = s?.print_show_currency ?? true;
-  const currSym = showCurrency ? '₹ ' : '';
-  const fmt = (n: number) => showDecimal ? `${currSym}${Number(n).toFixed(2)}` : `${currSym}${Math.round(n)}`;
+  const fmt = (n: number) => showDecimal ? `₹ ${Number(n).toFixed(2)}` : `₹ ${Math.round(n)}`;
   
   const accent = s?.print_accent_color || 'hsl(var(--primary))';
   const showCopyInfo = s?.print_original_duplicate ?? true;
-  
-  // Accept copyLabel as prop if provided by the multi-page wrapper, otherwise fallback to the default logic
-  const copyLabelOverride = (s as any)?._forceCopyLabel;
-  const copyLabel = showCopyInfo ? (copyLabelOverride || (s?.print_copy_original ? 'ORIGINAL FOR RECIPIENT' : 'DUPLICATE')) : '';
+  const copyLabel = showCopyInfo ? (s?.print_copy_original ? 'ORIGINAL FOR RECIPIENT' : 'DUPLICATE') : '';
   
   const showHash = s?.print_show_item_number ?? true;
   const showHsn = s?.print_show_hsn_sac ?? true;
   const showQty = s?.print_show_quantity ?? true;
-  const showMrp = s?.print_show_mrp ?? false; // new
   const showPrice = s?.print_show_price_unit ?? true;
   const showDisc = s?.print_show_discount ?? true;
-  const showTaxPct = s?.print_show_tax_pct ?? false; // new
-  const showTaxAmt = s?.print_show_gst ?? true; // Reusing print_show_gst logically for Tax Amt
+  const showGstCol = s?.print_show_gst ?? true;
 
   const showBank = s?.print_bank_details ?? true;
   const marginTopPx = (s?.print_extra_space_top || 0) * 3.77; // 1mm ≈ 3.77px
-  const theme = s?.print_regular_layout || 'gst_theme_6';
-  const paperSize = s?.print_paper_size || 'A4';
-
-  // --- Print pagination logic ---
-  const itemCount = dataItems.length;
+  const theme = s?.print_regular_layout || 'theme-1';
 
   // Helper styles based on theme
-  const isFrench = theme === 'french_elite';
-  const isDouble = theme === 'double_divine';
-  const isGst6 = theme === 'gst_theme_6';
+  const isFrench = theme === 'french-elite';
+  const isDouble = theme === 'double-divine';
+  const isGst6 = theme === 'gst-6';
   
   const fontFam = isFrench ? "'Playfair Display', 'Merriweather', serif" : "'Inter', 'Segoe UI', sans-serif";
   const headerBg = isDouble ? accent : isGst6 ? '#f3f4f6' : isFrench ? 'transparent' : `${accent}1A`; // 1A is ~10% opacity in hex
@@ -149,39 +119,23 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
     borderRight: isGst6 ? '1px solid #e5e7eb' : 'none',
   };
 
-  // cp = compact mode for ALL print outputs (not preview)
-  // singlePage only controls whether page breaks are prevented
-  const cp = !isPreview;
-  const headerMb = cp ? '6px' : '16px';
-  const billToMb = cp ? '6px' : '20px';
-  const tableMb = cp ? '4px' : '16px';
-  const footerGap = cp ? '8px' : '24px';
-  const footerMt = cp ? '4px' : '16px';
-  const sigMt = cp ? '6px' : '30px';
-  const sigPt = cp ? '4px' : '16px';
-  const sigSpace = cp ? '12px' : '32px';
-  const ackMt = cp ? '12px' : '40px';
-  const ackPt = cp ? '8px' : '20px';
-  const headerPb = cp ? '6px' : '14px';
-
   return (
     <div className="invoice-template-root" style={{ 
       background: '#fff', 
       color: '#1a1a1a', 
       fontFamily: fontFam, 
       fontSize: textSize, 
-      lineHeight: cp ? 1.3 : 1.5, 
+      lineHeight: 1.5, 
       padding: containerPad, 
       paddingTop: isPreview ? `${28 + marginTopPx}px` : `${marginTopPx}px`, 
       position: 'relative',
-      boxSizing: 'border-box',
-      width: '100%',
-      minHeight: '100%'
+      minHeight: isPreview ? '600px' : 'auto',
+      boxSizing: 'border-box'
     }}>
       
       {/* Document Title Header Block */}
       {docTitle && (
-        <div style={{ textAlign: isFrench ? 'center' : 'center', marginBottom: headerMb, borderBottom: isDouble ? `3px double ${accent}` : 'none', paddingBottom: isDouble ? '8px' : '0' }}>
+        <div style={{ textAlign: isFrench ? 'center' : 'center', marginBottom: '16px', borderBottom: isDouble ? `3px double ${accent}` : 'none', paddingBottom: isDouble ? '8px' : '0' }}>
             <span style={{ 
                 fontSize: isFrench ? '16px' : '14px', 
                 fontWeight: 800, 
@@ -211,27 +165,25 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
             flexDirection: isFrench ? 'column' : 'row',
             textAlign: isFrench ? 'center' : (isDouble ? 'left' : 'right'), 
             borderBottom: isFrench ? '1px solid #e5e7eb' : isGst6 ? '2px solid #111' : '1px solid #e5e7eb', 
-            paddingBottom: headerPb, 
-            marginBottom: headerMb,
+            paddingBottom: '14px', 
+            marginBottom: '16px',
             gap: isDouble ? '24px' : '0'
         }}>
           {isDouble && (
-             <div style={{ width: cp ? '40px' : '60px', height: cp ? '40px' : '60px', background: `${accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', color: accent, fontSize: cp ? '16px' : '24px', fontWeight: 900 }}>
+             <div style={{ width: '60px', height: '60px', background: `${accent}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', color: accent, fontSize: '24px', fontWeight: 900 }}>
                  {companyName.charAt(0)}
              </div>
           )}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: isFrench ? 'center' : (isDouble ? 'flex-start' : 'flex-end') }}>
             <div style={{ fontSize: nameSize, fontWeight: 800, color: '#111', letterSpacing: isFrench ? '0.05em' : 'normal' }}>{companyName}</div>
             {showPhone && <div style={{ fontSize: '10px', color: '#666' }}>Ph.no: {phone}</div>}
-            {showEmail && email && <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>Email: {email}</div>}
-            {showGstin && s?.gst_number && <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>GSTIN: {s.gst_number}</div>}
-            {showAddr && address && <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>{address}</div>}
+            {(isFrench || isDouble) && showAddr && <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>{address}</div>}
           </div>
         </div>
       )}
 
       {/* Bill To / Shipping / Invoice Details */}
-      <div style={{ display: 'grid', gridTemplateColumns: isDouble ? '1.5fr 1fr' : '1fr 1fr 1fr', gap: cp ? '6px' : '12px', marginBottom: billToMb, fontSize: '9.5px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isDouble ? '1.5fr 1fr' : '1fr 1fr 1fr', gap: '12px', marginBottom: '20px', fontSize: '9.5px' }}>
         <div style={{ background: isGst6 ? '#f9fafb' : 'transparent', padding: isGst6 ? '12px' : '0', border: isGst6 ? '1px solid #e5e7eb' : 'none', borderRadius: '6px' }}>
           <div style={{ fontWeight: 700, fontSize: '10px', marginBottom: '4px', color: isFrench ? accent : '#374151', textTransform: isFrench ? 'uppercase' : 'none' }}>Bill To:</div>
           <div style={{ fontWeight: 600, fontSize: '11px', color: '#111' }}>{custName}</div>
@@ -256,18 +208,16 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       </div>
 
       {/* Items Table */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: tableMb, fontSize: textSize, border: isGst6 ? '1px solid #111' : 'none' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px', fontSize: textSize, border: isGst6 ? '1px solid #111' : 'none' }}>
         <thead>
           <tr style={tableHeaderStyle}>
             {showHash && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'left', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>#</th>}
             <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'left', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>Item name</th>
             {showHsn && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'center', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>HSC/SAC</th>}
             {showQty && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'center', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>Qty</th>}
-            {showMrp && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>MRP</th>}
             {showPrice && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>Price/unit</th>}
             {showDisc && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>Disc</th>}
-            {showTaxPct && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>Tax %</th>}
-            {showTaxAmt && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>Tax Amt</th>}
+            {showGstCol && <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right', borderRight: isGst6 ? '1px solid #e5e7eb' : 'none' }}>GST</th>}
             <th style={{ padding: isGst6 ? '6px' : '8px 10px', textAlign: 'right' }}>Amt</th>
           </tr>
         </thead>
@@ -278,11 +228,9 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
                  <td style={{ ...tdStyle, fontWeight: 600, color: '#111' }}>{item.name}</td>
                  {showHsn && <td style={{ ...tdStyle, textAlign: 'center' }}>{item.hsn}</td>}
                  {showQty && <td style={{ ...tdStyle, textAlign: 'center' }}>{item.qty}</td>}
-                 {showMrp && <td style={{ ...tdStyle, textAlign: 'right' }}>{fmt(item.mrp)}</td>}
                  {showPrice && <td style={{ ...tdStyle, textAlign: 'right' }}>{fmt(item.price)}</td>}
                  {showDisc && <td style={{ ...tdStyle, textAlign: 'right' }}>{fmt(item.discount)}</td>}
-                 {showTaxPct && <td style={{ ...tdStyle, textAlign: 'right' }}>{item.gstPct > 0 ? `${item.gstPct}%` : '-'}</td>}
-                 {showTaxAmt && <td style={{ ...tdStyle, textAlign: 'right' }}>{item.gstAmt > 0 ? fmt(item.gstAmt) : '-'}</td>}
+                 {showGstCol && <td style={{ ...tdStyle, textAlign: 'right' }}>{item.gstAmt > 0 ? `${fmt(item.gstAmt)} (${item.gstPct}%)` : '-'}</td>}
                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600 }}>{fmt(item.total)}</td>
              </tr>
           ))}
@@ -291,21 +239,16 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
           <tr style={{ fontWeight: 700, borderTop: isGst6 ? '2px solid #111' : '2px solid #d1d5db', background: isFrench ? '#f8fafc' : 'transparent' }}>
             <td colSpan={1 + (showHash ? 1 : 0) + (showHsn ? 1 : 0)} style={{ padding: '8px 10px', textTransform: 'uppercase', color: isFrench ? accent : '#111' }}>Total</td>
             {showQty && <td style={{ padding: '8px 10px', textAlign: 'center' }}>{dataItems.reduce((acc: number, item: any) => acc + item.qty, 0)}</td>}
-            {showMrp && <td style={{ padding: '8px 10px', textAlign: 'right' }}></td>}
             <td colSpan={(showPrice ? 1 : 0)} style={{ padding: '8px 10px', textAlign: 'right' }}></td>
             {showDisc && <td style={{ padding: '8px 10px', textAlign: 'right' }}>{fmt(totalDisc)}</td>}
-            {showTaxPct && <td style={{ padding: '8px 10px', textAlign: 'right' }}></td>}
-            {showTaxAmt && <td style={{ padding: '8px 10px', textAlign: 'right' }}>{fmt(totalTax)}</td>}
+            {showGstCol && <td style={{ padding: '8px 10px', textAlign: 'right' }}>{fmt(totalTax)}</td>}
             <td style={{ padding: '8px 10px', textAlign: 'right', fontSize: '11px', color: isFrench ? accent : '#111' }}>{fmt(grandTotal)}</td>
           </tr>
         </tbody>
       </table>
 
-      {/* Footer section — no forced page breaks, browser fills remaining space naturally */}
-      <div className="invoice-footer-block">
-
       {/* Two Column Layout for the bottom area */}
-      <div style={{ display: 'flex', gap: footerGap, flexDirection: isFrench ? 'row-reverse' : 'row' }}>
+      <div style={{ display: 'flex', gap: '24px', flexDirection: isFrench ? 'row-reverse' : 'row' }}>
           
           {/* Right/Left Side: Totals & Summaries */}
           <div style={{ flex: '0 0 240px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -383,10 +326,14 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
 
               {showBank && (
                   <div style={{ border: isFrench ? '1px dashed #ccc' : `1px solid ${accent}4D`, background: isFrench ? 'transparent' : `${accent}0A`, padding: '10px', borderRadius: '6px', display: 'flex', gap: '16px' }}>
-                      {(s?.print_upi_qr ?? true) && s?.upi_id && (
+                      {(s?.print_upi_qr ?? true) && (
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                             <div style={{ width: '56px', height: '56px', background: '#fff', padding: '4px', borderRadius: '4px', border: '1px solid #ddd', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                 <QRCodeSVG value={`upi://pay?pa=${s.upi_id}&pn=${encodeURIComponent(companyName)}&am=${grandTotal}&cu=INR`} size={46} />
+                             <div style={{ width: '56px', height: '56px', background: '#fff', padding: '4px', borderRadius: '4px', border: '1px solid #ddd' }}>
+                                 <svg viewBox="0 0 10 10" style={{ width: '100%', height: '100%' }}>
+                                    <rect x="1" y="1" width="3" height="3" fill="#000"/><rect x="6" y="1" width="3" height="3" fill="#000"/>
+                                    <rect x="1" y="6" width="3" height="3" fill="#000"/><rect x="6" y="6" width="1" height="1" fill="#000"/>
+                                    <rect x="5" y="4" width="2" height="1" fill="#000"/><rect x="8" y="5" width="1" height="3" fill="#000"/>
+                                 </svg>
                              </div>
                              {(s?.print_pay_now_btn ?? true) && (
                                  <div style={{ fontSize: '7px', fontWeight: 800, background: '#16a34a', color: '#fff', padding: '2px 8px', borderRadius: '12px', whiteSpace: 'nowrap' }}>PAY NOW</div>
@@ -407,7 +354,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       </div>
 
       {/* Description & Terms */}
-      <div style={{ marginTop: footerMt, display: 'flex', flexDirection: 'column', gap: cp ? '4px' : '8px' }}>
+      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {showDesc && (
             <div style={{ fontSize: '9px' }}>
                 <span style={{ fontWeight: 700, color: isFrench ? accent : '#555' }}>Description:</span> <span style={{ color: '#333' }}>Standard sale description for professional recording.</span>
@@ -421,27 +368,23 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
       </div>
 
       {/* Signature Area */}
-      {showSignature && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: sigMt, paddingTop: sigPt, borderTop: isDouble ? `2px solid ${accent}` : '1px solid #e5e7eb' }}>
-           <div style={{ textAlign: 'center', width: '180px' }}>
-               <div style={{ fontSize: '8.5px', color: '#666', marginBottom: sigSpace }}>For {companyName}</div>
-               {s?.signature_url && (
-                 <img src={s.signature_url} alt="Signature" style={{ maxHeight: '40px', maxWidth: '120px', objectFit: 'contain', marginBottom: '4px' }} />
-               )}
-               <div style={{ borderBottom: '1px solid #111', width: '100%', marginBottom: '4px' }}></div>
-               <div style={{ fontSize: '9px', fontWeight: 600 }}>{sigText}</div>
-           </div>
-        </div>
-      )}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '30px', paddingTop: '16px', borderTop: isDouble ? `2px solid ${accent}` : '1px solid #e5e7eb' }}>
+         <div style={{ textAlign: 'center', width: '180px' }}>
+             <div style={{ fontSize: '8.5px', color: '#666', marginBottom: '32px' }}>For {companyName}</div>
+             <div style={{ borderBottom: '1px solid #111', width: '100%', marginBottom: '4px' }}></div>
+             <div style={{ fontSize: '9px', fontWeight: 600 }}>{sigText}</div>
+         </div>
+      </div>
 
       {/* Acknowledgement Tear-off */}
       {showAck && (
           <div style={{ 
-              marginTop: ackMt, 
+              marginTop: '40px', 
               borderTop: '1px dashed #94a3b8', 
-              paddingTop: ackPt
+              paddingTop: '20px',
+              pageBreakInside: 'avoid'
           }}>
-              <div style={{ textAlign: 'center', marginBottom: cp ? '6px' : '16px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
                   <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Acknowledgement / Return Slip</div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px' }}>
@@ -457,8 +400,6 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
               </div>
           </div>
       )}
-
-      </div>{/* end .invoice-footer-block */}
 
     </div>
   );

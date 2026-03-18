@@ -2,7 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessSettings, useUpdateBusinessSettings } from '@/hooks/useBusinessSettings';
 import { InvoiceTemplate } from '../bills/InvoiceTemplate';
-import { ThermalTemplate } from '../bills/ThermalTemplate';
 import {
   SettingsCard, Toggle, Counter, SettingRow, SectionLabel, TextInput, TextArea,
   FieldLabel, ButtonGroup, SelectInput, SaveBtn, InfoBox, ColStack, TwoColGrid,
@@ -14,7 +13,6 @@ import {
    ═══════════════════════════════════════════════════ */
 const REGULAR_LAYOUTS = [
   { id: 'gst_theme_6', name: 'GST Theme 6', icon: '📋' },
-  { id: 'urban_bill_style', name: 'Urban Bill', icon: '🏙️' },
   { id: 'double_divine', name: 'Double Divine', icon: '✨' },
   { id: 'french_elite', name: 'French Elite', icon: '🏛️' },
   { id: 'theme_1', name: 'Theme 1', icon: '📄' },
@@ -24,7 +22,6 @@ const THERMAL_LAYOUTS = [
   { id: 'theme_2', name: 'Theme 2', icon: '📜' },
   { id: 'theme_3', name: 'Theme 3', icon: '📑' },
   { id: 'theme_4', name: 'Theme 4', icon: '📃' },
-  { id: 'theme_5', name: 'Theme 5', icon: '🧾' },
 ];
 
 /* ═══════════════════════════════════════════════════
@@ -33,8 +30,8 @@ const THERMAL_LAYOUTS = [
 function PrinterTabBar({ active, onSelect }: { active: 'regular' | 'thermal'; onSelect: (v: 'regular' | 'thermal') => void }) {
   return (
     <div style={{
-      display: 'inline-flex', gap: '0', background: T.color.cardBg,
-      borderRadius: '8px', overflow: 'hidden',
+      display: 'flex', gap: '0', background: T.color.cardBg,
+      borderRadius: '12px', overflow: 'hidden',
       border: `1.5px solid ${T.color.border}`, boxShadow: T.shadow.card,
     }}>
       {([
@@ -44,9 +41,9 @@ function PrinterTabBar({ active, onSelect }: { active: 'regular' | 'thermal'; on
         const isActive = tab.id === active;
         return (
           <button key={tab.id} type="button" onClick={() => onSelect(tab.id)} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: '8px', padding: '10px 18px',
-            fontSize: '11.5px', fontWeight: isActive ? 700 : 500,
+            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: '8px', padding: '14px 20px',
+            fontSize: '12.5px', fontWeight: isActive ? 700 : 500,
             letterSpacing: '0.04em', textTransform: 'uppercase' as const,
             color: isActive ? '#fff' : T.color.textSec,
             background: isActive
@@ -58,7 +55,7 @@ function PrinterTabBar({ active, onSelect }: { active: 'regular' | 'thermal'; on
             borderBottom: isActive ? '3px solid hsl(var(--primary))' : '3px solid transparent',
             boxShadow: isActive ? `0 2px 12px ${op('hsl(var(--primary))', 25)}` : 'none',
           }}>
-            <span style={{ fontSize: '15px' }}>{tab.icon}</span>
+            <span style={{ fontSize: '16px' }}>{tab.icon}</span>
             {tab.label}
           </button>
         );
@@ -198,90 +195,92 @@ function PageSizeSelector({ value, onChange, disabled }: {
   );
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   LIVE INVOICE PREVIEW — Regular
+   ═══════════════════════════════════════════════════════════════ */
 function RegularPreview({ s }: { s: any }) {
-  // Determine how many pages to render based on copy settings
-  const copies = s?.print_original_duplicate ? [
-    s?.print_copy_original ?? true ? 'ORIGINAL FOR RECIPIENT' : null,
-    s?.print_copy_duplicate ?? true ? 'DUPLICATE FOR TRANSPORTER' : null,
-    s?.print_copy_triplicate ?? true ? 'TRIPLICATE FOR SUPPLIER' : null
-  ].filter(Boolean) : [null];
-  
-  const finalCopies = copies.length > 0 ? copies : [null];
-
-  const paperSize = s?.print_paper_size || 'A4';
-  const isA5 = paperSize === 'A5';
-  
-  // Real dimensions for paper at 96 DPI
-  const paperWidth = isA5 ? 560 : 794;
-  const paperHeight = isA5 ? 794 : 1123;
-  
-  // Container width is roughly 418px (450px column minus 32px paddings)
-  const containerWidth = 418;
-  const scale = containerWidth / paperWidth;
-  const scaledHeight = paperHeight * scale;
-
+  // We use the unified InvoiceTemplate that powers the actual print operation
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', padding: '24px 16px', background: '#e5e7eb', minHeight: '100%' }}>
-      {finalCopies.map((label, idx) => (
-        <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', letterSpacing: '0.05em' }}>
-            PAGE {idx + 1} OF {finalCopies.length} {label ? `— ${label}` : ''}
-          </div>
-          <div style={{ 
-            width: `${containerWidth}px`, 
-            height: `${scaledHeight}px`,
-            position: 'relative',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-            borderRadius: '4px',
-            overflow: 'hidden',
-            background: '#fff'
-          }}>
-            <div style={{
-              width: `${paperWidth}px`,
-              minHeight: `${paperHeight}px`,
-              transform: `scale(${scale})`,
-              transformOrigin: 'top left',
-              position: 'absolute',
-              top: 0,
-              left: 0
-            }}>
-              <InvoiceTemplate 
-                settings={{ ...s, _forceCopyLabel: label }} 
-                isPreview={true} 
-                bill={null} 
-                items={[]} 
-              />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
+    <InvoiceTemplate 
+      settings={s} 
+      isPreview={true} 
+      bill={null} 
+      items={[]} 
+    />
   );
 }
-
 
 
 /* ═══════════════════════════════════════════════════════════════
    LIVE INVOICE PREVIEW — Thermal
    ═══════════════════════════════════════════════════════════════ */
 function ThermalPreview({ s }: { s: any }) {
+  const companyName = s?.print_thermal_company_name_text || s?.business_name || 'My Company';
+  const phone = s?.phone || '9625507147';
+  const isBold = s?.print_thermal_bold ?? true;
+  const showAddr = s?.print_thermal_show_address ?? true;
+  const showPhone = s?.print_thermal_show_phone ?? true;
+  const showEmail = s?.print_thermal_show_email ?? false;
+  const showGstin = s?.print_thermal_show_gstin ?? true;
   const pageSize = s?.print_thermal_page_size || '4inch';
   const maxW = pageSize === '2inch' ? '220px' : pageSize === '3inch' ? '280px' : '340px';
 
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', 
-      gap: '10px', padding: '24px 16px', background: '#e5e7eb', minHeight: '100%'
+      background: '#fff', color: '#111', fontFamily: "'Courier New', monospace",
+      fontSize: '11px', lineHeight: 1.6, padding: '20px 16px',
+      maxWidth: maxW, margin: '0 auto', minHeight: '400px',
+      fontWeight: isBold ? 700 : 400,
     }}>
-      <div style={{
-          position: 'relative',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-          borderRadius: '4px',
-          overflow: 'hidden',
-          background: '#fff',
-          width: maxW
-      }}>
-        <ThermalTemplate settings={s} bill={null} items={[]} isPreview={true} />
+      {/* Header */}
+      <div style={{ textAlign: 'center', borderBottom: '2px dashed #aaa', paddingBottom: '10px', marginBottom: '10px' }}>
+        {(s?.print_thermal_company_name ?? true) && (
+          <div style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '0.02em' }}>{companyName}</div>
+        )}
+        {showPhone && <div style={{ fontSize: '10px' }}>Ph.No: {phone}</div>}
+        <div style={{ borderTop: '1px dotted #ccc', marginTop: '6px', paddingTop: '4px', fontSize: '10px' }}>
+          {showAddr && <div>Koramangala, Banglore, Karnataka</div>}
+          {showEmail && <div>{s?.email || 'email@example.com'}</div>}
+          {showGstin && s?.gst_number && <div>GSTIN: {s.gst_number}</div>}
+        </div>
+      </div>
+
+      {/* Party Info */}
+      <div style={{ fontSize: '10px', marginBottom: '8px' }}>
+        <div><strong>Vyapar tech solutions (Sample Party Name)</strong></div>
+        <div>Ph. No: +91-4356352</div>
+        <div>Date: 11/03/2020</div>
+        <div>Bill To:</div>
+        <div>Indranagar Road, Bangalore</div>
+      </div>
+
+      {/* Items */}
+      <div style={{ borderTop: '1px dashed #999', borderBottom: '1px dashed #999', padding: '6px 0', margin: '6px 0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 50px 50px 60px', gap: '2px', fontSize: '10px', fontWeight: 800, marginBottom: '4px' }}>
+          <span>#</span><span>Name</span><span>Qty</span><span>Price</span><span style={{ textAlign: 'right' }}>Amount</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 50px 50px 60px', gap: '2px', fontSize: '10px', padding: '4px 0' }}>
+          <span>1</span><span>Britannia Chocolate Ca...</span><span>100 + 20...</span><span>100.00</span><span style={{ textAlign: 'right' }}>10,000.00</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 50px 50px 60px', gap: '2px', fontSize: '10px', padding: '4px 0' }}>
+          <span>2</span><span>Cadbury Chocolate</span><span>50 + 0p...</span><span>150.00</span><span style={{ textAlign: 'right' }}>7,500.00</span>
+        </div>
+      </div>
+
+      {/* Totals */}
+      <div style={{ fontSize: '10px', padding: '6px 0', borderBottom: '1px dashed #999' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total</span><span style={{ fontWeight: 800 }}>150 + 1</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Disc.(2%)</span><span>-1,500.00</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tax(5%)</span><span>500.00</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total Disc.</span><span>-1,500.00</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '12px', marginTop: '4px' }}><span>Total</span><span>20,000.00</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Received</span><span>20,000.00</span></div>
+      </div>
+
+      {/* Terms */}
+      <div style={{ textAlign: 'center', padding: '10px 0', fontSize: '10px', color: '#666' }}>
+        <div style={{ fontWeight: 700 }}>Terms & Conditions</div>
+        <div>{s?.print_terms_conditions || 'Thanks for doing business with us'}</div>
       </div>
     </div>
   );
@@ -307,42 +306,6 @@ export default function PrintSettingsTab() {
     setLocalSettings((prev: any) => ({ ...prev, ...patch }));
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !isAdmin) return;
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 300;
-        const MAX_HEIGHT = 300;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
-        } else {
-          if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/webp', 0.8);
-          u({ logo_url: dataUrl });
-        }
-      };
-      if (typeof event.target?.result === 'string') {
-        img.src = event.target.result;
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
   const hasChanges = Object.keys(localSettings).length > 0;
   const isSaving = updateSettings.isPending;
 
@@ -365,19 +328,17 @@ export default function PrintSettingsTab() {
   const [regularSubTab, setRegularSubTab] = useState<'layout' | 'colors'>('layout');
 
   return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: '1fr 450px',
-      gap: '24px', alignItems: 'start', width: '100%',
-      /* overflow must NOT be hidden/auto here — sticky needs visible overflow on the grid */
-      overflow: 'visible',
-    }} className="print-settings-grid">
-      
-      {/* ═══ LEFT: Controls ═══ */}
-      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '20px' }}>
-        {/* Printer Type Switcher — Left aligned */}
-        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-           <PrinterTabBar active={printerTab} onSelect={setPrinterTab} />
-        </div>
+    <div style={{ width: '100%' }}>
+      {/* Printer Type Switcher — full width */}
+      <PrinterTabBar active={printerTab} onSelect={setPrinterTab} />
+
+      {/* Two-column layout: Controls left, Preview right */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: '1fr 420px',
+        gap: '24px', marginTop: '20px', alignItems: 'start',
+      }} className="print-settings-grid">
+        {/* ═══ LEFT: Controls ═══ */}
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '20px' }}>
 
           {/* ─── REGULAR CONTROLS ─── */}
           {printerTab === 'regular' && (<>
@@ -397,75 +358,24 @@ export default function PrintSettingsTab() {
                 <LayoutPicker layouts={REGULAR_LAYOUTS} selected={settings?.print_regular_layout || 'gst_theme_6'} onSelect={(id) => u({ print_regular_layout: id })} disabled={!isAdmin} />
               )}
               {regularSubTab === 'colors' && (
-                <div style={{ padding: '12px 0' }}>
-                  {settings?.print_regular_layout === 'urban_bill_style' ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                      <div>
-                        <SectionLabel text="Primary Invoice Color (Top Banner, Highlights)" />
-                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
-                          {['#242B3E', '#2563EB', '#7F1D1D', '#1E3A8A', '#172554', '#000000'].map(color => {
-                            const isActive = (settings?.print_primary_color || '#242B3E') === color;
-                            return (
-                              <button key={color} type="button" 
-                                onClick={() => u({ print_primary_color: color })}
-                                disabled={!isAdmin}
-                                style={{
-                                  width: '38px', height: '38px', borderRadius: '50%',
-                                  background: color, border: isActive ? '3px solid #fff' : '3px solid transparent',
-                                  cursor: !isAdmin ? 'not-allowed' : 'pointer',
-                                  boxShadow: isActive ? `0 0 0 2px ${color}, 0 4px 8px ${op(color, 30)}` : '0 2px 4px rgba(0,0,0,0.1)',
-                                  transition: 'all 0.2s', opacity: isAdmin ? 1 : 0.5,
-                                  transform: isActive ? 'scale(1.1)' : 'scale(1)',
-                                }}
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-                      <div>
-                        <SectionLabel text="Secondary Accent Color (Buttons, Accents)" />
-                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
-                          {['#E11D48', '#F97316', '#EA580C', '#10B981', '#A78BFA', '#E96020'].map(color => {
-                            const isActive = (settings?.print_secondary_color || '#E11D48') === color;
-                            return (
-                              <button key={color} type="button" 
-                                onClick={() => u({ print_secondary_color: color })}
-                                disabled={!isAdmin}
-                                style={{
-                                  width: '38px', height: '38px', borderRadius: '50%',
-                                  background: color, border: isActive ? '3px solid #fff' : '3px solid transparent',
-                                  cursor: !isAdmin ? 'not-allowed' : 'pointer',
-                                  boxShadow: isActive ? `0 0 0 2px ${color}, 0 4px 8px ${op(color, 30)}` : '0 2px 4px rgba(0,0,0,0.1)',
-                                  transition: 'all 0.2s', opacity: isAdmin ? 1 : 0.5,
-                                  transform: isActive ? 'scale(1.1)' : 'scale(1)',
-                                }}
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                      {['#7c3aed', '#2563eb', '#ea580c', '#16a34a', '#db2777', '#475569', '#000000', '#dc2626'].map(color => {
-                        const isActive = (settings?.print_accent_color || '#7c3aed') === color;
-                        return (
-                          <button key={color} type="button" 
-                            onClick={() => u({ print_accent_color: color })}
-                            disabled={!isAdmin}
-                            style={{
-                              width: '38px', height: '38px', borderRadius: '50%',
-                              background: color, border: isActive ? '3px solid #fff' : '3px solid transparent',
-                              cursor: !isAdmin ? 'not-allowed' : 'pointer',
-                              boxShadow: isActive ? `0 0 0 2px ${color}, 0 4px 8px ${op(color, 30)}` : '0 2px 4px rgba(0,0,0,0.1)',
-                              transition: 'all 0.2s', opacity: isAdmin ? 1 : 0.5,
-                              transform: isActive ? 'scale(1.1)' : 'scale(1)',
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', padding: '12px 0' }}>
+                  {['#7c3aed', '#2563eb', '#ea580c', '#16a34a', '#db2777', '#475569', '#000000', '#dc2626'].map(color => {
+                    const isActive = (settings?.print_accent_color || '#7c3aed') === color;
+                    return (
+                      <button key={color} type="button" 
+                        onClick={() => u({ print_accent_color: color })}
+                        disabled={!isAdmin}
+                        style={{
+                          width: '38px', height: '38px', borderRadius: '50%',
+                          background: color, border: isActive ? '3px solid #fff' : '3px solid transparent',
+                          cursor: !isAdmin ? 'not-allowed' : 'pointer',
+                          boxShadow: isActive ? `0 0 0 2px ${color}, 0 4px 8px ${op(color, 30)}` : '0 2px 4px rgba(0,0,0,0.1)',
+                          transition: 'all 0.2s', opacity: isAdmin ? 1 : 0.5,
+                          transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </SettingsCard>
@@ -485,35 +395,17 @@ export default function PrintSettingsTab() {
                 label="Company Name" inputPlaceholder="My Company"
                 inputValue={settings?.print_company_name_text || settings?.business_name || ''}
                 onInputChange={(v) => u({ print_company_name_text: v })} disabled={!isAdmin} />
-              
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
-                <div style={{ flex: 1 }}>
-                  <CheckRow checked={settings?.print_company_logo ?? false} onChange={(v) => u({ print_company_logo: v })}
-                    label="Company Logo" disabled={!isAdmin} noBorder={true} />
-                </div>
-                {(settings?.print_company_logo) && (
-                  <label style={{
-                    cursor: !isAdmin ? 'not-allowed' : 'pointer', padding: '6px 14px', fontSize: '11px', fontWeight: 700,
-                    backgroundColor: 'hsl(var(--primary))', color: '#fff', borderRadius: '6px',
-                    marginRight: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                  }}>
-                    {settings.logo_url ? 'Change Logo' : 'Upload Logo'}
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} disabled={!isAdmin} />
-                  </label>
-                )}
-              </div>
+              <CheckRow checked={settings?.print_company_logo ?? false} onChange={(v) => u({ print_company_logo: v })}
+                label="Company Logo" disabled={!isAdmin} />
               <CheckRow checked={settings?.print_show_address ?? true} onChange={(v) => u({ print_show_address: v })}
                 label="Address" inputPlaceholder="Business address"
-                inputValue={settings?.print_address_text || settings?.address || ''} 
-                onInputChange={(v) => u({ print_address_text: v })} disabled={!isAdmin} />
+                inputValue={settings?.address || ''} disabled={!isAdmin} />
               <CheckRow checked={settings?.print_show_email ?? true} onChange={(v) => u({ print_show_email: v })}
                 label="Email" inputPlaceholder="email@example.com"
-                inputValue={settings?.print_email_text || settings?.email || ''} 
-                onInputChange={(v) => u({ print_email_text: v })} disabled={!isAdmin} />
+                inputValue={settings?.email || ''} disabled={!isAdmin} />
               <CheckRow checked={settings?.print_show_phone ?? true} onChange={(v) => u({ print_show_phone: v })}
                 label="Phone Number" inputPlaceholder="Phone number"
-                inputValue={settings?.print_phone_text || settings?.phone || ''} 
-                onInputChange={(v) => u({ print_phone_text: v })} disabled={!isAdmin} />
+                inputValue={settings?.phone || ''} disabled={!isAdmin} />
               <CheckRow checked={settings?.print_show_gstin ?? true} onChange={(v) => u({ print_show_gstin: v })}
                 label="GSTIN on Sale" disabled={!isAdmin} />
 
@@ -526,10 +418,10 @@ export default function PrintSettingsTab() {
                   options={[{ value: 'portrait', label: 'Portrait' }, { value: 'landscape', label: 'Landscape' }]} />} />
               <SettingRow label="Company Name Text Size" desc="Size of the company name on invoice"
                 right={<SelectInput value={settings?.print_company_name_size || 'large'} onChange={(v) => u({ print_company_name_size: v })} disabled={!isAdmin}
-                  options={[{ value: 'v.small', label: 'V. Small' }, { value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }, { value: 'v.large', label: 'V. Large' }, { value: 'e.large', label: 'E. Large' }]} />} />
+                  options={[{ value: 'v.small', label: 'V. Small' }, { value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }]} />} />
               <SettingRow label="Invoice Text Size" desc="Size of content text on invoice" noBorder
                 right={<SelectInput value={settings?.print_invoice_text_size || 'medium'} onChange={(v) => u({ print_invoice_text_size: v })} disabled={!isAdmin}
-                  options={[{ value: 'v.small', label: 'V. small' }, { value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }, { value: 'v.large', label: 'V. Large' }, { value: 'e.large', label: 'E. Large' }]} />} />
+                  options={[{ value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }]} />} />
             </SettingsCard>
 
             <SettingsCard title="Print Copies & Layout Setup" subtitle="Configure number of copies and extra spacing" icon="📄" accent="#0ea5e9" footer={renderSaveBtn()}>
@@ -564,12 +456,9 @@ export default function PrintSettingsTab() {
                   <CheckRow checked={settings?.print_show_item_number ?? true} onChange={(v) => u({ print_show_item_number: v })} label="#" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_hsn_sac ?? true} onChange={(v) => u({ print_show_hsn_sac: v })} label="HSN/SAC" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_quantity ?? true} onChange={(v) => u({ print_show_quantity: v })} label="Quantity" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_show_mrp ?? false} onChange={(v) => u({ print_show_mrp: v })} label="MRP" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_price_unit ?? true} onChange={(v) => u({ print_show_price_unit: v })} label="Price/unit" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_discount ?? true} onChange={(v) => u({ print_show_discount: v })} label="Discount" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_show_tax_pct ?? false} onChange={(v) => u({ print_show_tax_pct: v })} label="Tax %" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_show_gst ?? true} onChange={(v) => u({ print_show_gst: v })} label="Tax Amt" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_show_currency ?? true} onChange={(v) => u({ print_show_currency: v })} label="Currency Symbol (₹)" disabled={!isAdmin} />
+                  <CheckRow checked={settings?.print_show_gst ?? true} onChange={(v) => u({ print_show_gst: v })} label="GST" disabled={!isAdmin} />
                 </div>
               </div>
             </SettingsCard>
@@ -624,12 +513,8 @@ export default function PrintSettingsTab() {
                   <div style={{ marginTop: '8px' }}>
                     <CheckRow checked={settings?.print_upi_qr ?? true} onChange={(v) => u({ print_upi_qr: v })} label="Print UPI QR Code" disabled={!isAdmin} />
                     {(settings?.print_upi_qr ?? true) && (
-                      <div style={{ paddingLeft: '32px', marginTop: '-4px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ paddingLeft: '32px', marginTop: '-4px', marginBottom: '8px' }}>
                         <TextInput value={settings?.upi_id || ''} onChange={(e) => u({ upi_id: e.target.value })} placeholder="e.g. yourname@bank" hint="Required for the dynamic QR code to work properly." disabled={!isAdmin} />
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: T.color.textPri, cursor: !isAdmin ? 'not-allowed' : 'pointer' }}>
-                          <input type="checkbox" checked={settings?.print_qr_with_amount ?? true} onChange={(e) => u({ print_qr_with_amount: e.target.checked })} disabled={!isAdmin} style={{ accentColor: 'hsl(var(--primary))', width: '16px', height: '16px' }} />
-                          Include Bill Amount in QR Code
-                        </label>
                       </div>
                     )}
                     <CheckRow checked={settings?.print_pay_now_btn ?? true} onChange={(v) => u({ print_pay_now_btn: v })} label="Print 'PAY NOW' button" disabled={!isAdmin} />
@@ -639,8 +524,6 @@ export default function PrintSettingsTab() {
             </SettingsCard>
 
             <SettingsCard title="Footer" subtitle="Customize the footer section of your printed invoices" icon="📝" accent="#8b5cf6" footer={renderSaveBtn()}>
-              <SettingRow label="Keep Footer Together on One Page" desc="Prevent the footer from splitting across multiple pages to save space"
-                right={<Toggle on={settings?.print_keep_footer_together ?? true} onChange={(v) => u({ print_keep_footer_together: v })} disabled={!isAdmin} />} />
               <SettingRow label="Print Description" desc="Show sale description on invoice"
                 right={<Toggle on={settings?.print_description ?? false} onChange={(v) => u({ print_description: v })} disabled={!isAdmin} />} />
               <div style={{ padding: '12px 0' }}>
@@ -657,15 +540,19 @@ export default function PrintSettingsTab() {
                 right={<Toggle on={settings?.print_received_by ?? true} onChange={(v) => u({ print_received_by: v })} disabled={!isAdmin} />} />
               <SettingRow label="Print Delivered by details" desc="Add delivered by name on invoice"
                 right={<Toggle on={settings?.print_delivered_by ?? false} onChange={(v) => u({ print_delivered_by: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Authorized Signatory" desc="Show authorized signatory section on invoice"
-                right={<Toggle on={settings?.print_show_signature ?? false} onChange={(v) => u({ print_show_signature: v })} disabled={!isAdmin} />} />
-              {(settings?.print_show_signature ?? false) && (
-                <div style={{ marginLeft: '12px', paddingLeft: '16px', borderLeft: `2px solid ${T.color.border}`, marginTop: '-4px', marginBottom: '8px', paddingBottom: '8px', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
-                  <FieldLabel>Signature Text</FieldLabel>
-                  <TextInput value={settings?.print_signature_text || ''} onChange={(e) => u({ print_signature_text: e.target.value })}
-                    placeholder="Authorized Signatory" disabled={!isAdmin} />
+              <div style={{ padding: '10px 0', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Toggle on={settings?.print_show_signature ?? false} onChange={(v) => u({ print_show_signature: v })} disabled={!isAdmin} />
+                  <span style={{ fontSize: '13px', fontWeight: 550, color: T.color.textPri }}>Print Signature</span>
                 </div>
-              )}
+                {(settings?.print_show_signature ?? false) && (
+                  <div style={{ marginTop: '12px', paddingLeft: '56px' }}>
+                    <FieldLabel>Signature Text</FieldLabel>
+                    <TextInput value={settings?.print_signature_text || ''} onChange={(e) => u({ print_signature_text: e.target.value })}
+                      placeholder="Authorized Signatory" disabled={!isAdmin} />
+                  </div>
+                )}
+              </div>
               <SettingRow label="Payment Mode" desc="Show payment method used on invoice"
                 right={<Toggle on={settings?.print_payment_mode ?? false} onChange={(v) => u({ print_payment_mode: v })} disabled={!isAdmin} />} />
               <SettingRow label="Print Acknowledgement" desc="Include customer acknowledgement section" noBorder
@@ -724,18 +611,18 @@ export default function PrintSettingsTab() {
           </>)}
         </div>
 
-        {/* ═══ RIGHT: Live Preview (Sticky — follows scroll) ═══ */}
-        <div style={{ position: 'sticky', top: '20px', height: 'calc(100vh - 40px)', alignSelf: 'flex-start' }}>
+        {/* ═══ RIGHT: Live Preview (Sticky with fading edges) ═══ */}
+        <div style={{ position: 'sticky' as const, top: '20px', alignSelf: 'start' }}>
           <div style={{
             background: T.color.cardBg, borderRadius: '14px',
             border: `1px solid ${T.color.border}`, boxShadow: T.shadow.card,
-            overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column'
+            overflow: 'hidden',
           }}>
             {/* Preview Header */}
             <div style={{
               padding: '12px 16px', borderBottom: `1px solid ${T.color.border}`,
               background: `linear-gradient(135deg, ${op('hsl(var(--primary))', 6)} 0%, transparent 100%)`,
-              display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0
+              display: 'flex', alignItems: 'center', gap: '8px',
             }}>
               <span style={{ fontSize: '14px' }}>👁️</span>
               <span style={{ fontSize: '12.5px', fontWeight: 700, color: T.color.textPri, letterSpacing: '-0.01em' }}>
@@ -743,31 +630,46 @@ export default function PrintSettingsTab() {
               </span>
             </div>
 
-            {/* Scrollable preview occupying all remaining card space */}
-            <div style={{
-              flex: 1, overflowY: 'auto' as const,
-              background: '#e5e7eb', // subtle dim outline behind paper
-              position: 'relative',
-              width: '100%',
-              overflowX: 'hidden'
-            }} className="custom-scrollbar">
-               {/* We remove transform: scale(0.92) so the preview fully fills the available wide container */}
-               {printerTab === 'regular' ? <RegularPreview s={settings} /> : <ThermalPreview s={settings} />}
+            {/* Preview Content with fading edges */}
+            <div style={{ position: 'relative' as const }}>
+              {/* Top fade */}
+              <div style={{
+                position: 'absolute' as const, top: 0, left: 0, right: 0, height: '30px', zIndex: 2,
+                background: 'linear-gradient(to bottom, #f8f9fa, transparent)',
+                borderRadius: '0', pointerEvents: 'none' as const,
+              }} />
+
+              {/* Scrollable preview */}
+              <div style={{
+                maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' as const,
+                padding: '8px', background: '#f8f9fa',
+              }} className="custom-scrollbar">
+                <div style={{
+                  borderRadius: '8px', overflow: 'hidden',
+                  boxShadow: '0 2px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05)',
+                  transform: 'scale(0.92)', transformOrigin: 'top center',
+                  transition: 'all 0.3s ease',
+                }}>
+                  {printerTab === 'regular' ? <RegularPreview s={settings} /> : <ThermalPreview s={settings} />}
+                </div>
+              </div>
+
+              {/* Bottom fade */}
+              <div style={{
+                position: 'absolute' as const, bottom: 0, left: 0, right: 0, height: '40px', zIndex: 2,
+                background: 'linear-gradient(to top, #f8f9fa, transparent)',
+                pointerEvents: 'none' as const,
+              }} />
             </div>
           </div>
         </div>
+      </div>
 
-      {/* Responsive: stack on tablet, static (not sticky) on mobile */}
+      {/* Responsive: hide preview on mobile, stack on tablet */}
       <style>{`
         @media (max-width: 1024px) {
           .print-settings-grid {
             grid-template-columns: 1fr !important;
-            overflow: visible !important;
-          }
-          /* On small screens the preview column should not be sticky so it renders naturally below */
-          .print-settings-grid > div:last-child {
-            position: static !important;
-            height: auto !important;
           }
         }
       `}</style>

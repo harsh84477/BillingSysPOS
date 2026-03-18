@@ -1,7 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { InvoiceTemplate } from './InvoiceTemplate';
-import { ThermalTemplate } from './ThermalTemplate';
 
 export interface BillItem {
   id: string;
@@ -53,83 +52,13 @@ export function printBillReceipt(bill: Bill, items: BillItem[], settings?: any) 
             color-adjust: exact !important;
           }
           @page {
+            /* Standard margins, top margin can be controlled by settings in InvoiceTemplate */
             margin: 5mm; 
           }
           /* Ensure backgrounds print correctly */
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-          }
-
-          /* ===== COMPACT TABLE STYLES ===== */
-          .invoice-template-root table tbody tr td {
-            padding: 2px 6px !important;
-            font-size: 9px !important;
-            line-height: 1.25 !important;
-          }
-          .invoice-template-root table thead tr th {
-            padding: 4px 6px !important;
-            font-size: 8px !important;
-          }
-          .invoice-template-root table tbody tr:last-child td {
-            padding: 4px 6px !important;
-          }
-
-          /* ===== NATURAL PRINT FLOW ===== */
-          /* Repeat table headers on every printed page */
-          .invoice-template-root table thead {
-            display: table-header-group;
-          }
-          /* Individual table rows should not split */
-          .invoice-template-root table tbody tr {
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          /* Container allows natural page flow — NO forced breaks */
-          .invoice-template-root {
-            page-break-inside: auto !important;
-            break-inside: auto !important;
-          }
-
-          /* General print resets */
-          @media print {
-            .invoice-template-root {
-              padding: 0 !important;
-            }
-          }
-
-          /* ===== URBAN BILL STYLE — COMPACT PRINT ===== */
-          .urban-template-root table tbody tr td {
-            padding: 3px 6px !important;
-            font-size: 8.5px !important;
-            line-height: 1.2 !important;
-          }
-          .urban-template-root table thead tr th {
-            padding: 4px 6px !important;
-            font-size: 7.5px !important;
-          }
-          .urban-template-root table tbody tr:last-child td {
-            padding: 4px 6px !important;
-          }
-          .urban-template-root table thead {
-            display: table-header-group;
-          }
-          .urban-template-root table tbody tr {
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          .urban-template-root {
-            page-break-inside: auto !important;
-            break-inside: auto !important;
-          }
-          .urban-footer-block {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-          @media print {
-            .urban-template-root {
-              padding: 0 !important;
-            }
           }
         </style>
       </head>
@@ -151,47 +80,14 @@ export function printBillReceipt(bill: Bill, items: BillItem[], settings?: any) 
       clearInterval(checkReady);
       const root = createRoot(rootEl);
       
-      // Determine how many pages to render based on copy settings
-      const copies = settings?.print_original_duplicate ? [
-        settings?.print_copy_original ?? true ? 'ORIGINAL FOR RECIPIENT' : null,
-        settings?.print_copy_duplicate ?? true ? 'DUPLICATE FOR TRANSPORTER' : null,
-        settings?.print_copy_triplicate ?? true ? 'TRIPLICATE FOR SUPPLIER' : null
-      ].filter(Boolean) : [null];
-      
-      const finalCopies = copies.length > 0 ? copies : [null];
-
-      // Thermal prints typically only print 1 copy by default unless multiplied
-      const isThermal = settings?.print_thermal_default ?? false;
-      const thermalCopiesCount = settings?.print_thermal_copies ?? 1;
-      const thermalCopiesArray = Array.from({ length: thermalCopiesCount });
-
-      // Render our new unified InvoiceTemplate components with page breaks
+      // Render our new unified InvoiceTemplate component
       root.render(
-        <React.Fragment>
-          {isThermal ? (
-            thermalCopiesArray.map((_, idx) => (
-              <div key={idx} style={{ pageBreakAfter: idx < thermalCopiesArray.length - 1 ? 'always' : 'auto' }}>
-                <ThermalTemplate 
-                  bill={bill} 
-                  items={items} 
-                  settings={settings} 
-                  isPreview={false}
-                />
-              </div>
-            ))
-          ) : (
-            finalCopies.map((label, idx) => (
-              <div key={idx} style={{ pageBreakAfter: idx < finalCopies.length - 1 ? 'always' : 'auto' }}>
-                <InvoiceTemplate 
-                  bill={bill} 
-                  items={items} 
-                  settings={{ ...settings, _forceCopyLabel: label }} 
-                  isPreview={false}
-                />
-              </div>
-            ))
-          )}
-        </React.Fragment>
+        <InvoiceTemplate 
+          bill={bill} 
+          items={items} 
+          settings={settings} 
+          isPreview={false}
+        />
       );
 
       // Trigger print after rendering and fonts have loaded

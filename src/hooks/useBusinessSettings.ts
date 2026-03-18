@@ -144,8 +144,6 @@ export interface BusinessSettings {
   print_thermal_show_gstin?: boolean;
   // Print Settings V2 — Color, Copy, Item Table, Bank Details
   print_accent_color?: string;
-  print_primary_color?: string;
-  print_secondary_color?: string;
   print_original_duplicate?: boolean;
   print_copy_original?: boolean;
   print_copy_duplicate?: boolean;
@@ -155,12 +153,9 @@ export interface BusinessSettings {
   print_show_item_number?: boolean;
   print_show_hsn_sac?: boolean;
   print_show_quantity?: boolean;
-  print_show_mrp?: boolean;
   print_show_price_unit?: boolean;
   print_show_discount?: boolean;
-  print_show_tax_pct?: boolean;
   print_show_gst?: boolean;
-  print_show_currency?: boolean;
   print_bank_details?: boolean;
   print_bank_name?: string;
   print_bank_account?: string;
@@ -168,8 +163,6 @@ export interface BusinessSettings {
   print_upi_qr?: boolean;
   print_pay_now_btn?: boolean;
   print_show_signature?: boolean;
-  print_keep_footer_together?: boolean;
-  print_qr_with_amount?: boolean;
   created_at: string;
   updated_at: string;
 }
