@@ -473,10 +473,10 @@ export default function PrintSettingsTab() {
                   options={[{ value: 'portrait', label: 'Portrait' }, { value: 'landscape', label: 'Landscape' }]} />} />
               <SettingRow label="Company Name Text Size" desc="Size of the company name on invoice"
                 right={<SelectInput value={settings?.print_company_name_size || 'large'} onChange={(v) => u({ print_company_name_size: v })} disabled={!isAdmin}
-                  options={[{ value: 'v.small', label: 'V. Small' }, { value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }]} />} />
+                  options={[{ value: 'v.small', label: 'V. Small' }, { value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }, { value: 'v.large', label: 'V. Large' }, { value: 'e.large', label: 'E. Large' }]} />} />
               <SettingRow label="Invoice Text Size" desc="Size of content text on invoice" noBorder
                 right={<SelectInput value={settings?.print_invoice_text_size || 'medium'} onChange={(v) => u({ print_invoice_text_size: v })} disabled={!isAdmin}
-                  options={[{ value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }]} />} />
+                  options={[{ value: 'v.small', label: 'V. small' }, { value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }, { value: 'v.large', label: 'V. Large' }, { value: 'e.large', label: 'E. Large' }]} />} />
             </SettingsCard>
 
             <SettingsCard title="Print Copies & Layout Setup" subtitle="Configure number of copies and extra spacing" icon="📄" accent="#0ea5e9" footer={renderSaveBtn()}>

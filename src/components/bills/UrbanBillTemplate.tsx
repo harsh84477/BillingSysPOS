@@ -133,11 +133,23 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
   const sigMargin = cp ? '10px' : '32px';
   const sigLineSpace = cp ? '16px' : '36px';
 
-  // Font sizing
-  const baseFontSize = cp ? '9px' : '10px';
+  // Font sizing (we use the user's explicit size choices, computing down from settings)
+  const nameSize = s?.print_company_name_size === 'v.small' ? '12px' : 
+                   s?.print_company_name_size === 'small' ? '14px' : 
+                   s?.print_company_name_size === 'medium' ? '17px' : 
+                   s?.print_company_name_size === 'v.large' ? '24px' : 
+                   s?.print_company_name_size === 'e.large' ? '28px' : '20px';
+
+  const textSize = s?.print_invoice_text_size === 'v.small' ? '7.5px' : 
+                   s?.print_invoice_text_size === 'small' ? '8.5px' : 
+                   s?.print_invoice_text_size === 'large' ? '11px' : 
+                   s?.print_invoice_text_size === 'v.large' ? '12.5px' :
+                   s?.print_invoice_text_size === 'e.large' ? '14px' : '9.5px';
+
+  const baseFontSize = textSize; // Use setting instead of just `cp` flag
   const baseLineHeight = cp ? 1.2 : 1.4;
   const titleFontSize = cp ? '24px' : '32px';
-  const companyFontSize = cp ? '16px' : '20px';
+  const companyFontSize = nameSize;
 
   // Transport details
   const transportName = isMock ? 'FastTrack Logistics' : '';
@@ -225,8 +237,11 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
         .urban-header-shape {
           background-color: var(--urban-primary);
           color: var(--urban-primary-text);
-          border-bottom-right-radius: ${cp ? '24px' : '40px'};
-          padding: ${cp ? '12px' : '24px'};
+          border-bottom-right-radius: ${cp ? '60px' : '100px'};
+          padding: ${cp ? '16px 20px' : '24px 32px'};
+          display: flex;
+          align-items: center;
+          gap: 16px;
         }
         /* ── PRINT PAGINATION ── */
         @media print {
@@ -258,25 +273,51 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
 
       {/* ══════ A. HEADER SECTION ══════ */}
       <div style={{ display: 'flex', gap: headerGap, marginBottom: sectionMb, alignItems: 'stretch' }}>
-        {(s?.print_company_name ?? true) && (
-          <div className="urban-header-shape" style={{ flex: '0 0 auto', minWidth: cp ? '180px' : '220px', maxWidth: '300px' }}>
-            {s?.print_company_logo && s?.logo_url && (
-              <img src={s.logo_url} alt="Logo" style={{ maxHeight: cp ? '36px' : '50px', maxWidth: '120px', marginBottom: cp ? '6px' : '12px', borderRadius: '4px', backgroundColor: '#fff', padding: '3px' }} />
-            )}
-            <div style={{ fontSize: companyFontSize, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-              {companyName}
-            </div>
-            {showGstin && s?.gst_number && (
-              <div style={{ fontSize: cp ? '8px' : '9px', opacity: 0.85, marginTop: '3px', letterSpacing: '0.02em' }}>GSTIN: {gstNumber}</div>
-            )}
-            <div style={{ marginTop: cp ? '6px' : '12px', fontSize: cp ? '8px' : '9px', opacity: 0.9, lineHeight: 1.4 }}>
-              {showAddr && address && <div>{address}</div>}
-              {showEmail && email && <div style={{ marginTop: '1px' }}>{email}</div>}
-            </div>
-          </div>
-        )}
+        <div style={{ flex: '1 1 auto', display: 'flex' }}>
+          {(s?.print_company_name ?? true) && (
+            <div className="urban-header-shape" style={{ flex: '1 1 auto', position: 'relative' }}>
+              
+              {/* Logo Box container acting similarly to the user's mockup */}
+              {s?.print_company_logo && (
+                <div style={{
+                  width: cp ? '50px' : '70px',
+                  height: cp ? '50px' : '70px',
+                  backgroundColor: '#fff',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}>
+                  {s?.logo_url ? (
+                    <img src={s.logo_url} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                  ) : (
+                    <span style={{ fontSize: cp ? '9px' : '11px', color: '#9CA3AF' }}>Image</span>
+                  )}
+                </div>
+              )}
 
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'space-between', paddingTop: cp ? '4px' : '10px' }}>
+              {/* Text Information block */}
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: companyFontSize, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                  {companyName}
+                </div>
+                {showGstin && s?.gst_number && (
+                  <div style={{ fontSize: cp ? '8px' : '9px', opacity: 0.85, marginTop: '3px', letterSpacing: '0.02em' }}>GSTIN: {gstNumber}</div>
+                )}
+                <div style={{ marginTop: cp ? '6px' : '10px', fontSize: cp ? '8px' : '9px', opacity: 0.9, lineHeight: 1.4 }}>
+                  {showAddr && address && <div>{address}</div>}
+                  {showEmail && email && <div style={{ marginTop: '1px' }}>{email}</div>}
+                </div>
+              </div>
+
+            </div>
+          )}
+        </div>
+
+        <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'flex-start', paddingTop: cp ? '8px' : '12px', paddingRight: cp ? '8px' : '16px' }}>
           {showPhone && (
             <div style={{
               backgroundColor: secondaryColor, color: secondaryText,

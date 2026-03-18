@@ -82,8 +82,8 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const showEmail = s?.print_show_email ?? true;
   const showGstin = s?.print_show_gstin ?? true;
   
-  const nameSize = s?.print_company_name_size === 'v.small' ? '12px' : s?.print_company_name_size === 'small' ? '14px' : s?.print_company_name_size === 'medium' ? '17px' : '20px';
-  const textSize = s?.print_invoice_text_size === 'small' ? '9px' : s?.print_invoice_text_size === 'large' ? '12px' : '10.5px';
+  const nameSize = s?.print_company_name_size === 'v.small' ? '12px' : s?.print_company_name_size === 'small' ? '14px' : s?.print_company_name_size === 'medium' ? '17px' : s?.print_company_name_size === 'v.large' ? '24px' : s?.print_company_name_size === 'e.large' ? '28px' : '20px';
+  const textSize = s?.print_invoice_text_size === 'v.small' ? '8px' : s?.print_invoice_text_size === 'small' ? '9px' : s?.print_invoice_text_size === 'large' ? '12px' : s?.print_invoice_text_size === 'v.large' ? '14px' : s?.print_invoice_text_size === 'e.large' ? '16px' : '10.5px';
   const showDecimal = s?.print_amount_decimal ?? true;
   const showCurrency = s?.print_show_currency ?? true;
   const currSym = showCurrency ? '₹ ' : '';
