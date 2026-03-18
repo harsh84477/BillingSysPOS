@@ -170,8 +170,6 @@ export interface BusinessSettings {
   print_show_signature?: boolean;
   print_keep_footer_together?: boolean;
   print_qr_with_amount?: boolean;
-  print_signature_image?: string | null;
-  print_show_mrp_total?: boolean;
   created_at: string;
   updated_at: string;
 }

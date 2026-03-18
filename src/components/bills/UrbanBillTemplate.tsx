@@ -115,7 +115,6 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
   const showTaxAmt = s?.print_show_gst ?? true;
 
   const showBank = s?.print_bank_details ?? true;
-  const qrWithAmount = s?.print_qr_with_amount ?? true;
   const marginTopPx = (s?.print_extra_space_top || 0) * 3.77;
 
   // ── Compact mode: print uses tighter spacing, preview keeps generous spacing ──
@@ -465,7 +464,7 @@ export function UrbanBillTemplate({ bill, items, settings: s, isPreview = false 
               {(s?.print_upi_qr ?? true) && s?.upi_id && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: cp ? '4px' : '8px' }}>
                   <div style={{ background: '#fff', padding: '4px', borderRadius: '4px', border: '1px solid #CBD5E1' }}>
-                    <QRCodeSVG value={`upi://pay?pa=${s.upi_id}&pn=${encodeURIComponent(companyName)}${qrWithAmount ? `&am=${grandTotal}` : ''}&cu=INR`} size={cp ? 48 : 64} />
+                    <QRCodeSVG value={`upi://pay?pa=${s.upi_id}&pn=${encodeURIComponent(companyName)}&am=${grandTotal}&cu=INR`} size={cp ? 48 : 64} />
                   </div>
                   {(s?.print_pay_now_btn ?? true) && (
                     <div style={{ 
