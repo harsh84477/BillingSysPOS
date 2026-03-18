@@ -123,14 +123,14 @@ function LayoutPicker({ layouts, selected, onSelect, disabled }: {
 /* ═══════════════════════════════════════════════════
    CheckRow
    ═══════════════════════════════════════════════════ */
-function CheckRow({ checked, onChange, label, inputPlaceholder, inputValue, onInputChange, disabled }: {
+function CheckRow({ checked, onChange, label, inputPlaceholder, inputValue, onInputChange, disabled, noBorder }: {
   checked: boolean; onChange: (v: boolean) => void; label: string;
-  inputPlaceholder?: string; inputValue?: string; onInputChange?: (v: string) => void; disabled?: boolean;
+  inputPlaceholder?: string; inputValue?: string; onInputChange?: (v: string) => void; disabled?: boolean; noBorder?: boolean;
 }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0',
-      borderBottom: `1px solid ${op(T.color.border, 40)}`,
+      borderBottom: noBorder ? 'none' : `1px solid ${op(T.color.border, 40)}`,
     }}>
       <button type="button" onClick={() => !disabled && onChange(!checked)} disabled={disabled}
         style={{
@@ -490,14 +490,29 @@ export default function PrintSettingsTab() {
                     label="Company Logo" disabled={!isAdmin} noBorder={true} />
                 </div>
                 {(settings?.print_company_logo) && (
-                  <label style={{
-                    cursor: !isAdmin ? 'not-allowed' : 'pointer', padding: '6px 14px', fontSize: '11px', fontWeight: 700,
-                    backgroundColor: 'hsl(var(--primary))', color: '#fff', borderRadius: '6px',
-                    marginRight: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                  }}>
-                    {settings.logo_url ? 'Change Logo' : 'Upload Logo'}
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} disabled={!isAdmin} />
-                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '8px' }}>
+                    {settings.logo_url && (
+                      <img src={settings.logo_url} alt="Logo Preview"
+                        style={{ maxHeight: '48px', maxWidth: '80px', objectFit: 'contain', borderRadius: '6px', border: `1px solid ${T.color.border}`, padding: '2px', background: '#fff' }} />
+                    )}
+                    <label style={{
+                      cursor: !isAdmin ? 'not-allowed' : 'pointer', padding: '6px 14px', fontSize: '11px', fontWeight: 700,
+                      backgroundColor: 'hsl(var(--primary))', color: '#fff', borderRadius: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }}>
+                      {settings.logo_url ? 'Change Logo' : 'Upload Logo'}
+                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} disabled={!isAdmin} />
+                    </label>
+                    {settings.logo_url && (
+                      <button type="button" onClick={() => isAdmin && u({ logo_url: null })} disabled={!isAdmin}
+                        title="Delete Logo"
+                        style={{
+                          padding: '6px 10px', fontSize: '13px', fontWeight: 700, borderRadius: '6px',
+                          border: `1.5px solid #fca5a5`, background: '#fef2f2', color: '#dc2626',
+                          cursor: !isAdmin ? 'not-allowed' : 'pointer', opacity: !isAdmin ? 0.5 : 1,
+                          transition: 'all 0.2s',
+                        }}>✕</button>
+                    )}
+                  </div>
                 )}
               </div>
               <CheckRow checked={settings?.print_show_address ?? true} onChange={(v) => u({ print_show_address: v })}
@@ -568,6 +583,7 @@ export default function PrintSettingsTab() {
                   <CheckRow checked={settings?.print_show_tax_pct ?? false} onChange={(v) => u({ print_show_tax_pct: v })} label="Tax %" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_gst ?? true} onChange={(v) => u({ print_show_gst: v })} label="Tax Amt" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_currency ?? true} onChange={(v) => u({ print_show_currency: v })} label="Currency Symbol (₹)" disabled={!isAdmin} />
+                  <CheckRow checked={settings?.print_show_mrp_total ?? false} onChange={(v) => u({ print_show_mrp_total: v })} label="MRP Total in Footer" disabled={!isAdmin} />
                 </div>
               </div>
             </SettingsCard>
@@ -659,9 +675,61 @@ export default function PrintSettingsTab() {
                 right={<Toggle on={settings?.print_show_signature ?? false} onChange={(v) => u({ print_show_signature: v })} disabled={!isAdmin} />} />
               {(settings?.print_show_signature ?? false) && (
                 <div style={{ marginLeft: '12px', paddingLeft: '16px', borderLeft: `2px solid ${T.color.border}`, marginTop: '-4px', marginBottom: '8px', paddingBottom: '8px', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
-                  <FieldLabel>Signature Text</FieldLabel>
+                  <FieldLabel>Signature Text (fallback if no image)</FieldLabel>
                   <TextInput value={settings?.print_signature_text || ''} onChange={(e) => u({ print_signature_text: e.target.value })}
                     placeholder="Authorized Signatory" disabled={!isAdmin} />
+                  <div style={{ marginTop: '12px' }}>
+                    <FieldLabel>Signature Image</FieldLabel>
+                    {settings?.print_signature_image && (
+                      <div style={{ marginBottom: '8px' }}>
+                        <img src={settings.print_signature_image} alt="Signature Preview"
+                          style={{ maxHeight: '64px', maxWidth: '180px', objectFit: 'contain', borderRadius: '6px', border: `1px solid ${T.color.border}`, padding: '4px', background: '#fff' }} />
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <label style={{
+                        cursor: !isAdmin ? 'not-allowed' : 'pointer', padding: '6px 14px', fontSize: '11px', fontWeight: 700,
+                        backgroundColor: 'hsl(var(--primary))', color: '#fff', borderRadius: '6px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)', opacity: !isAdmin ? 0.5 : 1,
+                      }}>
+                        {settings?.print_signature_image ? 'Change Signature' : 'Upload Signature'}
+                        <input type="file" accept="image/*" style={{ display: 'none' }} disabled={!isAdmin}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file || !isAdmin) return;
+                            const reader = new FileReader();
+                            reader.onload = (ev) => {
+                              const img = new window.Image();
+                              img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const MAX = 300;
+                                let w = img.width, h = img.height;
+                                if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+                                else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+                                canvas.width = w; canvas.height = h;
+                                const ctx = canvas.getContext('2d');
+                                if (ctx) {
+                                  ctx.drawImage(img, 0, 0, w, h);
+                                  u({ print_signature_image: canvas.toDataURL('image/webp', 0.85) });
+                                }
+                              };
+                              if (typeof ev.target?.result === 'string') img.src = ev.target.result;
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                      </label>
+                      {settings?.print_signature_image && (
+                        <button type="button" onClick={() => isAdmin && u({ print_signature_image: null })} disabled={!isAdmin}
+                          style={{
+                            padding: '6px 10px', fontSize: '12px', fontWeight: 700, borderRadius: '6px',
+                            border: '1.5px solid #fca5a5', background: '#fef2f2', color: '#dc2626',
+                            cursor: !isAdmin ? 'not-allowed' : 'pointer', opacity: !isAdmin ? 0.5 : 1,
+                            transition: 'all 0.2s'
+                          }}>✕ Remove</button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
               <SettingRow label="Payment Mode" desc="Show payment method used on invoice"
