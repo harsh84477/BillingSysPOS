@@ -307,6 +307,42 @@ export default function PrintSettingsTab() {
     setLocalSettings((prev: any) => ({ ...prev, ...patch }));
   };
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !isAdmin) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 300;
+        const MAX_HEIGHT = 300;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+        } else {
+          if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/webp', 0.8);
+          u({ logo_url: dataUrl });
+        }
+      };
+      if (typeof event.target?.result === 'string') {
+        img.src = event.target.result;
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const hasChanges = Object.keys(localSettings).length > 0;
   const isSaving = updateSettings.isPending;
 
@@ -447,8 +483,23 @@ export default function PrintSettingsTab() {
                 label="Company Name" inputPlaceholder="My Company"
                 inputValue={settings?.print_company_name_text || settings?.business_name || ''}
                 onInputChange={(v) => u({ print_company_name_text: v })} disabled={!isAdmin} />
-              <CheckRow checked={settings?.print_company_logo ?? false} onChange={(v) => u({ print_company_logo: v })}
-                label="Company Logo" disabled={!isAdmin} />
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
+                <div style={{ flex: 1 }}>
+                  <CheckRow checked={settings?.print_company_logo ?? false} onChange={(v) => u({ print_company_logo: v })}
+                    label="Company Logo" disabled={!isAdmin} noBorder={true} />
+                </div>
+                {(settings?.print_company_logo) && (
+                  <label style={{
+                    cursor: !isAdmin ? 'not-allowed' : 'pointer', padding: '6px 14px', fontSize: '11px', fontWeight: 700,
+                    backgroundColor: 'hsl(var(--primary))', color: '#fff', borderRadius: '6px',
+                    marginRight: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}>
+                    {settings.logo_url ? 'Change Logo' : 'Upload Logo'}
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoUpload} disabled={!isAdmin} />
+                  </label>
+                )}
+              </div>
               <CheckRow checked={settings?.print_show_address ?? true} onChange={(v) => u({ print_show_address: v })}
                 label="Address" inputPlaceholder="Business address"
                 inputValue={settings?.print_address_text || settings?.address || ''} 
@@ -571,8 +622,12 @@ export default function PrintSettingsTab() {
                   <div style={{ marginTop: '8px' }}>
                     <CheckRow checked={settings?.print_upi_qr ?? true} onChange={(v) => u({ print_upi_qr: v })} label="Print UPI QR Code" disabled={!isAdmin} />
                     {(settings?.print_upi_qr ?? true) && (
-                      <div style={{ paddingLeft: '32px', marginTop: '-4px', marginBottom: '8px' }}>
+                      <div style={{ paddingLeft: '32px', marginTop: '-4px', marginBottom: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <TextInput value={settings?.upi_id || ''} onChange={(e) => u({ upi_id: e.target.value })} placeholder="e.g. yourname@bank" hint="Required for the dynamic QR code to work properly." disabled={!isAdmin} />
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: T.color.textPri, cursor: !isAdmin ? 'not-allowed' : 'pointer' }}>
+                          <input type="checkbox" checked={settings?.print_qr_with_amount ?? true} onChange={(e) => u({ print_qr_with_amount: e.target.checked })} disabled={!isAdmin} style={{ accentColor: 'hsl(var(--primary))', width: '16px', height: '16px' }} />
+                          Include Bill Amount in QR Code
+                        </label>
                       </div>
                     )}
                     <CheckRow checked={settings?.print_pay_now_btn ?? true} onChange={(v) => u({ print_pay_now_btn: v })} label="Print 'PAY NOW' button" disabled={!isAdmin} />
@@ -582,6 +637,8 @@ export default function PrintSettingsTab() {
             </SettingsCard>
 
             <SettingsCard title="Footer" subtitle="Customize the footer section of your printed invoices" icon="📝" accent="#8b5cf6" footer={renderSaveBtn()}>
+              <SettingRow label="Keep Footer Together on One Page" desc="Prevent the footer from splitting across multiple pages to save space"
+                right={<Toggle on={settings?.print_keep_footer_together ?? true} onChange={(v) => u({ print_keep_footer_together: v })} disabled={!isAdmin} />} />
               <SettingRow label="Print Description" desc="Show sale description on invoice"
                 right={<Toggle on={settings?.print_description ?? false} onChange={(v) => u({ print_description: v })} disabled={!isAdmin} />} />
               <div style={{ padding: '12px 0' }}>

@@ -168,6 +168,8 @@ export interface BusinessSettings {
   print_upi_qr?: boolean;
   print_pay_now_btn?: boolean;
   print_show_signature?: boolean;
+  print_keep_footer_together?: boolean;
+  print_qr_with_amount?: boolean;
   created_at: string;
   updated_at: string;
 }
