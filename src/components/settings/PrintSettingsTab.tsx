@@ -123,14 +123,14 @@ function LayoutPicker({ layouts, selected, onSelect, disabled }: {
 /* ═══════════════════════════════════════════════════
    CheckRow
    ═══════════════════════════════════════════════════ */
-function CheckRow({ checked, onChange, label, inputPlaceholder, inputValue, onInputChange, disabled }: {
+function CheckRow({ checked, onChange, label, inputPlaceholder, inputValue, onInputChange, disabled, noBorder }: {
   checked: boolean; onChange: (v: boolean) => void; label: string;
-  inputPlaceholder?: string; inputValue?: string; onInputChange?: (v: string) => void; disabled?: boolean;
+  inputPlaceholder?: string; inputValue?: string; onInputChange?: (v: string) => void; disabled?: boolean; noBorder?: boolean;
 }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0',
-      borderBottom: `1px solid ${op(T.color.border, 40)}`,
+      borderBottom: noBorder ? 'none' : `1px solid ${op(T.color.border, 40)}`,
     }}>
       <button type="button" onClick={() => !disabled && onChange(!checked)} disabled={disabled}
         style={{
@@ -365,15 +365,10 @@ export default function PrintSettingsTab() {
   const [regularSubTab, setRegularSubTab] = useState<'layout' | 'colors'>('layout');
 
   return (
-    <div style={{
-      display: 'grid', gridTemplateColumns: '1fr 450px',
-      gap: '24px', alignItems: 'start', width: '100%',
-      /* overflow must NOT be hidden/auto here — sticky needs visible overflow on the grid */
-      overflow: 'visible',
-    }} className="print-settings-grid">
+    <div className="flex w-full flex-col gap-6 lg:h-[calc(100vh-13rem)] lg:flex-row lg:items-start lg:overflow-hidden">
       
       {/* ═══ LEFT: Controls ═══ */}
-      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '20px' }}>
+      <div className="flex min-w-0 flex-1 flex-col gap-5 lg:h-full lg:overflow-y-auto lg:pr-2 custom-scrollbar">
         {/* Printer Type Switcher — Left aligned */}
         <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
            <PrinterTabBar active={printerTab} onSelect={setPrinterTab} />
@@ -725,7 +720,7 @@ export default function PrintSettingsTab() {
         </div>
 
         {/* ═══ RIGHT: Live Preview (Sticky — follows scroll) ═══ */}
-        <div style={{ position: 'sticky', top: '20px', height: 'calc(100vh - 40px)', alignSelf: 'flex-start' }}>
+        <div className="w-full lg:sticky lg:top-5 lg:h-[calc(100vh-13rem)] lg:w-[450px] lg:flex-shrink-0 lg:self-start">
           <div style={{
             background: T.color.cardBg, borderRadius: '14px',
             border: `1px solid ${T.color.border}`, boxShadow: T.shadow.card,
@@ -756,21 +751,6 @@ export default function PrintSettingsTab() {
             </div>
           </div>
         </div>
-
-      {/* Responsive: stack on tablet, static (not sticky) on mobile */}
-      <style>{`
-        @media (max-width: 1024px) {
-          .print-settings-grid {
-            grid-template-columns: 1fr !important;
-            overflow: visible !important;
-          }
-          /* On small screens the preview column should not be sticky so it renders naturally below */
-          .print-settings-grid > div:last-child {
-            position: static !important;
-            height: auto !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }
