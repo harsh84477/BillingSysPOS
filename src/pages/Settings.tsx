@@ -534,30 +534,7 @@ export default function Settings() {
                           <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.01em' }}>{opt.name}</span>
                         </div>
                         <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0, lineHeight: 1.4 }}>{opt.description}</p>
-                      <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <SettingsCard title="Billing Rules" subtitle="Configure your business billing defaults" icon="📋" accent="#10b981">
-                            <form onSubmit={handleBillingSubmit}>
-                              <div style={{ marginBottom: '14px' }}><FieldLabel htmlFor="bill_prefix">Business Bill Prefix</FieldLabel><TextInput id="bill_prefix" name="bill_prefix" defaultValue={settings?.bill_prefix} hint="This prefix identifies your business on all bills." disabled={!isAdmin} /></div>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3.5">
-                                <div><FieldLabel htmlFor="currency">Currency Code</FieldLabel><TextInput id="currency" name="currency" defaultValue={settings?.currency} disabled={!isAdmin} /></div>
-                                <div><FieldLabel htmlFor="currency_symbol">Symbol</FieldLabel><TextInput id="currency_symbol" name="currency_symbol" defaultValue={settings?.currency_symbol} disabled={!isAdmin} /></div>
-                              </div>
-                              {isAdmin && <SaveBtn label="Save Changes" />}
-                            </form>
-                          </SettingsCard>
-                        </div>
-                        <div style={{ position: 'sticky', top: 80, minWidth: 320, maxWidth: 400, flexShrink: 0 }}>
-                          <SettingsCard title="Personal Settings" subtitle="Settings specific to your account" icon="👤" accent="#8b5cf6">
-                            <div style={{ marginBottom: '14px' }}><FieldLabel htmlFor="my_bill_prefix">Personal Collector Code</FieldLabel>
-                              <TextInput id="my_bill_prefix" defaultValue={userRoles.find((r: any) => r.user_id === user?.id)?.bill_prefix || ''} placeholder="e.g. UK" hint="Identifies you as the collector on bills."
-                                style={{ width: '80px', textTransform: 'uppercase', textAlign: 'center', fontFamily: 'monospace', fontWeight: 700 }}
-                                onBlur={async (e) => { const val = (e.target as HTMLInputElement).value.toUpperCase(); try { const { error } = await supabase.rpc('update_my_bill_prefix', { _prefix: val }); if (error) throw error; toast.success('Your personal code updated!'); await refreshBusinessInfo(); queryClient.invalidateQueries({ queryKey: ['allUserRoles'] }); } catch (err: any) { toast.error('Failed: ' + err.message); } }} /></div>
-                            <InfoBox bg={op('#8b5cf6', 10)} border={`1px solid ${op('#8b5cf6', 30)}`} icon="📌" title="Bill Format Preview" titleColor="#8b5cf6" value={`${settings?.bill_prefix || 'INV'} — CODE — 2024-01 — 001`} valueColor={T.color.textPri} />
-                          </SettingsCard>
-                        </div>
-                      </div>
-                      </div>
+                        </button>
                         onMouseEnter={e => { if (!active) e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                         onMouseLeave={e => { if (!active) e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)'; e.currentTarget.style.transform = 'none'; }}
                       >
