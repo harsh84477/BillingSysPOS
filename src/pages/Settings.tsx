@@ -535,29 +535,6 @@ export default function Settings() {
                         </div>
                         <p style={{ fontSize: '11.5px', color: '#94a3b8', margin: 0, lineHeight: 1.4 }}>{opt.description}</p>
                         </button>
-                        onMouseEnter={e => { if (!active) e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                        onMouseLeave={e => { if (!active) e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)'; e.currentTarget.style.transform = 'none'; }}
-                      >
-                        {active && (
-                          <div style={{
-                            position: 'absolute', top: '12px', right: '12px',
-                            width: '22px', height: '22px', borderRadius: '50%', background: opt.color,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: '#fff', fontSize: '12px', fontWeight: 700,
-                            boxShadow: `0 2px 8px ${opt.color}50`,
-                          }}>✓</div>
-                        )}
-                        <div style={{
-                          width: '100%', height: '6px', borderRadius: '3px', marginBottom: '14px',
-                          background: `linear-gradient(90deg, ${opt.color}, ${opt.color}40)`,
-                          boxShadow: `0 0 8px ${opt.color}30`,
-                        }} />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                          <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: opt.color, display: 'inline-block', boxShadow: `0 0 8px ${opt.color}50` }} />
-                          <span style={{ fontSize: '14px', fontWeight: 700, color: '#e2e8f0', letterSpacing: '-0.01em' }}>{opt.name}</span>
-                        </div>
-                        <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0, lineHeight: 1.4 }}>{opt.description}</p>
-                      </button>
                     );
                   })}
                 </div>
