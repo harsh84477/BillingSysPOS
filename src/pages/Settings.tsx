@@ -557,7 +557,7 @@ export default function Settings() {
                           </SettingsCard>
                         </div>
                       </div>
-                        }}
+                      </div>
                         onMouseEnter={e => { if (!active) e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                         onMouseLeave={e => { if (!active) e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)'; e.currentTarget.style.transform = 'none'; }}
                       >
