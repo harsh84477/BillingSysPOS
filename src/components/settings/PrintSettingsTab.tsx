@@ -365,7 +365,7 @@ export default function PrintSettingsTab() {
   const [regularSubTab, setRegularSubTab] = useState<'layout' | 'colors'>('layout');
 
   return (
-    <div className="flex w-full flex-col gap-6 lg:h-[calc(100vh-13rem)] lg:flex-row lg:items-start lg:overflow-hidden">
+    <div className="flex w-full flex-col gap-6 lg:h-full lg:flex-row lg:items-start lg:overflow-hidden">
       
       {/* ═══ LEFT: Controls ═══ */}
       <div className="flex min-w-0 flex-1 flex-col gap-5 lg:h-full lg:overflow-y-auto lg:pr-2 custom-scrollbar">
@@ -720,7 +720,7 @@ export default function PrintSettingsTab() {
         </div>
 
         {/* ═══ RIGHT: Live Preview (Sticky — follows scroll) ═══ */}
-        <div className="w-full lg:sticky lg:top-5 lg:h-[calc(100vh-13rem)] lg:w-[450px] lg:flex-shrink-0 lg:self-start">
+        <div className="w-full lg:h-full lg:w-[450px] lg:flex-shrink-0 lg:self-stretch">
           <div style={{
             background: T.color.cardBg, borderRadius: '14px',
             border: `1px solid ${T.color.border}`, boxShadow: T.shadow.card,
