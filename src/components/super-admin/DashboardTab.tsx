@@ -26,15 +26,15 @@ export default function DashboardTab() {
 
             const roles = rolesData || [];
             const admins = roles.filter(r => r.role === 'admin').length;
-            const staff = roles.filter(r => r.role === 'staff').length;
-            const viewers = roles.filter(r => r.role === 'viewer').length;
+            const managers = roles.filter(r => r.role === 'manager').length;
+            const cashiers = roles.filter(r => r.role === 'cashier').length;
 
             return {
                 businesses: businessCount || 0,
                 users: userCount || 0,
                 admins,
-                staff,
-                viewers,
+                managers,
+                cashiers,
                 revenue: totalRevenue,
             };
         },
@@ -45,7 +45,7 @@ export default function DashboardTab() {
         { title: 'Total Businesses', value: stats?.businesses, icon: Building2, color: 'text-blue-500', bg: 'bg-blue-500/10', desc: 'Registered on platform' },
         { title: 'Total Users', value: stats?.users, icon: Users, color: 'text-violet-500', bg: 'bg-violet-500/10', desc: 'Across all businesses' },
         { title: 'Business Owners', value: stats?.admins, icon: Crown, color: 'text-amber-500', bg: 'bg-amber-500/10', desc: 'Admin role users' },
-        { title: 'Staff Members', value: stats?.staff, icon: UserCheck, color: 'text-emerald-500', bg: 'bg-emerald-500/10', desc: 'Cashiers & managers' },
+        { title: 'Staff Members', value: (stats?.managers ?? 0) + (stats?.cashiers ?? 0), icon: UserCheck, color: 'text-emerald-500', bg: 'bg-emerald-500/10', desc: 'Cashiers & managers' },
     ];
 
     return (
@@ -141,8 +141,8 @@ export default function DashboardTab() {
                             <UserCheck className="h-5 w-5 text-blue-500" />
                         </div>
                         <div>
-                            <p className="text-xl font-black">{isLoading ? '—' : stats?.staff ?? 0}</p>
-                            <p className="text-xs text-muted-foreground">Staff Members</p>
+                            <p className="text-xl font-black">{isLoading ? '—' : stats?.managers ?? 0}</p>
+                            <p className="text-xs text-muted-foreground">Managers</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -152,8 +152,8 @@ export default function DashboardTab() {
                             <UserX className="h-5 w-5 text-slate-500" />
                         </div>
                         <div>
-                            <p className="text-xl font-black">{isLoading ? '—' : stats?.viewers ?? 0}</p>
-                            <p className="text-xs text-muted-foreground">Viewers</p>
+                            <p className="text-xl font-black">{isLoading ? '—' : stats?.cashiers ?? 0}</p>
+                            <p className="text-xs text-muted-foreground">Cashiers</p>
                         </div>
                     </CardContent>
                 </Card>
