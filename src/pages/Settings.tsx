@@ -193,20 +193,23 @@ export default function Settings() {
   const visibleTabs = isAdmin ? TABS : TABS.filter(t => t.id !== 'staff');
 
   return (
-    <div className={activeTab === 'print' ? 'flex flex-col h-full overflow-hidden' : ''} style={{ display: 'flex', flexDirection: 'column', gap: 20, fontFamily: 'var(--spos-sans)' }}>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-shrink-0">
+    <div className="flex flex-col h-full overflow-hidden" style={{ gap: 20, fontFamily: 'var(--spos-sans)' }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 flex-shrink-0 p-4 lg:p-6 pb-0">
         <div>
           <h1 className="spos-page-heading">Settings</h1>
           <p className="spos-page-subhead" style={{ marginBottom: 0 }}>Manage your business configuration</p>
         </div>
       </div>
 
-      <div className="w-full pb-2 -mx-2 px-2 sm:mx-0 sm:px-0 scrollbar-hide flex-shrink-0">
+      <div className="w-full pb-2 -mx-2 px-6 sm:mx-0 scrollbar-hide flex-shrink-0">
         <TabBar tabs={visibleTabs} active={activeTab} onSelect={handleTabChange} />
       </div>
 
       {/* Content */}
-      <div className={activeTab === 'print' ? 'flex-1 min-h-0 overflow-hidden' : 'pb-10'}>
+      <div className={cn(
+        "flex-1 min-h-0",
+        activeTab === 'print' ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar p-4 lg:p-6 pb-20'
+      )}>
         <div className={activeTab === 'print' ? 'h-full' : 'max-w-[1100px] mx-auto'}>
 
           {/* ═══ BUSINESS ═══ */}
