@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessSettings, useUpdateBusinessSettings } from '@/hooks/useBusinessSettings';
 import { InvoiceTemplate } from '../bills/InvoiceTemplate';
 import { ThermalTemplate } from '../bills/ThermalTemplate';
-import { ColStack, SaveBtn } from './SettingsUI';
+import { ColStack } from '@/components/settings/SettingsUI';
 
 /* ─── Modular Sections ─── */
 import AppearanceSection from './tabs/PrintTab/sections/AppearanceSection';
@@ -13,6 +13,7 @@ import CopiesSection from './tabs/PrintTab/sections/CopiesSection';
 import ItemTableSection from './tabs/PrintTab/sections/ItemTableSection';
 import TotalsTaxesSection from './tabs/PrintTab/sections/TotalsTaxesSection';
 import FooterSection from './tabs/PrintTab/sections/FooterSection';
+import { SaveBtn } from '../SettingsUI';
 
 function RegularPrintPreview({ settings, businessId }: { settings: any; businessId?: string }) {
   const containerWidth = 380;
