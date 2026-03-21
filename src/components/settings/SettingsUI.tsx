@@ -411,4 +411,48 @@ export function FormatGroup({ value = '', onChange, disabled, accentColor = T.co
     );
 }
 
+/* ═══ LayoutPicker ═══ */
+export function LayoutPicker({ layouts, selected, onSelect, disabled }: {
+    layouts: { id: string; name: string; icon: string }[];
+    selected: string; onSelect: (id: string) => void; disabled?: boolean;
+}) {
+    return (
+        <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '12px',
+            padding: '4px 0',
+        }}>
+            {layouts.map(layout => {
+                const isActive = selected === layout.id;
+                return (
+                    <button key={layout.id} type="button"
+                        onClick={() => !disabled && onSelect(layout.id)} disabled={disabled}
+                        style={{
+                            padding: '16px 8px', borderRadius: '12px',
+                            cursor: disabled ? 'not-allowed' : 'pointer',
+                            border: `2px solid ${isActive ? 'hsl(var(--primary))' : T.color.border}`,
+                            background: isActive ? op('hsl(var(--primary))', 6) : T.color.cardBg,
+                            transition: 'all 0.2s', textAlign: 'center' as const, fontFamily: T.font,
+                            opacity: disabled ? 0.6 : 1, transform: isActive ? 'translateY(-2px)' : 'none',
+                            position: 'relative',
+                        }}
+                    >
+                        <div style={{ fontSize: '28px', marginBottom: '8px', display: 'block' }}>{layout.icon}</div>
+                        <div style={{
+                            fontSize: '11.5px', fontWeight: isActive ? 700 : 500,
+                            color: isActive ? 'hsl(var(--primary))' : T.color.textPri, lineHeight: 1.2,
+                        }}>{layout.name}</div>
+                        {isActive && (
+                            <div style={{
+                                position: 'absolute', top: '6px', right: '6px',
+                                width: '18px', height: '18px', borderRadius: '50%', background: 'hsl(var(--primary))',
+                                color: '#fff', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>✓</div>
+                        )}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
 export { T };

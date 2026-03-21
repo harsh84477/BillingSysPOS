@@ -1,34 +1,36 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
-  SettingsCard, SaveBtn, TabBar, LayoutPicker 
-} from '../../SettingsUI';
+  SettingsCard, TabBar, LayoutPicker 
+} from '../../../SettingsUI';
 
 interface AppearanceSectionProps {
   printerTab: 'regular' | 'thermal';
   setPrinterTab: (v: 'regular' | 'thermal') => void;
-  regularSubTab: 'layout' | 'colors';
-  setRegularSubTab: (v: 'layout' | 'colors') => void;
   settings: any;
   isAdmin: boolean;
   onUpdate: (patch: any) => void;
-  onSave: () => void;
-  hasChanges: boolean;
-  isSaving: boolean;
-  REGULAR_LAYOUTS: any[];
-  THERMAL_LAYOUTS: any[];
+  renderSaveBtn: () => React.ReactNode;
 }
 
-export default function AppearanceSection({
-  printerTab, setPrinterTab, regularSubTab, setRegularSubTab,
-  settings, isAdmin, onUpdate, onSave, hasChanges, isSaving,
-  REGULAR_LAYOUTS, THERMAL_LAYOUTS
-}: AppearanceSectionProps) {
+const REGULAR_LAYOUTS = [
+  { id: 'gst_theme_6', name: 'GST Theme 6', icon: '📋' },
+  { id: 'urban_bill_style', name: 'Urban Bill', icon: '🏙️' },
+  { id: 'double_divine', name: 'Double Divine', icon: '✨' },
+  { id: 'french_elite', name: 'French Elite', icon: '🏛️' },
+  { id: 'theme_1', name: 'Theme 1', icon: '📄' },
+];
+const THERMAL_LAYOUTS = [
+  { id: 'theme_1', name: 'Theme 1', icon: '🧾' },
+  { id: 'theme_2', name: 'Theme 2', icon: '📜' },
+  { id: 'theme_3', name: 'Theme 3', icon: '📑' },
+  { id: 'theme_4', name: 'Theme 4', icon: '📃' },
+  { id: 'theme_5', name: 'Theme 5', icon: '🧾' },
+];
 
-  const renderSaveBtn = () => (
-    <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '4px' }}>
-      <SaveBtn label="Save Changes" onClick={onSave} disabled={!hasChanges || isSaving} />
-    </div>
-  );
+export default function AppearanceSection({
+  printerTab, setPrinterTab, settings, isAdmin, onUpdate, renderSaveBtn
+}: AppearanceSectionProps) {
+  const [regularSubTab, setRegularSubTab] = useState<'layout' | 'colors'>('layout');
 
   return (
     <SettingsCard title="Appearance" subtitle="Customize layout and colors for regular printing" icon="🎨" accent="hsl(var(--primary))" footer={renderSaveBtn()}>
