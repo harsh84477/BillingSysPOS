@@ -8,8 +8,6 @@
 
 @layer base {
   :root {
-    height: 100vh;
-    overflow: hidden;
     /* ─── Tailwind/Shadcn token bridge ─── */
     --background: 0 0% 96%;
     /* maps to --bg */
@@ -143,8 +141,6 @@
   }
 
   body {
-    height: 100vh;
-    overflow: hidden;
     font-family: var(--spos-sans);
     color: var(--spos-text);
     background: var(--spos-bg);

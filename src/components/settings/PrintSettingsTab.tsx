@@ -288,10 +288,10 @@ export default function PrintSettingsTab() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'hsl(var(--background))' }}>
+    <div style={{ display: 'flex', background: 'hsl(var(--background))', gap: '24px', alignItems: 'flex-start' }}>
       
-      {/* ═══ LEFT: SCROLLABLE SETTINGS ═══ */}
-      <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '0 24px 40px 0' }}>
+      {/* ═══ LEFT: SETTINGS (Flows normally) ═══ */}
+      <div style={{ flex: 1, minWidth: 0 }}>
         
         {/* Appearance / Printer Type */}
         <SettingsCard title="Appearance" subtitle="Customize layout and colors for regular printing" icon="🎨" accent="hsl(var(--primary))" footer={renderSaveBtn()}>
@@ -451,10 +451,12 @@ export default function PrintSettingsTab() {
 
       </div>
 
-      {/* ═══ RIGHT: FIXED PREVIEW ═══ */}
+      {/* ═══ RIGHT: STICKY PREVIEW ═══ */}
       <div style={{ 
         width: '420px', flexShrink: 0, borderLeft: `1px solid ${T.color.border}`,
-        display: 'flex', flexDirection: 'column', background: '#f8fafc', overflow: 'hidden'
+        position: 'sticky', top: '10px', height: 'calc(100vh - 160px)',
+        display: 'flex', flexDirection: 'column', background: '#f8fafc', overflow: 'hidden',
+        borderRadius: '12px', border: `1px solid ${T.color.border}`
       }}>
         {/* Preview Header */}
         <div style={{ 
