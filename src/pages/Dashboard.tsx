@@ -36,6 +36,13 @@ import { Wallet, Smartphone, CreditCard, Plus, UserPlus, Sun, Moon, Sunrise, Sun
 
 type KPIColor = 'blue' | 'green' | 'amber' | 'red';
 
+const KPI_THEME: Record<KPIColor, { lightBg: string; grad: string; textColor: string }> = {
+  green: { lightBg: 'bg-emerald-50 dark:bg-emerald-950/20', grad: 'from-emerald-500 to-green-600',   textColor: 'text-emerald-600' },
+  blue:  { lightBg: 'bg-indigo-50  dark:bg-indigo-950/20',  grad: 'from-indigo-500 to-blue-600',    textColor: 'text-indigo-600' },
+  amber: { lightBg: 'bg-amber-50   dark:bg-amber-950/20',   grad: 'from-amber-500  to-orange-500',  textColor: 'text-amber-600' },
+  red:   { lightBg: 'bg-rose-50    dark:bg-rose-950/20',    grad: 'from-rose-500   to-pink-600',    textColor: 'text-rose-600' },
+};
+
 function KPICard({
   title,
   value,
@@ -55,27 +62,35 @@ function KPICard({
   index?: number;
   onClick?: () => void;
 }) {
+  const theme = KPI_THEME[color];
   return (
     <div
-      className={cn("spos-kpi", onClick && "hover:border-primary/50 cursor-pointer")}
-      style={{ animationDelay: `${index * 0.04}s`, transition: 'all 0.2s', ...(onClick ? { backgroundColor: 'var(--spos-bg)' } : {}) }}
+      className={cn(
+        'rounded-2xl border p-4 relative overflow-hidden group transition-all duration-200',
+        theme.lightBg,
+        onClick && 'cursor-pointer hover:shadow-md active:scale-[0.98]'
+      )}
+      style={{ animationDelay: `${index * 0.04}s` }}
       onClick={onClick}
     >
-      <div className={`spos-kpi-bar spos-kpi-bar--${color}`} />
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div className="spos-kpi-label">{title}</div>
-        <div className={`spos-icon-wrap spos-icon-wrap--${color}`}>
-          <Icon style={{ width: 15, height: 15, strokeWidth: 2 }} />
+      {/* Decorative gradient circle */}
+      <div className={cn('absolute -right-5 -top-5 w-20 h-20 rounded-full bg-gradient-to-br opacity-10 group-hover:opacity-20 transition-opacity', theme.grad)} />
+      <div className="relative">
+        <div className="flex items-start justify-between mb-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground leading-tight pr-2">{title}</p>
+          <div className={cn('w-8 h-8 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-md shrink-0', theme.grad)}>
+            <Icon className="h-4 w-4 text-white" />
+          </div>
         </div>
+        {isLoading ? (
+          <Skeleton className="h-7 w-24 mt-1" />
+        ) : (
+          <>
+            <p className={cn('text-xl sm:text-2xl font-black leading-none', theme.textColor)}>{value}</p>
+            {description && <p className="text-[10px] text-muted-foreground mt-1.5 leading-tight">{description}</p>}
+          </>
+        )}
       </div>
-      {isLoading ? (
-        <Skeleton className="h-7 w-24 mt-1.5" />
-      ) : (
-        <>
-          <div className="spos-kpi-value">{value}</div>
-          {description && <div className="spos-kpi-footer">{description}</div>}
-        </>
-      )}
     </div>
   );
 }
@@ -613,43 +628,24 @@ export default function Dashboard() {
           {loadingExpense ? (
             <div className="grid grid-cols-2 gap-3">
               {[1, 2, 3, 4].map(i => (
-                <Skeleton key={i} className="h-16 sm:h-20 w-full" />
+                <Skeleton key={i} className="h-20 w-full rounded-2xl" />
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 sm:p-4 rounded-lg bg-muted/50">
-                <p className="text-xs text-muted-foreground">Total Revenue</p>
-                <p className="text-lg sm:text-2xl font-bold text-green-600">
-                  {currencySymbol}{monthlyTotals.revenue.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground">{monthlyTotals.orderCount} orders</p>
-              </div>
-              <div className="p-3 sm:p-4 rounded-lg bg-muted/50">
-                <p className="text-xs text-muted-foreground">Total Cost</p>
-                <p className="text-lg sm:text-2xl font-bold text-orange-600">
-                  {currencySymbol}{monthlyTotals.cost.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground">Product costs</p>
-              </div>
-              <div className="p-3 sm:p-4 rounded-lg bg-muted/50">
-                <p className="text-xs text-muted-foreground">Discounts Given</p>
-                <p className="text-lg sm:text-2xl font-bold text-red-600">
-                  {currencySymbol}{monthlyTotals.discounts.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground">Total discounts</p>
-              </div>
-              <div className="p-3 sm:p-4 rounded-lg bg-muted/50">
-                <p className="text-xs text-muted-foreground">Net Profit</p>
-                <p className={`text-lg sm:text-2xl font-bold ${monthlyTotals.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {currencySymbol}{monthlyTotals.profit.toFixed(2)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {monthlyTotals.revenue > 0
-                    ? `${((monthlyTotals.profit / monthlyTotals.revenue) * 100).toFixed(1)}% margin`
-                    : 'No sales'}
-                </p>
-              </div>
+              {[
+                { label: 'Total Revenue', value: `${currencySymbol}${monthlyTotals.revenue.toFixed(2)}`, sub: `${monthlyTotals.orderCount} orders`, bg: 'bg-emerald-50 dark:bg-emerald-950/20', grad: 'from-emerald-500 to-green-600', text: 'text-emerald-600' },
+                { label: 'Total Cost',    value: `${currencySymbol}${monthlyTotals.cost.toFixed(2)}`,    sub: 'Product costs',   bg: 'bg-amber-50  dark:bg-amber-950/20',   grad: 'from-amber-500  to-orange-500',  text: 'text-amber-600' },
+                { label: 'Discounts',     value: `${currencySymbol}${monthlyTotals.discounts.toFixed(2)}`, sub: 'Total discounts', bg: 'bg-rose-50   dark:bg-rose-950/20',    grad: 'from-rose-500   to-pink-600',    text: 'text-rose-600' },
+                { label: 'Net Profit',    value: `${currencySymbol}${monthlyTotals.profit.toFixed(2)}`,  sub: monthlyTotals.revenue > 0 ? `${((monthlyTotals.profit / monthlyTotals.revenue) * 100).toFixed(1)}% margin` : 'No sales', bg: monthlyTotals.profit >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/20' : 'bg-rose-50 dark:bg-rose-950/20', grad: monthlyTotals.profit >= 0 ? 'from-emerald-500 to-green-600' : 'from-rose-500 to-pink-600', text: monthlyTotals.profit >= 0 ? 'text-emerald-600' : 'text-rose-600' },
+              ].map(card => (
+                <div key={card.label} className={cn('rounded-2xl border p-4 relative overflow-hidden', card.bg)}>
+                  <div className={cn('absolute -right-4 -top-4 w-16 h-16 rounded-full bg-gradient-to-br opacity-10', card.grad)} />
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{card.label}</p>
+                  <p className={cn('text-xl font-black leading-none mt-1', card.text)}>{card.value}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">{card.sub}</p>
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

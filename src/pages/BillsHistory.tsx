@@ -371,52 +371,28 @@ export default function BillsHistory() {
         </Button>
       </div>
 
-      {/* Summary Stats - 2 cols on mobile */}
+      {/* Summary Stats */}
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 shrink-0">
-              <Receipt className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+        {[
+          { label: 'Total Bills',  value: summaryStats.totalBills,                              icon: Receipt,   bg: 'bg-indigo-50 dark:bg-indigo-950/20',  grad: 'from-indigo-500 to-blue-600',   text: 'text-indigo-600' },
+          { label: 'Revenue',      value: `${currencySymbol}${summaryStats.totalRevenue.toFixed(2)}`, icon: TrendingUp, bg: 'bg-emerald-50 dark:bg-emerald-950/20', grad: 'from-emerald-500 to-green-600',  text: 'text-emerald-600' },
+          { label: 'Avg Bill',     value: `${currencySymbol}${summaryStats.avgBillValue.toFixed(2)}`, icon: Clock,     bg: 'bg-amber-50  dark:bg-amber-950/20',   grad: 'from-amber-500 to-orange-500',  text: 'text-amber-600' },
+          { label: 'Discounts',    value: `${currencySymbol}${summaryStats.totalDiscount.toFixed(2)}`, icon: X,        bg: 'bg-rose-50   dark:bg-rose-950/20',    grad: 'from-rose-500 to-pink-600',     text: 'text-rose-600' },
+        ].map(card => {
+          const Icon = card.icon;
+          return (
+            <div key={card.label} className={cn('rounded-2xl border p-4 relative overflow-hidden', card.bg)}>
+              <div className={cn('absolute -right-4 -top-4 w-16 h-16 rounded-full bg-gradient-to-br opacity-10', card.grad)} />
+              <div className="relative flex items-start justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{card.label}</p>
+                <div className={cn('w-7 h-7 rounded-xl bg-gradient-to-br flex items-center justify-center shadow-md shrink-0', card.grad)}>
+                  <Icon className="h-3.5 w-3.5 text-white" />
+                </div>
+              </div>
+              <p className={cn('text-xl font-black leading-none mt-2', card.text)}>{card.value}</p>
             </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Total Bills</p>
-              <p className="text-base sm:text-lg font-bold">{summaryStats.totalBills}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/10 shrink-0">
-              <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Revenue</p>
-              <p className="text-base sm:text-lg font-bold truncate">{currencySymbol}{summaryStats.totalRevenue.toFixed(2)}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-orange-500/10 shrink-0">
-              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-600" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Avg Bill</p>
-              <p className="text-base sm:text-lg font-bold truncate">{currencySymbol}{summaryStats.avgBillValue.toFixed(2)}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-red-500/10 shrink-0">
-              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-600" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">Discounts</p>
-              <p className="text-base sm:text-lg font-bold truncate">{currencySymbol}{summaryStats.totalDiscount.toFixed(2)}</p>
-            </div>
-          </div>
-        </Card>
+          );
+        })}
       </div>
 
       {/* Filters & Tabs Section */}

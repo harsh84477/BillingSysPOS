@@ -164,22 +164,28 @@ export default function DueBills() {
             </div>
 
             {/* Summary Cards */}
-            <div className="spos-kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                <div className="spos-kpi" style={{ animationDelay: '0s' }}>
-                    <div className="spos-kpi-bar spos-kpi-bar--red" />
-                    <div className="spos-kpi-label">Total Due</div>
-                    <div className="spos-kpi-value" style={{ color: 'var(--spos-red-val)' }}>{currencySymbol}{totalDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
-                </div>
-                <div className="spos-kpi" style={{ animationDelay: '0.04s' }}>
-                    <div className="spos-kpi-bar spos-kpi-bar--amber" />
-                    <div className="spos-kpi-label">Unpaid Bills</div>
-                    <div className="spos-kpi-value">{dueBills.length}</div>
-                </div>
-                <div className="spos-kpi" style={{ animationDelay: '0.08s' }}>
-                    <div className="spos-kpi-bar spos-kpi-bar--red" />
-                    <div className="spos-kpi-label">Overdue</div>
-                    <div className="spos-kpi-value" style={{ color: overdueCount > 0 ? 'var(--spos-red-val)' : undefined }}>{overdueCount}</div>
-                </div>
+            <div className="grid grid-cols-3 gap-3">
+                {[
+                    { label: 'Total Due',    value: `${currencySymbol}${totalDue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, icon: IndianRupee,   bg: 'bg-rose-50 dark:bg-rose-950/20',    grad: 'from-rose-500 to-pink-600',    text: 'text-rose-600' },
+                    { label: 'Unpaid Bills', value: dueBills.length,                                                                         icon: AlertCircle,   bg: 'bg-amber-50 dark:bg-amber-950/20',  grad: 'from-amber-500 to-orange-500',  text: 'text-amber-600' },
+                    { label: 'Overdue',      value: overdueCount,                                                                             icon: AlertTriangle, bg: 'bg-rose-50 dark:bg-rose-950/20',    grad: 'from-rose-500 to-pink-600',    text: 'text-rose-600' },
+                ].map(card => {
+                    const Icon = card.icon;
+                    return (
+                        <div key={card.label} className={cn('rounded-2xl border p-3 sm:p-4 relative overflow-hidden', card.bg)}>
+                            <div className={cn('absolute -right-4 -top-4 w-16 h-16 rounded-full bg-gradient-to-br opacity-10', card.grad)} />
+                            <div className="relative">
+                                <div className="flex items-start justify-between gap-1 mb-1">
+                                    <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground leading-tight">{card.label}</p>
+                                    <div className={cn('w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-gradient-to-br flex items-center justify-center shadow-md shrink-0', card.grad)}>
+                                        <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-white" />
+                                    </div>
+                                </div>
+                                <p className={cn('text-base sm:text-xl font-black leading-none', card.text)}>{card.value}</p>
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Search */}
@@ -193,85 +199,69 @@ export default function DueBills() {
                 />
             </div>
 
-            {/* Table */}
-            <Card>
-                <CardContent className="p-0">
+            {/* Bill Cards */}
+            <div className="space-y-3 pb-24">
                     {isLoading ? (
-                        <TableSkeleton columns={5} rows={4} />
+                        <TableSkeleton columns={3} rows={4} />
                     ) : filtered.length === 0 ? (
                         <EmptyState
                             icon="alert"
                             title={search ? 'No due bills matching search' : 'No due bills!'}
                             description="All bills are paid. Great job!"
                         />
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Bill #</TableHead>
-                                        <TableHead>Customer</TableHead>
-                                        <TableHead>Date</TableHead>
-                                        <TableHead className="text-right">Total</TableHead>
-                                        <TableHead className="text-right">Paid</TableHead>
-                                        <TableHead className="text-right">Due</TableHead>
-                                        <TableHead>Due Date</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filtered.map((bill: any) => {
-                                        const isOverdue = bill.due_date && isPast(parseISO(bill.due_date));
-                                        return (
-                                            <TableRow
-                                                key={bill.id}
-                                                className={cn(isOverdue && 'bg-red-50 dark:bg-red-950/20 border-l-4 border-l-red-500')}
-                                            >
-                                                <TableCell className="font-mono text-sm font-semibold">{bill.bill_number}</TableCell>
-                                                <TableCell className="font-medium">{bill.customers?.name || 'Walk-in'}</TableCell>
-                                                <TableCell className="text-muted-foreground text-sm">
-                                                    {format(new Date(bill.created_at), 'dd MMM yy')}
-                                                </TableCell>
-                                                <TableCell className="text-right font-medium">
-                                                    {currencySymbol}{Number(bill.total_amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                                </TableCell>
-                                                <TableCell className="text-right text-green-600 font-medium">
-                                                    {currencySymbol}{Number(bill.paid_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                                </TableCell>
-                                                <TableCell className="text-right font-bold text-destructive">
-                                                    {currencySymbol}{Number(bill.due_amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {bill.due_date ? (
-                                                        <span className={cn('text-sm flex items-center gap-1', isOverdue ? 'text-red-600 font-semibold' : 'text-muted-foreground')}>
-                                                            {isOverdue && <AlertTriangle className="h-3 w-3" />}
-                                                            {format(parseISO(bill.due_date), 'dd MMM yy')}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-muted-foreground text-xs">—</span>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell>{getStatusBadge(bill)}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <Button
-                                                        size="sm"
-                                                        className="h-7 text-xs"
-                                                        onClick={() => setPayDialog({ bill, cashAmount: String(bill.due_amount || ''), onlineAmount: '', method: 'cash' })}
-                                                    >
-                                                        <CreditCard className="h-3 w-3 mr-1" />
-                                                        Pay Now
-                                                    </Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                    ) : filtered.map((bill: any) => {
+                        const isOverdue = bill.due_date && isPast(parseISO(bill.due_date));
+                        return (
+                            <div
+                                key={bill.id}
+                                className={cn(
+                                    'bg-card border rounded-2xl p-4',
+                                    isOverdue && 'border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/20'
+                                )}
+                                style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+                            >
+                                {/* Top row */}
+                                <div className="flex items-start justify-between gap-2 mb-3">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-sm">#{bill.bill_number}</span>
+                                            {getStatusBadge(bill)}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-0.5">{bill.customers?.name || 'Walk-in'}</p>
+                                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                            <Calendar className="h-3 w-3" />
+                                            {format(new Date(bill.created_at), 'dd MMM yyyy')}
+                                            {bill.due_date && (
+                                                <span className={cn('ml-2 flex items-center gap-1', isOverdue ? 'text-red-600 font-semibold' : '')}>
+                                                    {isOverdue && <AlertTriangle className="h-3 w-3" />}
+                                                    Due: {format(parseISO(bill.due_date), 'dd MMM yy')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        <p className="text-[10px] text-muted-foreground uppercase font-semibold">Due Amount</p>
+                                        <p className="text-lg font-black text-rose-600">{currencySymbol}{Number(bill.due_amount || 0).toFixed(2)}</p>
+                                    </div>
+                                </div>
+                                {/* Amount row */}
+                                <div className="flex items-center gap-3 text-xs mb-3">
+                                    <span className="text-muted-foreground">Total: <strong className="text-foreground">{currencySymbol}{Number(bill.total_amount).toFixed(2)}</strong></span>
+                                    <span className="text-muted-foreground">Paid: <strong className="text-emerald-600">{currencySymbol}{Number(bill.paid_amount || 0).toFixed(2)}</strong></span>
+                                </div>
+                                {/* Pay button */}
+                                <Button
+                                    size="sm"
+                                    className="w-full h-9 font-semibold"
+                                    onClick={() => setPayDialog({ bill, cashAmount: String(bill.due_amount || ''), onlineAmount: '', method: 'cash' })}
+                                >
+                                    <CreditCard className="h-3.5 w-3.5 mr-2" />
+                                    Pay Now
+                                </Button>
+                            </div>
+                        );
+                    })}
+            </div>
 
             {/* Pay Now Dialog */}
             <Dialog open={!!payDialog} onOpenChange={() => setPayDialog(null)}>

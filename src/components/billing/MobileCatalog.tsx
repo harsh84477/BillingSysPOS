@@ -119,7 +119,7 @@ export default function MobileCatalog({
     cart.find((i) => i.productId === productId)?.quantity ?? 0;
 
   return (
-    <div className="flex flex-col h-full" style={{ background: '#f0f2f5', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
+    <div className="flex flex-col h-full" style={{ background: 'hsl(var(--muted))', fontFamily: 'system-ui,-apple-system,sans-serif' }}>
 
       {/* HEADER */}
       <div className="flex items-center px-4 gap-3 shrink-0" style={{ background: '#1a2e5a', height: 56 }}>
@@ -135,29 +135,29 @@ export default function MobileCatalog({
       </div>
 
       {/* SEARCH BAR */}
-      <div className="bg-white px-4 pt-3 pb-2 shrink-0" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+      <div className="px-4 pt-3 pb-2 shrink-0" style={{ background: 'hsl(var(--card))', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: '#9ca3af' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none text-muted-foreground" />
           <input
             type="text"
             placeholder="Search product name or SKU..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-11 pl-10 pr-4 rounded-xl text-sm outline-none"
-            style={{ background: '#f3f4f6', color: '#111827' }}
+            className="w-full h-11 pl-10 pr-4 rounded-xl text-sm outline-none text-foreground"
+            style={{ background: 'hsl(var(--muted))', border: '1px solid hsl(var(--border))' }}
           />
         </div>
       </div>
 
       {/* CATEGORY TABS */}
       <div
-        className="bg-white flex gap-2 px-4 pb-3 pt-2 overflow-x-auto shrink-0"
-        style={{ scrollbarWidth: 'none' }}
+        className="flex gap-2 px-4 pb-3 pt-2 overflow-x-auto shrink-0"
+        style={{ scrollbarWidth: 'none', background: 'var(--card, #fff)' }}
       >
         <button
           onClick={() => setSelectedCategory('all')}
           className="shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold active:scale-95 transition-transform"
-          style={selectedCategory === 'all' ? { background: '#1a2e5a', color: '#fff' } : { background: '#f3f4f6', color: '#6b7280' }}
+          style={selectedCategory === 'all' ? { background: '#1a2e5a', color: '#fff' } : { background: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}
         >
           All Items
         </button>
@@ -166,7 +166,7 @@ export default function MobileCatalog({
             key={cat.id}
             onClick={() => setSelectedCategory(cat.id)}
             className="shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap active:scale-95 transition-transform"
-            style={selectedCategory === cat.id ? { background: '#1a2e5a', color: '#fff' } : { background: '#f3f4f6', color: '#6b7280' }}
+            style={selectedCategory === cat.id ? { background: '#1a2e5a', color: '#fff' } : { background: 'hsl(var(--muted))', color: 'hsl(var(--muted-foreground))' }}
           >
             {cat.name}
           </button>
@@ -176,7 +176,7 @@ export default function MobileCatalog({
       {/* PRODUCT LIST */}
       <div className="flex-1 overflow-y-auto px-3 pt-2 pb-2 space-y-2" style={{ WebkitOverflowScrolling: 'touch' }}>
         {filtered.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-40" style={{ color: '#9ca3af' }}>
+          <div className="flex flex-col items-center justify-center h-40 text-muted-foreground">
             <Package className="h-10 w-10 mb-2 opacity-30" />
             <p className="text-sm">No products found</p>
           </div>
@@ -189,14 +189,20 @@ export default function MobileCatalog({
           const qty = getCartQty(product.id);
           const available = (product.stock_quantity ?? 9999) - (product.reserved_quantity ?? 0);
           const outOfStock = available <= 0;
+          const hasQty = qty > 0;
 
           return (
             <div
               key={product.id}
-              className="bg-white rounded-2xl flex items-center gap-3 px-3 py-3"
-              style={{ opacity: outOfStock ? 0.55 : 1, boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}
+              className="rounded-2xl border flex items-center gap-3 px-3 py-3 transition-all"
+              style={{
+                opacity: outOfStock ? 0.55 : 1,
+                background: hasQty ? 'hsl(var(--primary) / 0.04)' : 'hsl(var(--card))',
+                borderColor: hasQty ? 'hsl(var(--primary) / 0.25)' : 'hsl(var(--border))',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+              }}
             >
-              {/* Image */}
+              {/* Image / placeholder with warm tint */}
               <div
                 className="w-16 h-16 rounded-xl flex items-center justify-center shrink-0 overflow-hidden"
                 style={{ background: product.image_url ? 'transparent' : getPlaceholderBg(product.id) }}
@@ -204,42 +210,43 @@ export default function MobileCatalog({
                 {product.image_url ? (
                   <img src={product.image_url} alt={product.name} className="w-full h-full object-cover rounded-xl" />
                 ) : (
-                  <Package className="w-7 h-7" style={{ color: '#1a2e5a', opacity: 0.4 }} />
+                  <Package className="w-7 h-7" style={{ color: '#1a2e5a', opacity: 0.45 }} />
                 )}
               </div>
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="font-extrabold leading-tight truncate" style={{ fontSize: 14, color: '#111827' }}>
+                <p className="font-extrabold leading-tight truncate text-sm text-foreground">
                   {product.name}
                 </p>
                 {sku && (
-                  <p className="mt-0.5 font-medium" style={{ fontSize: 11, color: '#9ca3af' }}>
+                  <p className="mt-0.5 font-medium text-[11px] text-muted-foreground">
                     SKU: {sku}
                   </p>
                 )}
                 <div className="mt-1.5 space-y-0.5">
                   {casePrice !== null && (
                     <div className="flex items-center gap-1">
-                      <span className="font-semibold uppercase" style={{ fontSize: 11, color: '#9ca3af', minWidth: 62 }}>CASE ({caseQty})</span>
-                      <span className="font-bold" style={{ fontSize: 13, color: '#1f2937' }}>{currencySymbol}{casePrice.toFixed(2)}</span>
+                      <span className="font-bold uppercase text-[10px] text-muted-foreground" style={{ minWidth: 64 }}>CASE ({caseQty})</span>
+                      <span className="font-bold text-[13px] text-foreground">{currencySymbol}{casePrice.toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex items-center gap-1">
-                    <span className="font-semibold uppercase" style={{ fontSize: 11, color: '#9ca3af', minWidth: 62 }}>PIECE</span>
-                    <span className="font-bold" style={{ fontSize: 13, color: '#1f2937' }}>{currencySymbol}{price.toFixed(2)}</span>
+                    <span className="font-bold uppercase text-[10px] text-muted-foreground" style={{ minWidth: 64 }}>PIECE</span>
+                    <span className="font-bold text-[13px] text-foreground">{currencySymbol}{price.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Buttons */}
               <div className="flex flex-col gap-1.5 items-end shrink-0">
+                {/* + CASE — emerald gradient matching Expenses theme */}
                 {caseQty > 0 && (
                   <button
                     disabled={outOfStock}
                     onClick={() => onAddCase(product, caseQty)}
-                    className="flex items-center justify-center gap-1 rounded-lg font-bold active:scale-95 transition-transform disabled:opacity-40"
-                    style={{ background: '#4caf50', color: '#fff', fontSize: 12, minWidth: 72, height: 34 }}
+                    className="flex items-center justify-center gap-1 rounded-xl font-bold active:scale-95 transition-transform disabled:opacity-40 shadow-sm"
+                    style={{ background: 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', fontSize: 11, minWidth: 68, height: 32 }}
                   >
                     + CASE
                     {qty >= caseQty && caseQty > 0 && (
@@ -249,27 +256,28 @@ export default function MobileCatalog({
                     )}
                   </button>
                 )}
+                {/* + PIECE / counter — indigo gradient */}
                 {qty > 0 ? (
-                  <div className="flex items-center gap-1" style={{ height: 34 }}>
+                  <div className="flex items-center" style={{ height: 32, gap: 4 }}>
                     <button
                       onClick={() => onUpdateQty(product.id, -1)}
-                      className="flex items-center justify-center rounded-lg font-bold text-white active:scale-95 transition-transform"
-                      style={{ background: '#1a2e5a', width: 28, height: 34, fontSize: 18 }}
+                      className="flex items-center justify-center rounded-xl font-bold text-white active:scale-95 transition-transform shadow-sm"
+                      style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)', width: 28, height: 32, fontSize: 18 }}
                     >−</button>
-                    <span className="text-center font-black" style={{ width: 28, fontSize: 14, color: '#1a2e5a' }}>{qty}</span>
+                    <span className="text-center font-black text-sm" style={{ width: 26, color: 'hsl(var(--foreground))' }}>{qty}</span>
                     <button
                       disabled={outOfStock}
                       onClick={() => onAddPiece(product)}
-                      className="flex items-center justify-center rounded-lg font-bold text-white active:scale-95 transition-transform disabled:opacity-40"
-                      style={{ background: '#1a2e5a', width: 28, height: 34, fontSize: 18 }}
+                      className="flex items-center justify-center rounded-xl font-bold text-white active:scale-95 transition-transform disabled:opacity-40 shadow-sm"
+                      style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)', width: 28, height: 32, fontSize: 18 }}
                     >+</button>
                   </div>
                 ) : (
                   <button
                     disabled={outOfStock}
                     onClick={() => onAddPiece(product)}
-                    className="flex items-center justify-center rounded-lg font-bold active:scale-95 transition-transform disabled:opacity-40"
-                    style={{ background: '#1a2e5a', color: '#fff', fontSize: 12, minWidth: 72, height: 34 }}
+                    className="flex items-center justify-center rounded-xl font-bold active:scale-95 transition-transform disabled:opacity-40 shadow-sm"
+                    style={{ background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', fontSize: 11, minWidth: 68, height: 32 }}
                   >
                     + PIECE
                   </button>
@@ -293,8 +301,8 @@ export default function MobileCatalog({
           </div>
           <button
             onClick={onViewBill}
-            className="flex items-center gap-2 font-bold text-white rounded-xl active:scale-95 transition-transform"
-            style={{ background: '#2e7d32', fontSize: 14, paddingLeft: 20, paddingRight: 20, height: 48 }}
+            className="flex items-center gap-2 font-bold text-white rounded-xl active:scale-95 transition-transform shadow-lg"
+            style={{ background: 'linear-gradient(135deg,#10b981,#059669)', fontSize: 14, paddingLeft: 20, paddingRight: 20, height: 48 }}
           >
             VIEW BILL <ArrowRight className="h-4 w-4" />
           </button>
