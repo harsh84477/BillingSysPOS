@@ -99,6 +99,9 @@ import {
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { printBillReceipt } from '@/components/bills/BillReceiptPrint';
+import MobileCatalog from '@/components/billing/MobileCatalog';
+import { Capacitor } from '@capacitor/core';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Safe icon map — avoids the broken `icons` bulk export from lucide-react
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -844,6 +847,23 @@ export default function Billing() {
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  // ─── Mobile catalog view (native Android or small screen) ───
+  const isMobileScreen = useIsMobile();
+  const isNative = Capacitor.isNativePlatform();
+  const [mobileBillOpen, setMobileBillOpen] = useState(false);
+  const useMobileLayout = isNative || isMobileScreen;
+
+  const handleAddCase = (product: typeof products[0], caseQty: number) => {
+    const available = product.stock_quantity - (product.reserved_quantity || 0);
+    const existing = cart.find((item) => item.productId === product.id);
+    const currentQty = existing ? existing.quantity : 0;
+    if (currentQty + caseQty > available) {
+      toast.error(`Only ${available} units available.`);
+      return;
+    }
+    addToCartWithQuantity(product, caseQty);
+  };
+
   // ─── Dynamic grid settings from admin ───
   const productColumns = settings?.product_columns ?? 5;
   const gridGap = settings?.grid_gap ?? 8;
@@ -1047,6 +1067,350 @@ export default function Billing() {
       )}
     </div>
   );
+
+  // ── Shared dialogs for both mobile and desktop layouts ──
+  const renderDialogs = () => (
+    <>
+      {/* Customer Selection Dialog */}
+      <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              Select Customer
+              <Button size="sm" variant="outline" className="text-xs gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => { setIsCustomerDialogOpen(false); setQuickAddName(''); setQuickAddPhone(''); setQuickAddOpen(true); }}>
+                <UserPlus className="h-3.5 w-3.5" /> New Customer
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search by name or phone..." value={customerSearchQuery} onChange={(e) => setCustomerSearchQuery(e.target.value)} className="pl-10 h-10" autoFocus />
+          </div>
+          <ScrollArea className="max-h-72">
+            <div className="space-y-1">
+              <Button variant="ghost" className="w-full justify-start h-auto py-2.5"
+                onClick={() => { setSelectedCustomerId(null); setCustomerName(''); setIsCustomerDialogOpen(false); }}>
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground"><User className="h-4 w-4" /></div>
+                  <span className="font-medium text-sm">Walk-in Customer</span>
+                </div>
+              </Button>
+              {customers
+                .filter(c => {
+                  if (!customerSearchQuery.trim()) return true;
+                  const q = customerSearchQuery.toLowerCase();
+                  return c.name?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q);
+                })
+                .map((customer) => (
+                  <Button key={customer.id} variant={selectedCustomerId === customer.id ? 'secondary' : 'ghost'}
+                    className="w-full justify-start h-auto py-2.5"
+                    onClick={() => { setSelectedCustomerId(customer.id); setCustomerName(customer.name); setIsCustomerDialogOpen(false); }}>
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">{customer.name?.charAt(0)?.toUpperCase()}</div>
+                      <div className="text-left">
+                        <div className="font-medium text-sm">{customer.name}</div>
+                        {customer.phone && <div className="text-[11px] text-muted-foreground">📱 {customer.phone}</div>}
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              {customers.filter(c => {
+                if (!customerSearchQuery.trim()) return true;
+                const q = customerSearchQuery.toLowerCase();
+                return c.name?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q);
+              }).length === 0 && customerSearchQuery.trim() && (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  <p>No customers found</p>
+                  <Button size="sm" variant="link" className="text-primary mt-1" onClick={() => { setIsCustomerDialogOpen(false); setQuickAddName(customerSearchQuery); setQuickAddPhone(''); setQuickAddOpen(true); }}>Create "{customerSearchQuery}" as new customer</Button>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Add Customer Dialog */}
+      <Dialog open={quickAddOpen} onOpenChange={setQuickAddOpen}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-emerald-500" />
+              Quick Add Customer
+            </DialogTitle>
+            <DialogDescription>Add a new customer for fast billing.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Customer Name *</Label>
+              <Input placeholder="e.g. Ravi Kumar" value={quickAddName} onChange={e => setQuickAddName(e.target.value)} autoFocus />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Mobile Number</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-muted-foreground bg-muted px-3 py-2 rounded-lg">+91</span>
+                <Input type="tel" placeholder="10 digit number" value={quickAddPhone} onChange={e => setQuickAddPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength={10} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setQuickAddOpen(false)}>Cancel</Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={!quickAddName.trim() || quickAddSaving}
+              onClick={async () => {
+                setQuickAddSaving(true);
+                try {
+                  const { data: newCust, error } = await supabase.from('customers').insert({ name: quickAddName.trim(), phone: quickAddPhone || null, business_id: businessId }).select().single();
+                  if (error) throw error;
+                  queryClient.invalidateQueries({ queryKey: ['customers'] });
+                  setSelectedCustomerId(newCust.id);
+                  setCustomerName(newCust.name);
+                  toast.success(`Customer "${newCust.name}" added!`);
+                  setQuickAddOpen(false);
+                } catch (err: any) { toast.error('Failed: ' + err.message); }
+                finally { setQuickAddSaving(false); }
+              }}>
+              {quickAddSaving ? 'Saving...' : 'Add & Select'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Long-Press / Enter Quantity Dialog */}
+      <Dialog open={quantityDialogOpen} onOpenChange={setQuantityDialogOpen}>
+        <DialogContent className="sm:max-w-[320px]">
+          <DialogHeader><DialogTitle>Enter Quantity</DialogTitle></DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Add <span className="font-medium text-foreground">{quantityDialogProduct?.name}</span> to cart
+            </p>
+            <Input type="number" placeholder="Enter quantity..." value={quantityDialogValue}
+              onChange={(e) => setQuantityDialogValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleQuantityDialogConfirm(); }}
+              className="text-lg h-12 text-center" autoFocus min={1} />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setQuantityDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleQuantityDialogConfirm} disabled={!quantityDialogValue || parseInt(quantityDialogValue, 10) <= 0}>Add to Cart</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cost Warning Dialog */}
+      <Dialog open={costWarningDialogOpen} onOpenChange={setCostWarningDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Building2 className="h-5 w-5" /> Price Alert: Below Cost Price
+            </DialogTitle>
+            <DialogDescription className="py-2">
+              This price is at or below cost price. You are selling without profit or at loss. Are you sure you want to continue?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setCostWarningDialogOpen(false); setPendingPriceInfo(null); }}>Cancel & Revert</Button>
+            <Button variant="destructive" onClick={confirmCostWarning}>Accept Price</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* WhatsApp Phone Number Dialog */}
+      <Dialog open={whatsappPhoneDialogOpen} onOpenChange={(open) => { setWhatsappPhoneDialogOpen(open); if (!open) setPendingWhatsappBillNumber(null); }}>
+        <DialogContent className="sm:max-w-[380px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-[#25D366]" /> Enter Customer Phone
+            </DialogTitle>
+            <DialogDescription className="py-1">
+              No phone number found for this customer. Enter a WhatsApp number to send the bill.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-muted-foreground bg-muted px-3 py-2 rounded-lg">+91</span>
+              <Input type="tel" placeholder="10 digit mobile number" value={whatsappPhone}
+                onChange={(e) => setWhatsappPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                onKeyDown={(e) => { if (e.key === 'Enter' && whatsappPhone.length === 10 && pendingWhatsappBillNumber) { sendWhatsApp(pendingWhatsappBillNumber, whatsappPhone); setWhatsappPhoneDialogOpen(false); setPendingWhatsappBillNumber(null); } }}
+                className="text-lg h-12 text-center font-mono tracking-wider flex-1" autoFocus maxLength={10} />
+            </div>
+            {whatsappPhone.length > 0 && whatsappPhone.length < 10 && (
+              <p className="text-xs text-destructive font-medium">Please enter a valid 10-digit number</p>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setWhatsappPhoneDialogOpen(false); setPendingWhatsappBillNumber(null); }}>Cancel</Button>
+            <Button className="bg-[#25D366] hover:bg-[#128C7E] text-white"
+              disabled={whatsappPhone.length !== 10 || !pendingWhatsappBillNumber}
+              onClick={() => { if (pendingWhatsappBillNumber) { sendWhatsApp(pendingWhatsappBillNumber, whatsappPhone); setWhatsappPhoneDialogOpen(false); setPendingWhatsappBillNumber(null); } }}>
+              <MessageCircle className="mr-2 h-4 w-4" /> Send via WhatsApp
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+
+  // ── Mobile-first layout (Android native or small screen) ──
+  if (useMobileLayout) {
+    return (
+      <>
+        {!mobileBillOpen ? (
+          <div className="fixed inset-0 z-10" style={{ top: 0, bottom: 0 }}>
+            <MobileCatalog
+              products={filteredProducts}
+              categories={categories}
+              cart={cart}
+              currencySymbol={currencySymbol}
+              businessName={settings?.business_name || 'Smart POS'}
+              onAddPiece={addToCart}
+              onAddCase={handleAddCase}
+              onUpdateQty={updateQuantity}
+              onViewBill={() => setMobileBillOpen(true)}
+              onNavigate={(path) => navigate(path)}
+            />
+          </div>
+        ) : (
+          <div className="fixed inset-0 z-20 bg-background flex flex-col">
+            {/* Mobile Bill Header */}
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
+              <button
+                onClick={() => setMobileBillOpen(false)}
+                className="flex items-center gap-1 text-sm font-semibold text-primary"
+              >
+                ← Back
+              </button>
+              <span className="flex-1 text-center font-bold text-base">Invoice #{previewBillNumber}</span>
+              <span className="text-xs text-muted-foreground">{totalItems} items</span>
+            </div>
+
+            {/* Scrollable bill body */}
+            <ScrollArea className="flex-1">
+              {/* Customer */}
+              <div className="px-4 py-3 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      placeholder="Customer Name..."
+                      value={customerName || (selectedCustomerId ? customers.find(c => c.id === selectedCustomerId)?.name : '') || ''}
+                      onChange={(e) => { setCustomerName(e.target.value); if (selectedCustomerId) setSelectedCustomerId(null); }}
+                      className="pl-8 h-10 text-sm"
+                    />
+                  </div>
+                  <Button variant="secondary" size="icon" className="h-10 w-10 shrink-0"
+                    onClick={() => { setCustomerSearchQuery(''); setIsCustomerDialogOpen(true); }}>
+                    <Users className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Cart Items */}
+              <div className="px-4 py-2 space-y-2">
+                {cart.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+                    <ShoppingCart className="h-10 w-10 mb-2 opacity-20" />
+                    <p className="text-sm">Your cart is empty</p>
+                  </div>
+                ) : cart.map((item) => (
+                  <div key={item.productId} className="flex items-center gap-2 rounded-xl border border-border p-3 bg-card">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{item.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {currencySymbol}{item.unitPrice.toFixed(2)} × {item.quantity} = <span className="font-bold text-foreground">{currencySymbol}{(item.unitPrice * item.quantity).toFixed(2)}</span>
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => updateQuantity(item.productId, -1)}
+                        className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-sm font-bold">−</button>
+                      <span className="w-7 text-center text-sm font-bold">{item.quantity}</span>
+                      <button onClick={() => updateQuantity(item.productId, 1)}
+                        className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-sm font-bold">+</button>
+                      <button onClick={() => removeFromCart(item.productId)}
+                        className="w-7 h-7 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive text-xs font-bold ml-1">✕</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Totals */}
+              <div className="mx-4 mt-2 mb-2 rounded-xl bg-muted/30 border border-border divide-y divide-border">
+                <div className="flex justify-between items-center px-4 py-2.5 text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="font-semibold">{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
+                </div>
+                {cartCalculations.taxAmount > 0 && (
+                  <div className="flex justify-between items-center px-4 py-2.5 text-sm">
+                    <span className="text-muted-foreground">GST</span>
+                    <span className="font-semibold">{currencySymbol}{cartCalculations.taxAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                {cartCalculations.discountAmount > 0 && (
+                  <div className="flex justify-between items-center px-4 py-2.5 text-sm">
+                    <span className="text-muted-foreground">Discount</span>
+                    <span className="font-semibold text-green-600">−{currencySymbol}{cartCalculations.discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center px-4 py-3">
+                  <span className="font-black text-base">Total</span>
+                  <span className="font-black text-xl text-primary">{currencySymbol}{cartCalculations.total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Discount */}
+              <div className="mx-4 mt-2 flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium w-16 shrink-0">Discount</span>
+                <div className="relative flex-1">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">{currencySymbol}</span>
+                  <Input type="number" placeholder="0" value={discountValue || ''}
+                    onChange={(e) => setDiscountValue(Number(e.target.value) || 0)}
+                    className="pl-6 h-9 text-sm" />
+                </div>
+              </div>
+
+              {/* Payment selector */}
+              <div className="mx-4 mt-3">
+                {renderPaymentSelector()}
+              </div>
+
+              <div className="h-36" />
+            </ScrollArea>
+
+            {/* Actions */}
+            <div className="px-4 pb-6 pt-3 border-t border-border bg-card space-y-2.5">
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" className="h-11 text-sm font-semibold gap-2"
+                  onClick={() => createBillMutation.mutate('draft')}
+                  disabled={cart.length === 0 || createBillMutation.isPending}>
+                  <Save className="h-4 w-4" />
+                  Save Draft
+                </Button>
+                <Button variant="outline" className="h-11 text-sm font-semibold gap-2"
+                  onClick={() => createBillMutation.mutate(false)}
+                  disabled={cart.length === 0 || createBillMutation.isPending}>
+                  <FileText className="h-4 w-4" />
+                  Save Bill
+                </Button>
+              </div>
+              <Button className="w-full h-12 text-base font-bold gap-2"
+                onClick={() => createBillMutation.mutate(true)}
+                disabled={cart.length === 0 || createBillMutation.isPending}>
+                <Printer className="h-5 w-5" />
+                {createBillMutation.isPending ? 'Processing...' : 'Save & Print'}
+              </Button>
+              <Button variant="outline" className="w-full h-10 text-sm font-semibold gap-2 border-green-300 text-green-700 hover:bg-green-50"
+                onClick={() => createBillMutation.mutate('whatsapp')}
+                disabled={cart.length === 0 || createBillMutation.isPending}>
+                <MessageCircle className="h-4 w-4" />
+                Send via WhatsApp
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Keep all the existing dialogs so they still work */}
+        {renderDialogs()}
+      </>
+    );
+  }
 
   return (
     <div className="flex gap-0 w-full h-[calc(100dvh-3.5rem)] md:h-[100dvh] overflow-hidden relative bg-background">
@@ -1855,248 +2219,7 @@ export default function Billing() {
         </SheetContent>
       </Sheet>
 
-      {/* Customer Selection Dialog */}
-      <Dialog open={isCustomerDialogOpen} onOpenChange={setIsCustomerDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              Select Customer
-              <Button size="sm" variant="outline" className="text-xs gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50" onClick={() => { setIsCustomerDialogOpen(false); setQuickAddName(''); setQuickAddPhone(''); setQuickAddOpen(true); }}>
-                <UserPlus className="h-3.5 w-3.5" /> New Customer
-              </Button>
-            </DialogTitle>
-          </DialogHeader>
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search by name or phone..." value={customerSearchQuery} onChange={(e) => setCustomerSearchQuery(e.target.value)} className="pl-10 h-10" autoFocus />
-          </div>
-          <ScrollArea className="max-h-72">
-            <div className="space-y-1">
-              <Button
-                variant="ghost"
-                className="w-full justify-start h-auto py-2.5"
-                onClick={() => {
-                  setSelectedCustomerId(null);
-                  setCustomerName('');
-                  setIsCustomerDialogOpen(false);
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground"><User className="h-4 w-4" /></div>
-                  <span className="font-medium text-sm">Walk-in Customer</span>
-                </div>
-              </Button>
-              {customers
-                .filter(c => {
-                  if (!customerSearchQuery.trim()) return true;
-                  const q = customerSearchQuery.toLowerCase();
-                  return c.name?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q);
-                })
-                .map((customer) => (
-                  <Button
-                    key={customer.id}
-                    variant={selectedCustomerId === customer.id ? 'secondary' : 'ghost'}
-                    className="w-full justify-start h-auto py-2.5"
-                    onClick={() => {
-                      setSelectedCustomerId(customer.id);
-                      setCustomerName(customer.name);
-                      setIsCustomerDialogOpen(false);
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">{customer.name?.charAt(0)?.toUpperCase()}</div>
-                      <div className="text-left">
-                        <div className="font-medium text-sm">{customer.name}</div>
-                        {customer.phone && (
-                          <div className="text-[11px] text-muted-foreground">📱 {customer.phone}</div>
-                        )}
-                      </div>
-                    </div>
-                  </Button>
-                ))}
-              {customers.filter(c => {
-                if (!customerSearchQuery.trim()) return true;
-                const q = customerSearchQuery.toLowerCase();
-                return c.name?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q);
-              }).length === 0 && customerSearchQuery.trim() && (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    <p>No customers found</p>
-                    <Button size="sm" variant="link" className="text-primary mt-1" onClick={() => { setIsCustomerDialogOpen(false); setQuickAddName(customerSearchQuery); setQuickAddPhone(''); setQuickAddOpen(true); }}>Create "{customerSearchQuery}" as new customer</Button>
-                  </div>
-                )}
-            </div>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-
-      {/* Quick Add Customer Dialog */}
-      <Dialog open={quickAddOpen} onOpenChange={setQuickAddOpen}>
-        <DialogContent className="sm:max-w-[380px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-emerald-500" />
-              Quick Add Customer
-            </DialogTitle>
-            <DialogDescription>Add a new customer for fast billing.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold">Customer Name *</Label>
-              <Input placeholder="e.g. Ravi Kumar" value={quickAddName} onChange={e => setQuickAddName(e.target.value)} autoFocus />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold">Mobile Number</Label>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-muted-foreground bg-muted px-3 py-2 rounded-lg">+91</span>
-                <Input type="tel" placeholder="10 digit number" value={quickAddPhone} onChange={e => setQuickAddPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength={10} />
-              </div>
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setQuickAddOpen(false)}>Cancel</Button>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              disabled={!quickAddName.trim() || quickAddSaving}
-              onClick={async () => {
-                setQuickAddSaving(true);
-                try {
-                  const { data: newCust, error } = await supabase.from('customers').insert({ name: quickAddName.trim(), phone: quickAddPhone || null, business_id: businessId }).select().single();
-                  if (error) throw error;
-                  queryClient.invalidateQueries({ queryKey: ['customers'] });
-                  setSelectedCustomerId(newCust.id);
-                  setCustomerName(newCust.name);
-                  toast.success(`Customer "${newCust.name}" added!`);
-                  setQuickAddOpen(false);
-                } catch (err: any) { toast.error('Failed: ' + err.message); }
-                finally { setQuickAddSaving(false); }
-              }}
-            >
-              {quickAddSaving ? 'Saving...' : 'Add & Select'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Long-Press Quantity Dialog */}
-      <Dialog open={quantityDialogOpen} onOpenChange={setQuantityDialogOpen}>
-        <DialogContent className="sm:max-w-[320px]">
-          <DialogHeader>
-            <DialogTitle>Enter Quantity</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <p className="text-sm text-muted-foreground">
-              Add <span className="font-medium text-foreground">{quantityDialogProduct?.name}</span> to cart
-            </p>
-            <Input
-              type="number"
-              placeholder="Enter quantity..."
-              value={quantityDialogValue}
-              onChange={(e) => setQuantityDialogValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleQuantityDialogConfirm();
-                }
-              }}
-              className="text-lg h-12 text-center"
-              autoFocus
-              min={1}
-            />
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setQuantityDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleQuantityDialogConfirm} disabled={!quantityDialogValue || parseInt(quantityDialogValue, 10) <= 0}>
-              Add to Cart
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Cost Warning Dialog */}
-      <Dialog open={costWarningDialogOpen} onOpenChange={setCostWarningDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <Building2 className="h-5 w-5" />
-              Price Alert: Below Cost Price
-            </DialogTitle>
-            <DialogDescription className="py-2">
-              This price is at or below cost price. You are selling without profit or at loss. Are you sure you want to continue?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => {
-              setCostWarningDialogOpen(false);
-              setPendingPriceInfo(null);
-            }}>
-              Cancel & Revert
-            </Button>
-            <Button variant="destructive" onClick={confirmCostWarning}>
-              Accept Price
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* WhatsApp Phone Number Dialog */}
-      <Dialog open={whatsappPhoneDialogOpen} onOpenChange={(open) => { setWhatsappPhoneDialogOpen(open); if (!open) setPendingWhatsappBillNumber(null); }}>
-        <DialogContent className="sm:max-w-[380px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 text-[#25D366]" />
-              Enter Customer Phone
-            </DialogTitle>
-            <DialogDescription className="py-1">
-              No phone number found for this customer. Enter a WhatsApp number to send the bill.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-muted-foreground bg-muted px-3 py-2 rounded-lg">+91</span>
-              <Input
-                type="tel"
-                placeholder="10 digit mobile number"
-                value={whatsappPhone}
-                onChange={(e) => setWhatsappPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && whatsappPhone.length === 10 && pendingWhatsappBillNumber) {
-                    sendWhatsApp(pendingWhatsappBillNumber, whatsappPhone);
-                    setWhatsappPhoneDialogOpen(false);
-                    setPendingWhatsappBillNumber(null);
-                  }
-                }}
-                className="text-lg h-12 text-center font-mono tracking-wider flex-1"
-                autoFocus
-                maxLength={10}
-              />
-            </div>
-            {whatsappPhone.length > 0 && whatsappPhone.length < 10 && (
-              <p className="text-xs text-destructive font-medium">Please enter a valid 10-digit number</p>
-            )}
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { setWhatsappPhoneDialogOpen(false); setPendingWhatsappBillNumber(null); }}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-[#25D366] hover:bg-[#128C7E] text-white"
-              disabled={whatsappPhone.length !== 10 || !pendingWhatsappBillNumber}
-              onClick={() => {
-                if (pendingWhatsappBillNumber) {
-                  sendWhatsApp(pendingWhatsappBillNumber, whatsappPhone);
-                  setWhatsappPhoneDialogOpen(false);
-                  setPendingWhatsappBillNumber(null);
-                }
-              }}
-            >
-              <MessageCircle className="mr-2 h-4 w-4" />
-              Send via WhatsApp
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {renderDialogs()}
     </div>
   );
 }

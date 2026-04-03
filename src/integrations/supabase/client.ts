@@ -13,5 +13,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    // Detect session from URL hash on OAuth callback (needed for Capacitor deep links)
+    detectSessionInUrl: true,
   }
 });

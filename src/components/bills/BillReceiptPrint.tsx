@@ -3,6 +3,127 @@ import { createRoot } from 'react-dom/client';
 import { InvoiceTemplate } from './InvoiceTemplate';
 import { ThermalTemplate } from './ThermalTemplate';
 
+// Inject once: @media print CSS that hides everything except the mobile overlay
+function ensureMobilePrintStyles() {
+  if (document.getElementById('spos-mobile-print-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'spos-mobile-print-styles';
+  style.textContent = `
+    @media print {
+      body > *:not(#spos-mobile-invoice-overlay) { display: none !important; }
+      #spos-mobile-invoice-overlay { position: static !important; }
+      #spos-mobile-invoice-topbar { display: none !important; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function showMobileInvoiceOverlay(bill: Bill, items: BillItem[], settings?: any) {
+  ensureMobilePrintStyles();
+
+  // Remove any existing overlay
+  document.getElementById('spos-mobile-invoice-overlay')?.remove();
+
+  // ── Outer overlay ──
+  const overlay = document.createElement('div');
+  overlay.id = 'spos-mobile-invoice-overlay';
+  overlay.style.cssText = `
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: #f9fafb; z-index: 99999; overflow-y: auto;
+    display: flex; flex-direction: column; font-family: system-ui, sans-serif;
+  `;
+
+  // ── Top action bar ──
+  const topBar = document.createElement('div');
+  topBar.id = 'spos-mobile-invoice-topbar';
+  topBar.style.cssText = `
+    position: sticky; top: 0; background: #1e293b; z-index: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; gap: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  `;
+
+  const titleEl = document.createElement('span');
+  titleEl.textContent = `Invoice #${bill.bill_number}`;
+  titleEl.style.cssText = 'font-weight: 700; font-size: 16px; color: #fff; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
+
+  const btnStyle = (bg: string, color = '#fff') => `
+    background: ${bg}; color: ${color}; border: none; border-radius: 8px;
+    padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 6px; white-space: nowrap;
+    font-family: system-ui, sans-serif;
+  `;
+
+  // Share button  
+  const shareBtn = document.createElement('button');
+  shareBtn.innerHTML = '&#128228; Share';
+  shareBtn.setAttribute('style', btnStyle('#2563eb'));
+  shareBtn.onclick = async () => {
+    try {
+      // Build a plain-text version for the share sheet
+      const lines: string[] = [];
+      lines.push(`Invoice #${bill.bill_number}`);
+      lines.push(`Date: ${new Date(bill.created_at).toLocaleString()}`);
+      if (bill.customers?.name) lines.push(`Customer: ${bill.customers.name}`);
+      lines.push('');
+      items.forEach(i => lines.push(`${i.product_name}  x${i.quantity}  ₹${Number(i.total_price).toFixed(2)}`));
+      lines.push('');
+      if (Number(bill.discount_amount) > 0) lines.push(`Discount: -₹${Number(bill.discount_amount).toFixed(2)}`);
+      if (Number(bill.tax_amount) > 0) lines.push(`Tax: ₹${Number(bill.tax_amount).toFixed(2)}`);
+      lines.push(`Total: ₹${Number(bill.total_amount).toFixed(2)}`);
+      lines.push('');
+      if (settings?.business_name) lines.push(settings.business_name);
+      if (settings?.phone) lines.push(settings.phone);
+
+      if (navigator.share) {
+        await navigator.share({ title: `Invoice #${bill.bill_number}`, text: lines.join('\n') });
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard?.writeText(lines.join('\n'));
+        alert('Invoice text copied to clipboard!');
+      }
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') console.error('Share failed:', e);
+    }
+  };
+
+  // Print button
+  const printBtn = document.createElement('button');
+  printBtn.innerHTML = '&#128424; Print';
+  printBtn.setAttribute('style', btnStyle('#475569'));
+  printBtn.onclick = () => {
+    setTimeout(() => window.print(), 100);
+  };
+
+  // Close / Back button
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '&#8592; Back';
+  closeBtn.setAttribute('style', btnStyle('#ef4444'));
+  closeBtn.onclick = () => overlay.remove();
+
+  topBar.appendChild(closeBtn);
+  topBar.appendChild(titleEl);
+  topBar.appendChild(shareBtn);
+  topBar.appendChild(printBtn);
+
+  // ── Invoice content ──
+  const contentDiv = document.createElement('div');
+  contentDiv.style.cssText = 'flex: 1; padding: 12px; background: white; margin: 12px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1);';
+
+  overlay.appendChild(topBar);
+  overlay.appendChild(contentDiv);
+  document.body.appendChild(overlay);
+
+  // Render React invoice component into the overlay
+  const root = createRoot(contentDiv);
+  const isThermal = settings?.print_thermal_default ?? false;
+  if (isThermal) {
+    root.render(<ThermalTemplate bill={bill} items={items} settings={settings} isPreview={false} />);
+  } else {
+    root.render(<InvoiceTemplate bill={bill} items={items} settings={settings} isPreview={false} />);
+  }
+}
+
+
 export interface BillItem {
   id: string;
   product_name: string;
@@ -30,6 +151,14 @@ export interface Bill {
 }
 
 export function printBillReceipt(bill: Bill, items: BillItem[], settings?: any) {
+  // ── MOBILE (Capacitor Android/iOS): show in-app overlay ──
+  const isNative = !!(window as any).Capacitor?.isNativePlatform?.();
+  if (isNative) {
+    showMobileInvoiceOverlay(bill, items, settings);
+    return;
+  }
+
+  // ── WEB: open popup window and print ──
   const printWindow = window.open('', '_blank', 'width=800,height=900');
   if (!printWindow) {
     alert('Please allow popups for this website to print invoices.');

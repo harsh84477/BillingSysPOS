@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 
 type AppRole = 'owner' | 'manager' | 'cashier' | 'salesman';
 
@@ -374,14 +376,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
-    if (error) {
-      console.error('Google sign-in error:', error.message);
+    const isNative = Capacitor.isNativePlatform();
+    const redirectTo = isNative
+      ? 'com.smartpos.app://login-callback'
+      : `${window.location.origin}/dashboard`;
+
+    if (isNative) {
+      // Get the OAuth URL without opening a browser (skipBrowserRedirect)
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error) {
+        console.error('Google sign-in error:', error.message);
+        return;
+      }
+      if (data?.url) {
+        // Open in Chrome Custom Tabs — Android will intercept the custom scheme on redirect
+        await Browser.open({ url: data.url });
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo },
+      });
+      if (error) {
+        console.error('Google sign-in error:', error.message);
+      }
     }
   };
 
