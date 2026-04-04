@@ -88,7 +88,7 @@ export default function MobileCatalog({
   categories,
   cart,
   currencySymbol = 'Rs.',
-  businessName = 'Smart POS',
+  businessName = 'Invoice Adda',
   onAddPiece,
   onAddCase,
   onUpdateQty,
@@ -103,7 +103,9 @@ export default function MobileCatalog({
     return products.filter((p) => {
       const matchSearch =
         p.name.toLowerCase().includes(q) ||
-        (p.sku || '').toLowerCase().includes(q);
+        (p.sku || '').toLowerCase().includes(q) ||
+        (p.item_code || '').toLowerCase().includes(q) ||
+        (p.barcode || '').toLowerCase().includes(q);
       const matchCat = selectedCategory === 'all' || p.category_id === selectedCategory;
       return matchSearch && matchCat;
     });

@@ -245,7 +245,7 @@ export function CommandPalette({ userRole }: { userRole?: string }) {
                         </div>
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                             <Command className="h-3 w-3" />
-                            <span>Smart POS</span>
+                            <span>Invoice Adda</span>
                         </div>
                     </div>
                 </div>

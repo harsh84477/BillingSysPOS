@@ -295,10 +295,17 @@ export default function Billing() {
     }
 
     setCart((prev) => {
+      const newQty = existing ? existing.quantity + 1 : 1;
+      const caseSize = Number((product as any).items_per_case || 0);
+      const wholesalePrice = Number((product as any).wholesale_price || 0);
+      const unitPrice = (caseSize > 0 && wholesalePrice > 0 && newQty >= caseSize)
+        ? wholesalePrice
+        : Number(product.selling_price);
+
       if (existing) {
         return prev.map((item) =>
           item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: newQty, unitPrice }
             : item
         );
       }
@@ -307,10 +314,10 @@ export default function Billing() {
         {
           productId: product.id,
           name: product.name,
-          unitPrice: Number(product.selling_price),
+          unitPrice,
           costPrice: Number(product.cost_price),
           mrpPrice: Number((product as any).mrp_price || product.selling_price),
-          itemsPerCase: Number((product as any).items_per_case || 0),
+          itemsPerCase: caseSize,
           quantity: 1,
         },
       ];
@@ -393,11 +400,19 @@ export default function Billing() {
       return;
     }
 
+    const totalQty = currentQty + quantity;
+    const caseSize = Number((product as any).items_per_case || 0);
+    const wholesalePrice = Number((product as any).wholesale_price || 0);
+    // Apply wholesale price whenever total quantity >= case size and wholesale price exists
+    const unitPrice = (caseSize > 0 && wholesalePrice > 0 && totalQty >= caseSize)
+      ? wholesalePrice
+      : Number(product.selling_price);
+
     setCart((prev) => {
       if (existing) {
         return prev.map((item) =>
           item.productId === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: totalQty, unitPrice }
             : item
         );
       }
@@ -406,10 +421,10 @@ export default function Billing() {
         {
           productId: product.id,
           name: product.name,
-          unitPrice: Number(product.selling_price),
+          unitPrice,
           costPrice: Number(product.cost_price),
           mrpPrice: Number((product as any).mrp_price || product.selling_price),
-          itemsPerCase: Number((product as any).items_per_case || 0),
+          itemsPerCase: caseSize,
           quantity,
         },
       ];
@@ -665,6 +680,14 @@ export default function Billing() {
   // Create bill mutation with retry logic for duplicate key handling
   const createBillMutation = useMutation({
     mutationFn: async (shouldPrint: boolean | 'whatsapp' | 'draft' | 'save-print') => {
+      // Due bill validation — require customer details
+      if (paymentType === 'due') {
+        const hasCustomer = selectedCustomerId || customerName.trim();
+        if (!hasCustomer) {
+          throw new Error('Customer details are required to create a due bill. Please add customer information before proceeding.');
+        }
+      }
+
       let retryCount = 0;
       const maxRetries = 3;
 
@@ -896,6 +919,9 @@ export default function Billing() {
         ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
         : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
 
+    // Quantity of this product in the current bill
+    const cartQty = cart.find(i => i.productId === product.id)?.quantity || 0;
+
     return (
       <button
         key={product.id}
@@ -913,27 +939,40 @@ export default function Billing() {
           sz.card
         )}
       >
-        {/* Stock Badge */}
-        {showStockBadge && (
+        {/* Bill Quantity Badge — bottom-left */}
+        {cartQty > 0 && (
           <Badge
             variant="secondary"
-            className={cn(
-              'absolute top-1 right-1 text-[9px] px-1 py-0 z-10 font-bold',
-              stockBadgeClass
-            )}
+            className="absolute bottom-1 left-1 text-[9px] px-1.5 py-0 z-10 font-bold bg-primary text-white"
           >
-            {availableStock}
+            {cartQty}
+          </Badge>
+        )}
+
+        {/* Out-of-stock indicator */}
+        {isOutOfStock && (
+          <Badge
+            variant="secondary"
+            className="absolute top-1 right-1 text-[9px] px-1 py-0 z-10 font-bold bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+          >
+            Out
           </Badge>
         )}
 
         <div className="flex flex-col items-center justify-center flex-1 w-full gap-1">
-          {/* Icon */}
-          <div className={cn(
-            'flex items-center justify-center rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors',
-            sz.icon
-          )}>
-            <IconComponent className={cn('text-primary', sz.fIcon)} />
-          </div>
+          {/* Icon or Product Image */}
+          {(product as any).image_url ? (
+            <div className={cn('flex items-center justify-center rounded-full overflow-hidden', sz.icon)}>
+              <img src={(product as any).image_url} alt={product.name} className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className={cn(
+              'flex items-center justify-center rounded-full bg-primary/5 group-hover:bg-primary/10 transition-colors',
+              sz.icon
+            )}>
+              <IconComponent className={cn('text-primary', sz.fIcon)} />
+            </div>
+          )}
 
           {/* Product Name */}
           <span className={cn('font-semibold line-clamp-2 leading-tight px-0.5', sz.name)}>
@@ -1187,6 +1226,21 @@ export default function Billing() {
               onChange={(e) => setQuantityDialogValue(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuantityDialogConfirm(); }}
               className="text-lg h-12 text-center" autoFocus min={1} />
+            {/* Add Case button — shown when product has a case size configured */}
+            {quantityDialogProduct && Number((quantityDialogProduct as any).items_per_case || 0) > 0 && (
+              <Button variant="outline" className="w-full gap-2" onClick={() => {
+                const caseSize = Number((quantityDialogProduct as any).items_per_case);
+                setQuantityDialogValue(String(caseSize));
+              }}>
+                <Package className="h-4 w-4" />
+                Add Case ({(quantityDialogProduct as any).items_per_case} pcs)
+                {Number((quantityDialogProduct as any).wholesale_price || 0) > 0 && (
+                  <span className="text-xs text-muted-foreground ml-1">
+                    @ {currencySymbol}{Number((quantityDialogProduct as any).wholesale_price).toFixed(2)}/pc
+                  </span>
+                )}
+              </Button>
+            )}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setQuantityDialogOpen(false)}>Cancel</Button>
@@ -1260,7 +1314,7 @@ export default function Billing() {
               categories={categories}
               cart={cart}
               currencySymbol={currencySymbol}
-              businessName={settings?.business_name || 'Smart POS'}
+              businessName={settings?.business_name || 'Invoice Adda'}
               onAddPiece={addToCart}
               onAddCase={handleAddCase}
               onUpdateQty={updateQuantity}

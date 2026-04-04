@@ -25,14 +25,16 @@ import {
   TrendingUp,
   Users,
   Download,
+  ChevronRight,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from 'sonner';
-import { exportToExcel } from '@/lib/exportToExcel';
+import { exportToExcel, exportDayWiseSummary } from '@/lib/exportToExcel';
 import { cn } from '@/lib/utils';
 import DraftBillModal from '@/components/bills/DraftBillModal';
 import { useExpenseTracking } from '@/hooks/useBillingSystem';
 import { Wallet, Smartphone, CreditCard, Plus, UserPlus, Sun, Moon, Sunrise, Sunset } from 'lucide-react';
+import DisplayNamePrompt from '@/components/auth/DisplayNamePrompt';
 
 type KPIColor = 'blue' | 'green' | 'amber' | 'red';
 
@@ -100,6 +102,36 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [selectedDraftBillId, setSelectedDraftBillId] = useState<string | null>(null);
   const { profitSummary, isSummaryLoading } = useExpenseTracking(businessId);
+
+  // Display name state
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [profileDisplayName, setProfileDisplayName] = useState<string | null>(null);
+
+  // Fetch display name from profiles table
+  const { data: profileData } = useQuery({
+    queryKey: ['profileDisplayName', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  React.useEffect(() => {
+    if (profileData !== undefined) {
+      if (profileData?.display_name) {
+        setProfileDisplayName(profileData.display_name);
+      } else if (user) {
+        // No display name set — show prompt
+        setShowNamePrompt(true);
+      }
+    }
+  }, [profileData, user]);
 
   React.useEffect(() => {
     if (!user && isSuperAdmin) {
@@ -519,7 +551,72 @@ export default function Dashboard() {
     return { text: 'Good Night', icon: Moon, emoji: '🌙' };
   };
   const greeting = getGreeting();
-  const displayName = user?.email?.split('@')[0] || 'User';
+  const displayName = profileDisplayName || user?.email?.split('@')[0] || 'User';
+
+  // Download handler for Today's data
+  const handleDownloadToday = () => {
+    const row: import('@/lib/exportToExcel').DayWiseSummaryRow = {
+      day: format(today, 'dd MMM yyyy'),
+      orders: todayStats?.orders || 0,
+      daySales: todayStats?.sales || 0,
+      dayProfit: todayStats?.profit || 0,
+      cashCollection: todayPayments?.cash || 0,
+      onlineCollection: todayPayments?.online || 0,
+      dueCollection: todayPayments?.dueCollectionSum || 0,
+      dueAmount: todayStats?.dueAmount || 0,
+    };
+    exportDayWiseSummary([row], `todays-performance-${format(today, 'yyyy-MM-dd')}`);
+    toast.success('Today\'s data exported');
+  };
+
+  // Download handler for Monthly data (day-wise breakdown)
+  const handleDownloadMonthly = async () => {
+    try {
+      const monthStart = startOfThisMonth;
+      const { data: bills, error } = await supabase
+        .from('bills')
+        .select('total_amount, profit, due_amount, payment_status, completed_at')
+        .eq('status', 'completed')
+        .gte('completed_at', monthStart.toISOString());
+      if (error) throw error;
+
+      const { data: payments, error: payError } = await (supabase
+        .from('bill_payments' as any)
+        .select('amount, payment_mode, notes, created_at, bills!inner(created_at)')
+        .eq('business_id', businessId)
+        .gte('created_at', monthStart.toISOString()) as any);
+
+      const dayMap: Record<string, import('@/lib/exportToExcel').DayWiseSummaryRow> = {};
+      const getRow = (dateStr: string) => {
+        if (!dayMap[dateStr]) dayMap[dateStr] = { day: dateStr, orders: 0, daySales: 0, dayProfit: 0, cashCollection: 0, onlineCollection: 0, dueCollection: 0, dueAmount: 0 };
+        return dayMap[dateStr];
+      };
+
+      (bills || []).forEach((b: any) => {
+        const d = format(new Date(b.completed_at), 'dd MMM yyyy');
+        const r = getRow(d);
+        r.orders++;
+        r.daySales += Number(b.total_amount || 0);
+        r.dayProfit += Number(b.profit || 0);
+        if (b.payment_status === 'unpaid' || b.payment_status === 'partial') r.dueAmount += Number(b.due_amount || 0);
+      });
+
+      if (!payError && payments) {
+        (payments as any[]).forEach((p: any) => {
+          const d = format(new Date(p.created_at), 'dd MMM yyyy');
+          const r = getRow(d);
+          if (p.payment_mode === 'cash') r.cashCollection += Number(p.amount || 0);
+          else if (p.payment_mode === 'upi' || p.payment_mode === 'card') r.onlineCollection += Number(p.amount || 0);
+          if (p.notes === 'due_bill') r.dueCollection += Number(p.amount || 0);
+        });
+      }
+
+      const rows = Object.values(dayMap).sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime());
+      if (rows.length === 0) { toast.error('No data for this month'); return; }
+      exportDayWiseSummary(rows, `monthly-performance-${format(today, 'yyyy-MM')}`);
+      toast.success('Monthly data exported');
+    } catch { toast.error('Failed to export monthly data'); }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -554,7 +651,18 @@ export default function Dashboard() {
       </div>
 
       {/* ── Today's Performance ── */}
-      <div className="spos-section-label">Today's Performance</div>
+      <div className="flex items-center justify-between">
+        <div className="spos-section-label">Today's Performance</div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={handleDownloadToday}>
+            <Download className="h-3 w-3" />
+            <span className="hidden sm:inline">Download</span>
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground hover:text-primary" onClick={() => navigate('/bills-history')}>
+            See Details <ChevronRight className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
       <div className="spos-kpi-grid">
         <KPICard title="Today's Sales" value={`${currencySymbol}${todayStats?.sales?.toFixed(2) || '0.00'}`} icon={DollarSign} description="Total sales amount today" isLoading={loadingTodayStats} color="green" index={0} />
         <KPICard title="Today's Profit" value={`${currencySymbol}${(todayStats?.profit || 0).toFixed(2)}`} icon={TrendingUp} description="Profit earned today" isLoading={loadingTodayStats} color="green" index={1} />
@@ -567,7 +675,18 @@ export default function Dashboard() {
       </div>
 
       {/* ── Monthly Performance ── */}
-      <div className="spos-section-label" style={{ marginTop: 24 }}>Monthly Performance</div>
+      <div className="flex items-center justify-between" style={{ marginTop: 24 }}>
+        <div className="spos-section-label">Monthly Performance</div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={handleDownloadMonthly}>
+            <Download className="h-3 w-3" />
+            <span className="hidden sm:inline">Download</span>
+          </Button>
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground hover:text-primary" onClick={() => navigate('/bills-history')}>
+            See Details <ChevronRight className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
       <div className="spos-kpi-grid">
         <KPICard title="Monthly Sales" value={`${currencySymbol}${(monthlyStats?.revenue || 0).toFixed(2)}`} icon={TrendingUp} description="Total sales this month" isLoading={loadingMonthlyStats} color="green" index={0} />
         <KPICard title="Monthly Profit" value={`${currencySymbol}${(monthlyStats?.profit || 0).toFixed(2)}`} icon={DollarSign} description="Profit this month" isLoading={loadingMonthlyStats} color="green" index={1} />
@@ -578,7 +697,14 @@ export default function Dashboard() {
       </div>
 
       {/* ── Overall Operations ── */}
-      <div className="spos-section-label" style={{ marginTop: 24 }}>Overall Operations</div>
+      <div className="flex items-center justify-between" style={{ marginTop: 24 }}>
+        <div className="spos-section-label">Overall Operations</div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1 text-muted-foreground hover:text-primary" onClick={() => navigate('/bills-history')}>
+            See Details <ChevronRight className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
       <div className="spos-kpi-grid">
         <KPICard title="Total Customers" value={customerCount || 0} icon={Users} description="Total registered customers" isLoading={loadingCustomers} color="blue" index={0} />
         <KPICard title="Inventory Value" value={`${currencySymbol}${(inventoryValue || 0).toFixed(2)}`} icon={Package} description="Total value of stock" isLoading={loadingInventoryValue} color="amber" index={1} />
@@ -725,11 +851,21 @@ export default function Dashboard() {
         {/* Low Stock Alerts */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Low Stock Alerts
-            </CardTitle>
-            <CardDescription>Products that need restocking</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  Low Stock Alerts
+                </CardTitle>
+                <CardDescription>Products that need restocking</CardDescription>
+              </div>
+              {lowStockProducts && lowStockProducts.length > 0 && (
+                <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs" onClick={() => navigate('/products')}>
+                  <Package className="h-3.5 w-3.5" />
+                  Update Stock
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loadingLowStock ? (
@@ -897,6 +1033,18 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Display Name Onboarding Prompt */}
+      {user && (
+        <DisplayNamePrompt
+          userId={user.id}
+          open={showNamePrompt}
+          onComplete={(name) => {
+            setProfileDisplayName(name);
+            setShowNamePrompt(false);
+          }}
+        />
+      )}
     </div>
   );
 }

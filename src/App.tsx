@@ -26,6 +26,7 @@ import ActivityLogs from "./pages/ActivityLogs";
 import SalesmanBilling from "./pages/SalesmanBilling";
 import DraftBills from "./pages/DraftBills";
 import Reports from "./pages/Reports";
+import ManageProducts from "./pages/ManageProducts";
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
@@ -142,6 +143,7 @@ const App = () => (
                 <Route path="/billing" element={<Billing />} />
                 <Route path="/bills-history" element={<BillsHistory />} />
                 <Route path="/products" element={<Products />} />
+                <Route path="/manage-products" element={<ManageProducts />} />
                 <Route path="/categories" element={<Categories />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/settings" element={<Settings />} />

@@ -39,3 +39,34 @@ export function exportToExcel<T extends object>(
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Export day-wise performance summary to Excel-compatible CSV
+ */
+export interface DayWiseSummaryRow {
+  day: string;
+  orders: number;
+  daySales: number;
+  dayProfit: number;
+  cashCollection: number;
+  onlineCollection: number;
+  dueCollection: number;
+  dueAmount: number;
+}
+
+export function exportDayWiseSummary(rows: DayWiseSummaryRow[], filename: string) {
+  exportToExcel(
+    rows,
+    [
+      { key: 'day', header: 'Day' },
+      { key: 'orders', header: 'No. of Orders', format: (v) => String(v) },
+      { key: 'daySales', header: 'Day Sales', format: (v) => Number(v).toFixed(2) },
+      { key: 'dayProfit', header: 'Day Profit', format: (v) => Number(v).toFixed(2) },
+      { key: 'cashCollection', header: 'Cash Collection', format: (v) => Number(v).toFixed(2) },
+      { key: 'onlineCollection', header: 'Online Collection', format: (v) => Number(v).toFixed(2) },
+      { key: 'dueCollection', header: 'Due Collection', format: (v) => Number(v).toFixed(2) },
+      { key: 'dueAmount', header: 'Due Amount', format: (v) => Number(v).toFixed(2) },
+    ],
+    filename
+  );
+}

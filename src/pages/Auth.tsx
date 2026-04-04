@@ -184,7 +184,7 @@ export default function Auth() {
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg">
               <ShoppingCart className="h-7 w-7 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">Smart POS</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Invoice Adda</h1>
             <p className="text-muted-foreground text-lg">
               Who are you? Select your role to continue.
             </p>
@@ -293,7 +293,7 @@ export default function Auth() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
             <ShoppingCart className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl">Smart POS</CardTitle>
+          <CardTitle className="text-2xl">Invoice Adda</CardTitle>
           <CardDescription>
             {selectedRole === 'owner'
               ? 'Sign in to manage your business'

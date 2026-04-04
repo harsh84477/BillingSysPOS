@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,7 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Plus, Pencil, Trash2, Package, Search, AlertTriangle, Download,
   Filter, X, ChevronDown, ChevronRight, Barcode, Hash, Tag, Scale, Calendar,
-  Box, ScanLine,
+  Box, ScanLine, Upload, Link as LinkIcon, Image as ImageIcon,
   Apple, Beef, Beer, Coffee, Cookie, Cake, Flame, Droplet,
   Sandwich, Pizza, IceCream, Wine, Milk, ShoppingBag, Gift,
   Archive, type LucideIcon,
@@ -117,6 +118,7 @@ const DEFAULT_UNITS = [
 export default function Products() {
   const { isAdmin, businessId } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data: settings } = useBusinessSettings();
   const currencySymbol = settings?.currency_symbol || '₹';
 
@@ -126,6 +128,10 @@ export default function Products() {
   const [selectedIcon, setSelectedIcon] = useState('Package');
   const [showFilters, setShowFilters] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'low-stock' | 'expired'>('all');
+  const [iconMode, setIconMode] = useState<'icon' | 'upload' | 'url'>('icon');
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Collapsible sections in form
   const [showCodes, setShowCodes] = useState(false);
@@ -203,9 +209,28 @@ export default function Products() {
   });
 
   // ── Form submit ──
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+
+    // Handle image upload if needed
+    let resolvedImageUrl: string | null = editingProduct?.image_url || null;
+    if (iconMode === 'upload' && imageFile) {
+      const ext = imageFile.name.split('.').pop();
+      const filePath = `product-images/${businessId}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('product-images').upload(filePath, imageFile, { upsert: true });
+      if (uploadError) {
+        toast.error('Image upload failed: ' + uploadError.message);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(filePath);
+      resolvedImageUrl = urlData.publicUrl;
+    } else if (iconMode === 'url' && imageUrl.trim()) {
+      resolvedImageUrl = imageUrl.trim();
+    } else if (iconMode === 'icon') {
+      resolvedImageUrl = null;
+    }
+
     saveMutation.mutate({
       name: fd.get('name') as string,
       description: (fd.get('description') as string) || null,
@@ -218,6 +243,7 @@ export default function Products() {
       items_per_case: Number(fd.get('items_per_case')) || 0,
       category_id: (fd.get('category_id') as string) || null,
       icon: selectedIcon,
+      image_url: resolvedImageUrl,
       item_code: (fd.get('item_code') as string) || null,
       sku: (fd.get('sku') as string) || null,
       hsn_code: (fd.get('hsn_code') as string) || null,
@@ -229,9 +255,6 @@ export default function Products() {
       batch_number: (fd.get('batch_number') as string) || null,
       expiry_date: (fd.get('expiry_date') as string) || null,
       manufacturing_date: (fd.get('manufacturing_date') as string) || null,
-      serial_number: (fd.get('serial_number') as string) || null,
-      model_number: (fd.get('model_number') as string) || null,
-      size: (fd.get('size') as string) || null,
     });
   };
 
@@ -239,13 +262,27 @@ export default function Products() {
     if (product) {
       setEditingProduct(product);
       setSelectedIcon(product.icon || 'Package');
+      if (product.image_url) {
+        setIconMode('url');
+        setImageUrl(product.image_url);
+        setImagePreview(product.image_url);
+      } else {
+        setIconMode('icon');
+        setImageUrl('');
+        setImagePreview(null);
+      }
+      setImageFile(null);
       // Auto-open sections if product has data
       setShowCodes(!!(product.item_code || product.sku || product.hsn_code || product.barcode));
       setShowUnits(!!(product.secondary_unit));
-      setShowBatch(!!(product.batch_number || product.expiry_date || product.serial_number));
+      setShowBatch(!!(product.batch_number || product.expiry_date));
     } else {
       setEditingProduct(null);
       setSelectedIcon('Package');
+      setIconMode('icon');
+      setImageUrl('');
+      setImageFile(null);
+      setImagePreview(null);
       setShowCodes(false);
       setShowUnits(false);
       setShowBatch(false);
@@ -384,6 +421,11 @@ export default function Products() {
               <Trash2 className="mr-2 h-4 w-4" />Delete ({selectedProductIds.size})
             </Button>
           )}
+          <Button onClick={() => navigate('/manage-products')} variant="outline" size="sm">
+            <Pencil className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Manage All</span>
+            <span className="sm:hidden">Edit All</span>
+          </Button>
           {isAdmin && <ProductImporter />}
           <Button onClick={handleExportExcel} variant="outline" size="sm">
             <Download className="mr-2 h-4 w-4" />
@@ -485,17 +527,49 @@ export default function Products() {
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Icon</Label>
-                        <div className="grid grid-cols-5 gap-1 max-h-20 overflow-y-auto p-1 border rounded-md">
-                          {PRODUCT_ICONS.map((iconName) => {
-                            const IconComp = ICON_MAP[iconName];
-                            return IconComp ? (
-                              <button key={iconName} type="button" onClick={() => setSelectedIcon(iconName)} className={`p-1.5 rounded flex items-center justify-center text-xs transition-colors ${selectedIcon === iconName ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'}`}>
-                                <IconComp className="h-4 w-4" />
-                              </button>
-                            ) : null;
-                          })}
+                        <Label className="text-xs">Product Image</Label>
+                        <div className="flex gap-1 mb-2">
+                          <Button type="button" variant={iconMode === 'icon' ? 'default' : 'outline'} size="sm" className="text-[10px] h-7 gap-1 flex-1" onClick={() => setIconMode('icon')}>
+                            <Package className="h-3 w-3" /> Icon
+                          </Button>
+                          <Button type="button" variant={iconMode === 'upload' ? 'default' : 'outline'} size="sm" className="text-[10px] h-7 gap-1 flex-1" onClick={() => setIconMode('upload')}>
+                            <Upload className="h-3 w-3" /> Upload
+                          </Button>
+                          <Button type="button" variant={iconMode === 'url' ? 'default' : 'outline'} size="sm" className="text-[10px] h-7 gap-1 flex-1" onClick={() => setIconMode('url')}>
+                            <LinkIcon className="h-3 w-3" /> URL
+                          </Button>
                         </div>
+                        {iconMode === 'icon' && (
+                          <div className="grid grid-cols-5 gap-1 max-h-20 overflow-y-auto p-1 border rounded-md">
+                            {PRODUCT_ICONS.map((iconName) => {
+                              const IconComp = ICON_MAP[iconName];
+                              return IconComp ? (
+                                <button key={iconName} type="button" onClick={() => setSelectedIcon(iconName)} className={`p-1.5 rounded flex items-center justify-center text-xs transition-colors ${selectedIcon === iconName ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-muted/80'}`}>
+                                  <IconComp className="h-4 w-4" />
+                                </button>
+                              ) : null;
+                            })}
+                          </div>
+                        )}
+                        {iconMode === 'upload' && (
+                          <div className="space-y-2">
+                            <Input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                if (file.size > 2 * 1024 * 1024) { toast.error('Max file size is 2MB'); return; }
+                                setImageFile(file);
+                                setImagePreview(URL.createObjectURL(file));
+                              }
+                            }} />
+                            {imagePreview && <img src={imagePreview} alt="" className="h-16 w-16 rounded-lg object-cover border" />}
+                          </div>
+                        )}
+                        {iconMode === 'url' && (
+                          <div className="space-y-2">
+                            <Input placeholder="https://example.com/product.jpg" value={imageUrl} onChange={(e) => { setImageUrl(e.target.value); setImagePreview(e.target.value); }} />
+                            {imagePreview && <img src={imagePreview} alt="" className="h-16 w-16 rounded-lg object-cover border" onError={() => setImagePreview(null)} />}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -573,17 +647,13 @@ export default function Products() {
                         {showBatch ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         <Calendar className="h-4 w-4 text-orange-500" />
                         <span>Batch & Tracking</span>
-                        <span className="text-xs text-muted-foreground ml-auto">Batch, Expiry, Serial, Model</span>
+                        <span className="text-xs text-muted-foreground ml-auto">Batch, Mfg Date, Expiry</span>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="pt-2 space-y-3">
                         <div className="grid grid-cols-2 gap-3 p-3 border rounded-lg bg-orange-50/30 dark:bg-orange-950/10">
-                          <div className="space-y-1">
+                          <div className="space-y-1 col-span-2">
                             <Label htmlFor="batch_number" className="text-xs">Batch Number</Label>
                             <Input id="batch_number" name="batch_number" defaultValue={editingProduct?.batch_number || ''} placeholder="e.g. BATCH-2026-001" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="serial_number" className="text-xs">Serial Number</Label>
-                            <Input id="serial_number" name="serial_number" defaultValue={editingProduct?.serial_number || ''} placeholder="S/N" />
                           </div>
                           <div className="space-y-1">
                             <Label htmlFor="manufacturing_date" className="text-xs">Mfg Date</Label>
@@ -592,14 +662,6 @@ export default function Products() {
                           <div className="space-y-1">
                             <Label htmlFor="expiry_date" className="text-xs">Expiry Date</Label>
                             <Input id="expiry_date" name="expiry_date" type="date" defaultValue={editingProduct?.expiry_date || ''} />
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="model_number" className="text-xs">Model Number</Label>
-                            <Input id="model_number" name="model_number" defaultValue={editingProduct?.model_number || ''} placeholder="Model" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="size" className="text-xs">Size</Label>
-                            <Input id="size" name="size" defaultValue={editingProduct?.size || ''} placeholder="e.g. XL, 500ml" />
                           </div>
                         </div>
                       </CollapsibleContent>
@@ -774,8 +836,10 @@ export default function Products() {
                         )}
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted shrink-0">
-                              {renderIcon(product.icon)}
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted shrink-0 overflow-hidden">
+                              {product.image_url ? (
+                                <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+                              ) : renderIcon(product.icon)}
                             </div>
                             <div className="min-w-0">
                               <p className="font-medium truncate">{product.name}</p>

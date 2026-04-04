@@ -154,7 +154,7 @@ export default function DueBills() {
     const overdueCount = dueBills.filter((b: any) => b.due_date && isPast(parseISO(b.due_date))).length;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="max-w-4xl mx-auto w-full" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Header */}
             <div>
                 <h1 className="spos-page-heading" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -200,7 +200,7 @@ export default function DueBills() {
             </div>
 
             {/* Bill Cards */}
-            <div className="space-y-3 pb-24">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-24">
                     {isLoading ? (
                         <TableSkeleton columns={3} rows={4} />
                     ) : filtered.length === 0 ? (
@@ -249,15 +249,20 @@ export default function DueBills() {
                                     <span className="text-muted-foreground">Total: <strong className="text-foreground">{currencySymbol}{Number(bill.total_amount).toFixed(2)}</strong></span>
                                     <span className="text-muted-foreground">Paid: <strong className="text-emerald-600">{currencySymbol}{Number(bill.paid_amount || 0).toFixed(2)}</strong></span>
                                 </div>
-                                {/* Pay button */}
-                                <Button
-                                    size="sm"
-                                    className="w-full h-9 font-semibold"
-                                    onClick={() => setPayDialog({ bill, cashAmount: String(bill.due_amount || ''), onlineAmount: '', method: 'cash' })}
-                                >
-                                    <CreditCard className="h-3.5 w-3.5 mr-2" />
-                                    Pay Now
-                                </Button>
+                                {/* Actions row */}
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                        {bill.customers?.phone && <span>{bill.customers.phone}</span>}
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        className="h-8 px-4 font-semibold text-xs"
+                                        onClick={() => setPayDialog({ bill, cashAmount: String(bill.due_amount || ''), onlineAmount: '', method: 'cash' })}
+                                    >
+                                        <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+                                        Pay Now
+                                    </Button>
+                                </div>
                             </div>
                         );
                     })}

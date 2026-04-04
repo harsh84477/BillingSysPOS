@@ -39,6 +39,8 @@ import {
   ChevronRight,
   ChevronsUpDown,
   PieChart,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -141,6 +143,15 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [infoModal, setInfoModal] = useState<{ open: boolean; title: string; content: React.ReactNode } | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('sidebar-collapsed') === 'true');
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('sidebar-collapsed', String(next));
+      return next;
+    });
+  };
 
   const handleSignOut = async () => {
     if (!user && isSuperAdmin) {
@@ -173,15 +184,20 @@ export default function AppLayout() {
       {/* ════════════════════════════════════
           SIDEBAR (desktop/tablet)
           ════════════════════════════════════ */}
-      <aside className="spos-sidebar">
+      <aside className={cn('spos-sidebar', sidebarCollapsed && 'spos-sidebar-collapsed')}>
         {/* Logo Block */}
         <div className="spos-sidebar-logo">
-          <div className="spos-sidebar-logo-mark">SP</div>
+          <div className="spos-sidebar-logo-mark">IA</div>
           <div>
-            <div className="spos-sidebar-logo-text">Smart POS</div>
+            <div className="spos-sidebar-logo-text">Invoice Adda</div>
             <div className="spos-sidebar-logo-tagline">Business Management</div>
           </div>
         </div>
+
+        {/* Collapse Toggle */}
+        <button onClick={toggleSidebar} className="spos-sidebar-toggle" title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          {sidebarCollapsed ? <PanelLeftOpen style={{ width: 16, height: 16 }} /> : <PanelLeftClose style={{ width: 16, height: 16 }} />}
+        </button>
 
         {/* Navigation Sections */}
         <nav className="flex-1 overflow-y-auto py-2 custom-scrollbar">
@@ -243,7 +259,7 @@ export default function AppLayout() {
       {/* ════════════════════════════════════
           MAIN AREA
           ════════════════════════════════════ */}
-      <div className="spos-main">
+      <div className={cn('spos-main', sidebarCollapsed && 'spos-main-collapsed')}>
         {/* Topbar removed for cleaner layout */}
 
         {/* Mobile Header (below md) */}
@@ -262,9 +278,9 @@ export default function AppLayout() {
               </SheetHeader>
               {/* Mobile sidebar content */}
               <div className="spos-sidebar-logo">
-                <div className="spos-sidebar-logo-mark">SP</div>
+                <div className="spos-sidebar-logo-mark">IA</div>
                 <div>
-                  <div className="spos-sidebar-logo-text">Smart POS</div>
+                  <div className="spos-sidebar-logo-text">Invoice Adda</div>
                   <div className="spos-sidebar-logo-tagline">Business Management</div>
                 </div>
               </div>

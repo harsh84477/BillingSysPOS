@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════
-   Smart POS — Master Design System
+   Invoice Adda — Master Design System
    ═══════════════════════════════════════════════════ */
 
 @layer base {
@@ -55,7 +55,7 @@
     --sidebar-border: 216 20% 90%;
     --sidebar-ring: 215 80% 52%;
 
-    /* ─── Smart POS Design Tokens ─── */
+    /* ─── Invoice Adda Design Tokens ─── */
     --spos-white: #ffffff;
     --spos-bg: #f4f5f7;
     --spos-bg2: #eef0f3;
@@ -160,7 +160,7 @@
   font-family: var(--spos-mono);
 }
 
-/* ─── Smart POS KPI Cards ─── */
+/* ─── Invoice Adda KPI Cards ─── */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -478,6 +478,65 @@
   flex-direction: column;
   z-index: 40;
   overflow: hidden;
+  transition: width 0.2s ease;
+}
+
+.spos-sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 6px 0;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  transition: color 0.15s, background 0.15s;
+}
+
+.spos-sidebar-toggle:hover {
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Collapsed sidebar state (desktop toggle) ─── */
+.spos-sidebar.spos-sidebar-collapsed {
+  width: 64px;
+}
+
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-logo-text,
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-logo-tagline,
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-section-label,
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-username,
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-role,
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-badge,
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-nav-item span {
+  display: none;
+}
+
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-nav-item {
+  justify-content: center;
+  padding: 10px;
+  margin: 1px 4px;
+}
+
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-logo {
+  justify-content: center;
+  padding: 14px 12px;
+}
+
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-user {
+  justify-content: center;
+  padding: 14px 12px;
+}
+
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-divider {
+  margin: 8px 12px;
+}
+
+.spos-main-collapsed {
+  margin-left: 64px !important;
 }
 
 .spos-sidebar-logo {

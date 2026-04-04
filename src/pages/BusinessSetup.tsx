@@ -76,6 +76,14 @@ export default function BusinessSetup() {
                 return;
             }
 
+            // Save display name to profile
+            const ownerName = formData.get('ownerName') as string;
+            if (ownerName?.trim()) {
+                await supabase
+                    .from('profiles')
+                    .upsert({ user_id: user.id, display_name: ownerName.trim() }, { onConflict: 'user_id' });
+            }
+
             const result = data as any;
 
             if (!result.success) {
@@ -196,6 +204,20 @@ export default function BusinessSetup() {
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
+                            <Label htmlFor="ownerName">Your Name</Label>
+                            <Input
+                                id="ownerName"
+                                name="ownerName"
+                                placeholder="e.g. Harsh"
+                                required
+                                disabled={isLoading}
+                                autoFocus
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                This will be used for your dashboard greeting.
+                            </p>
+                        </div>
+                        <div className="space-y-2">
                             <Label htmlFor="businessName">Business Name</Label>
                             <Input
                                 id="businessName"
@@ -203,7 +225,6 @@ export default function BusinessSetup() {
                                 placeholder="e.g. My Shop"
                                 required
                                 disabled={isLoading}
-                                autoFocus
                             />
                         </div>
                         <div className="space-y-2">

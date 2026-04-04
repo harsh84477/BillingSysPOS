@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.smartpos.app',
-  appName: 'Smart POS',
+  appName: 'Invoice Adda',
   webDir: 'dist',
   server: {
     // No local server needed — app uses Supabase (cloud backend)
