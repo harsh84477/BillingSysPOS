@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select';
 import {
   ArrowLeft, Save, Search, Filter, Check, X, Loader2, Download, FileSpreadsheet,
+  AlertTriangle, Image as ImageIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -32,12 +33,15 @@ interface Product {
   wholesale_price: number;
   stock_quantity: number;
   items_per_case: number;
+  low_stock_threshold: number;
+  image_url: string | null;
   categories?: { name: string; color: string | null } | null;
 }
 
-type EditableField = 'name' | 'item_code' | 'sku' | 'category_id' | 'mrp_price' | 'selling_price' | 'cost_price' | 'wholesale_price' | 'stock_quantity' | 'items_per_case' | 'cases';
+type EditableField = 'name' | 'item_code' | 'sku' | 'category_id' | 'mrp_price' | 'selling_price' | 'cost_price' | 'wholesale_price' | 'stock_quantity' | 'items_per_case' | 'cases' | 'low_stock_threshold' | 'image_url';
 
-const COLUMNS: { key: EditableField; label: string; type: 'text' | 'number' | 'category'; width: string }[] = [
+const COLUMNS: { key: EditableField; label: string; type: 'text' | 'number' | 'category' | 'image'; width: string }[] = [
+  { key: 'image_url',       label: 'Image',           type: 'image',    width: 'min-w-[60px] w-[60px]' },
   { key: 'name',            label: 'Product Name',   type: 'text',     width: 'min-w-[180px]' },
   { key: 'item_code',       label: 'Item Code',      type: 'text',     width: 'min-w-[100px]' },
   { key: 'sku',             label: 'SKU',             type: 'text',     width: 'min-w-[100px]' },
@@ -49,6 +53,7 @@ const COLUMNS: { key: EditableField; label: string; type: 'text' | 'number' | 'c
   { key: 'items_per_case',  label: 'PCS/Case',         type: 'number',   width: 'min-w-[80px]' },
   { key: 'cases',           label: 'Cases',            type: 'number',   width: 'min-w-[80px]' },
   { key: 'stock_quantity',  label: 'Stock',            type: 'number',   width: 'min-w-[80px]' },
+  { key: 'low_stock_threshold', label: 'Low Stock Alert', type: 'number', width: 'min-w-[90px]' },
 ];
 
 export default function ManageProducts() {
@@ -149,6 +154,10 @@ export default function ManageProducts() {
     if (col.type === 'number') {
       newVal = editValue === '' ? 0 : Number(editValue);
       if (isNaN(newVal)) newVal = 0;
+      // Integer fields
+      if (field === 'stock_quantity' || field === 'low_stock_threshold') {
+        newVal = Math.round(newVal);
+      }
     } else {
       newVal = editValue.trim() || null;
     }
@@ -485,6 +494,17 @@ export default function ManageProducts() {
                                   ))}
                                 </SelectContent>
                               </Select>
+                            ) : col.type === 'image' ? (
+                              <input
+                                ref={inputRef}
+                                type="text"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onBlur={handleCellBlur}
+                                className="w-full h-7 px-2 text-xs bg-transparent outline-none border-0"
+                                placeholder="Image URL..."
+                              />
                             ) : (
                               <input
                                 ref={inputRef}
@@ -502,9 +522,14 @@ export default function ManageProducts() {
                             <div className={cn(
                               'px-2 py-1 text-xs truncate',
                               col.type === 'number' && 'tabular-nums text-right',
+                              col.type === 'image' && 'flex items-center justify-center',
                               !value && value !== 0 && 'text-muted-foreground'
                             )}>
-                              {col.type === 'category' ? (
+                              {col.type === 'image' ? (
+                                value ? (
+                                  <img src={value as string} alt="" className="h-7 w-7 rounded object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                ) : <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+                              ) : col.type === 'category' ? (
                                 value ? (
                                   <Badge
                                     variant="secondary"
@@ -518,8 +543,17 @@ export default function ManageProducts() {
                                   </Badge>
                                 ) : '—'
                               ) : col.type === 'number' ? (
-                                col.key === 'stock_quantity' || col.key === 'cases' || col.key === 'items_per_case'
-                                  ? (value ?? 0)
+                                col.key === 'stock_quantity' || col.key === 'cases' || col.key === 'items_per_case' || col.key === 'low_stock_threshold'
+                                  ? (
+                                    <span className={cn(
+                                      col.key === 'stock_quantity' && product.stock_quantity <= (getCellValue(product, 'low_stock_threshold') as number || 10) && 'text-destructive font-medium',
+                                    )}>
+                                      {col.key === 'stock_quantity' && product.stock_quantity <= (getCellValue(product, 'low_stock_threshold') as number || 10) && (
+                                        <AlertTriangle className="inline h-3 w-3 mr-0.5 -mt-0.5" />
+                                      )}
+                                      {value ?? 0}
+                                    </span>
+                                  )
                                   : `${currencySymbol}${Number(value ?? 0).toFixed(2)}`
                               ) : (
                                 value || '—'
