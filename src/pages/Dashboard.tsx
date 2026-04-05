@@ -228,6 +228,9 @@ export default function Dashboard() {
 
   const [activeModalData, setActiveModalData] = useState<{ type: 'dueBills' | 'dueCollections', title: string, data: any[] } | null>(null);
 
+  // Month selector for monthly performance download
+  const [downloadMonth, setDownloadMonth] = useState(() => format(today, 'yyyy-MM'));
+
   // Fetch today's complete stats from bills
   const { data: todayStats, isLoading: loadingTodayStats } = useQuery({
     queryKey: ['todayStats', businessId],
@@ -717,17 +720,21 @@ export default function Dashboard() {
   // Download handler for Monthly data (day-wise breakdown)
   const handleDownloadMonthly = async () => {
     try {
-      const monthStart = startOfThisMonth;
+      const [year, month] = downloadMonth.split('-').map(Number);
+      const monthStart = new Date(year, month - 1, 1);
+      const monthEnd = endOfMonth(monthStart);
+      const monthLabel = format(monthStart, 'MMMM yyyy');
 
       // Fetch all completed bills this month with details
       const { data: bills, error } = await supabase
         .from('bills')
         .select('id, bill_number, total_amount, subtotal, discount_amount, tax_amount, profit, due_amount, payment_status, payment_type, paid_amount, completed_at, customers(name)')
         .eq('status', 'completed')
-        .gte('completed_at', monthStart.toISOString());
+        .gte('completed_at', monthStart.toISOString())
+        .lte('completed_at', monthEnd.toISOString());
       if (error) throw error;
 
-      // Fetch ALL payments for bills created this month (to calculate historical due status)
+      // Fetch ALL payments for bills created in selected month (to calculate historical due status)
       const billIds = (bills || []).map((b: any) => b.id);
       let allBillPayments: any[] = [];
       if (billIds.length > 0) {
@@ -743,7 +750,8 @@ export default function Dashboard() {
         .from('bill_payments' as any)
         .select('bill_id, amount, payment_mode, notes, created_at, bills!inner(bill_number, created_at, profit, customers(name))')
         .eq('business_id', businessId)
-        .gte('created_at', monthStart.toISOString()) as any);
+        .gte('created_at', monthStart.toISOString())
+        .lte('created_at', monthEnd.toISOString()) as any);
 
       // Build day-wise summary
       interface DayData {
@@ -892,7 +900,7 @@ export default function Dashboard() {
       const totProfit = dayRows.reduce((s, r) => s + r.dayProfit, 0);
 
       const monthlySummary: ExcelSummaryDef = {
-        title: `Monthly Summary — ${format(today, 'MMMM yyyy')}`,
+        title: `Monthly Summary — ${monthLabel}`,
         items: [
           { label: 'Total Orders', value: totOrders },
           { label: 'Due Orders', value: totDueOrders },
@@ -916,8 +924,8 @@ export default function Dashboard() {
         { title: 'Day-Wise Performance', titleColor: '1F4E79', data: dayRows, columns: dayColumns },
       ];
 
-      exportStyledExcel(monthlyTables, monthlySummary, `monthly-performance-${format(today, 'yyyy-MM')}`);
-      toast.success('Monthly data exported');
+      exportStyledExcel(monthlyTables, monthlySummary, `monthly-performance-${downloadMonth}`);
+      toast.success(`${monthLabel} data exported`);
     } catch { toast.error('Failed to export monthly data'); }
   };
 
@@ -981,6 +989,16 @@ export default function Dashboard() {
       <div className="flex items-center justify-between" style={{ marginTop: 24 }}>
         <div className="spos-section-label">Monthly Performance</div>
         <div className="flex items-center gap-2">
+          <Select value={downloadMonth} onValueChange={setDownloadMonth}>
+            <SelectTrigger className="h-7 text-xs w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={handleDownloadMonthly}>
             <Download className="h-3 w-3" />
             <span className="hidden sm:inline">Download</span>
