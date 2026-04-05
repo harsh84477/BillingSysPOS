@@ -29,7 +29,8 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from 'sonner';
-import { exportToExcel, exportDayWiseSummary, exportMultiTableCsv } from '@/lib/exportToExcel';
+import { exportToExcel, exportDayWiseSummary, exportStyledExcel } from '@/lib/exportToExcel';
+import type { ExcelTableDef, ExcelSummaryDef } from '@/lib/exportToExcel';
 import { cn } from '@/lib/utils';
 import DraftBillModal from '@/components/bills/DraftBillModal';
 import { useExpenseTracking } from '@/hooks/useBillingSystem';
@@ -568,7 +569,7 @@ export default function Dashboard() {
       // Fetch all today's payments to get cash/online breakdown per bill
       const { data: allPayments, error: allPayErr } = await (supabase
         .from('bill_payments' as any)
-        .select('bill_id, amount, payment_mode, created_at, notes, bills!inner(bill_number, profit, created_at, customers(name))')
+        .select('bill_id, amount, payment_mode, created_at, notes, bills!inner(bill_number, total_amount, discount_amount, tax_amount, subtotal, payment_type, profit, created_at, customers(name))')
         .eq('business_id', businessId)
         .gte('created_at', startOfToday.toISOString()) as any);
 
@@ -608,7 +609,7 @@ export default function Dashboard() {
         };
       });
 
-      // Build Table 2: Due Collections Received
+      // Build Table 2: Due Collections Received (with bill details)
       const dueCollectionRows = ((allPayments || []) as any[])
         .filter((p: any) => p.notes === 'due_bill' || new Date(p.bills.created_at).getTime() < startOfToday.getTime())
         .map((p: any) => {
@@ -619,6 +620,10 @@ export default function Dashboard() {
             customer: p.bills?.customers?.name || 'Walk-in',
             billDate: p.bills?.created_at ? format(new Date(p.bills.created_at), 'dd/MM/yyyy') : '',
             time: p.created_at ? format(new Date(p.created_at), 'hh:mm a') : '',
+            total: Number(p.bills?.total_amount || 0),
+            discount: Number(p.bills?.discount_amount || 0),
+            tax: Number(p.bills?.tax_amount || 0),
+            subtotal: Number(p.bills?.subtotal || 0),
             paymentMethod: (p.payment_mode || '').toUpperCase(),
             cashCollection: isCash ? Number(p.amount || 0) : 0,
             onlineCollection: isOnline ? Number(p.amount || 0) : 0,
@@ -627,7 +632,7 @@ export default function Dashboard() {
           };
         });
 
-      const fmtNum = (v: unknown) => v === '' ? '' : Number(v).toFixed(2);
+      const fmtNum = (v: unknown) => v === '' || v == null ? '' : Number(Number(v).toFixed(2));
       const salesColumns = [
         { key: 'billNumber', header: 'Bill Number' },
         { key: 'customer', header: 'Customer' },
@@ -648,6 +653,10 @@ export default function Dashboard() {
         { key: 'customer', header: 'Customer' },
         { key: 'billDate', header: 'Bill Date' },
         { key: 'time', header: 'Payment Time' },
+        { key: 'total', header: 'Total', format: fmtNum },
+        { key: 'discount', header: 'Discount', format: fmtNum },
+        { key: 'tax', header: 'Tax', format: fmtNum },
+        { key: 'subtotal', header: 'Subtotal', format: fmtNum },
         { key: 'paymentMethod', header: 'Payment Method' },
         { key: 'cashCollection', header: 'Cash Collection', format: fmtNum },
         { key: 'onlineCollection', header: 'Online Collection', format: fmtNum },
@@ -655,12 +664,42 @@ export default function Dashboard() {
         { key: 'profit', header: 'Profit', format: fmtNum },
       ];
 
-      const tables: { title: string; data: any[]; columns: any[] }[] = [
-        { title: "Today's Sales", data: salesRows, columns: salesColumns },
+      // Calculate summary
+      const totalBills = salesRows.length;
+      const dueBills = salesRows.filter(r => r.paymentMethod === 'Due' || r.paymentMethod.includes('Partial')).length;
+      const totalSales = salesRows.reduce((s, r) => s + r.total, 0);
+      const totalDiscount = salesRows.reduce((s, r) => s + r.discount, 0);
+      const totalTax = salesRows.reduce((s, r) => s + r.tax, 0);
+      const totalCash = salesRows.reduce((s, r) => s + r.cashCollection, 0);
+      const totalOnline = salesRows.reduce((s, r) => s + r.onlineCollection, 0);
+      const totalCollected = salesRows.reduce((s, r) => s + r.collectedAmount, 0);
+      const totalProfit = salesRows.reduce((s, r) => s + r.profit, 0);
+      const totalDueCollected = dueCollectionRows.reduce((s, r) => s + r.collectedAmount, 0);
+      const totalDueProfit = dueCollectionRows.reduce((s, r) => s + r.profit, 0);
+
+      const summary: ExcelSummaryDef = {
+        title: `Daily Summary — ${format(today, 'dd MMM yyyy')}`,
+        items: [
+          { label: 'Total Bills', value: totalBills },
+          { label: 'Due Bills', value: dueBills },
+          { label: 'Total Sales', value: totalSales.toFixed(2) },
+          { label: 'Total Discount', value: totalDiscount.toFixed(2) },
+          { label: 'Total Tax', value: totalTax.toFixed(2) },
+          { label: 'Total Collected', value: totalCollected.toFixed(2) },
+          { label: 'Cash Collection', value: totalCash.toFixed(2) },
+          { label: 'Online Collection', value: totalOnline.toFixed(2) },
+          { label: 'Total Profit', value: totalProfit.toFixed(2) },
+          { label: 'Due Collections Received', value: totalDueCollected.toFixed(2) },
+          { label: 'Profit from Due Collections', value: totalDueProfit.toFixed(2) },
+        ],
+      };
+
+      const tables: ExcelTableDef[] = [
+        { title: "Today's Sales", titleColor: '1F4E79', data: salesRows, columns: salesColumns },
       ];
 
       if (dueCollectionRows.length > 0) {
-        tables.push({ title: 'Due Collections Received', data: dueCollectionRows, columns: dueColumns });
+        tables.push({ title: 'Due Collections Received', titleColor: 'D35400', data: dueCollectionRows, columns: dueColumns });
       }
 
       if (salesRows.length === 0 && dueCollectionRows.length === 0) {
@@ -668,7 +707,7 @@ export default function Dashboard() {
         return;
       }
 
-      exportMultiTableCsv(tables, `todays-performance-${format(today, 'yyyy-MM-dd')}`);
+      exportStyledExcel(tables, summary, `todays-performance-${format(today, 'yyyy-MM-dd')}`);
       toast.success('Today\'s data exported');
     } catch {
       toast.error('Failed to export today\'s data');
