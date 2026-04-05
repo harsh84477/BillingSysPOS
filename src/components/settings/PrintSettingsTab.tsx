@@ -31,21 +31,21 @@ const THERMAL_LAYOUTS = [
    ═══════════════════════════════════════════════════ */
 function PrinterTabBar({ active, onSelect }: { active: 'regular' | 'thermal'; onSelect: (v: 'regular' | 'thermal') => void }) {
   return (
-    <div style={{
+    <div className="printer-tab-bar" style={{
       display: 'flex', gap: '0', background: T.color.cardBg,
       borderRadius: '12px', overflow: 'hidden',
       border: `1.5px solid ${T.color.border}`, boxShadow: T.shadow.card,
     }}>
       {([
-        { id: 'regular' as const, label: 'REGULAR PRINTER', icon: '🖨️' },
-        { id: 'thermal' as const, label: 'THERMAL PRINTER', icon: '🧾' },
+        { id: 'regular' as const, label: 'REGULAR PRINTER', shortLabel: 'REGULAR', icon: '🖨️' },
+        { id: 'thermal' as const, label: 'THERMAL PRINTER', shortLabel: 'THERMAL', icon: '🧾' },
       ]).map(tab => {
         const isActive = tab.id === active;
         return (
-          <button key={tab.id} type="button" onClick={() => onSelect(tab.id)} style={{
+          <button key={tab.id} type="button" onClick={() => onSelect(tab.id)} className="printer-tab-btn" style={{
             flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: '8px', padding: '14px 20px',
-            fontSize: '12.5px', fontWeight: isActive ? 700 : 500,
+            gap: '6px', padding: '12px 16px',
+            fontSize: '11.5px', fontWeight: isActive ? 700 : 500,
             letterSpacing: '0.04em', textTransform: 'uppercase' as const,
             color: isActive ? '#fff' : T.color.textSec,
             background: isActive
@@ -57,8 +57,9 @@ function PrinterTabBar({ active, onSelect }: { active: 'regular' | 'thermal'; on
             borderBottom: isActive ? '3px solid hsl(var(--primary))' : '3px solid transparent',
             boxShadow: isActive ? `0 2px 12px ${op('hsl(var(--primary))', 25)}` : 'none',
           }}>
-            <span style={{ fontSize: '16px' }}>{tab.icon}</span>
-            {tab.label}
+            <span style={{ fontSize: '15px' }}>{tab.icon}</span>
+            <span className="printer-tab-full">{tab.label}</span>
+            <span className="printer-tab-short" style={{ display: 'none' }}>{tab.shortLabel}</span>
           </button>
         );
       })}
@@ -74,20 +75,20 @@ function LayoutPicker({ layouts, selected, onSelect, disabled }: {
   selected: string; onSelect: (id: string) => void; disabled?: boolean;
 }) {
   return (
-    <div style={{
-      display: 'flex', gap: '12px', overflowX: 'auto' as const,
+    <div className="layout-picker-scroll scrollbar-hide" style={{
+      display: 'flex', gap: '10px', overflowX: 'auto' as const,
       padding: '4px 2px 8px', WebkitOverflowScrolling: 'touch' as const,
       scrollbarWidth: 'none',
-    }} className="scrollbar-hide">
+    }}>
       {layouts.map(layout => {
         const isActive = selected === layout.id;
         return (
-          <button key={layout.id} type="button"
+          <button key={layout.id} type="button" className="layout-picker-card"
             onClick={() => !disabled && onSelect(layout.id)} disabled={disabled}
             style={{
-              minWidth: '120px', padding: '16px 14px', borderRadius: '12px',
+              minWidth: '100px', padding: '12px 10px', borderRadius: '10px',
               cursor: disabled ? 'not-allowed' : 'pointer',
-              border: `2.5px solid ${isActive ? 'hsl(var(--primary))' : T.color.border}`,
+              border: `2px solid ${isActive ? 'hsl(var(--primary))' : T.color.border}`,
               background: isActive ? op('hsl(var(--primary))', 6) : T.color.cardBg,
               boxShadow: isActive ? `0 0 0 3px ${op('hsl(var(--primary))', 10)}, 0 4px 12px ${op('hsl(var(--primary))', 12)}` : T.shadow.card,
               transition: 'all 0.25s', textAlign: 'center' as const, fontFamily: T.font, flexShrink: 0,
@@ -96,19 +97,19 @@ function LayoutPicker({ layouts, selected, onSelect, disabled }: {
             onMouseEnter={e => { if (!disabled && !isActive) { e.currentTarget.style.boxShadow = T.shadow.cardHover; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
             onMouseLeave={e => { if (!disabled && !isActive) { e.currentTarget.style.boxShadow = T.shadow.card; e.currentTarget.style.transform = 'none'; } }}
           >
-            <div style={{
-              width: '56px', height: '72px', margin: '0 auto 10px', borderRadius: '6px',
+            <div className="layout-picker-icon" style={{
+              width: '44px', height: '56px', margin: '0 auto 8px', borderRadius: '6px',
               background: op(T.color.textPri, 5), border: `1px solid ${op(T.color.border, 60)}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px',
             }}>{layout.icon}</div>
             <div style={{
-              fontSize: '11px', fontWeight: isActive ? 700 : 500,
+              fontSize: '10.5px', fontWeight: isActive ? 700 : 500,
               color: isActive ? 'hsl(var(--primary))' : T.color.textPri, lineHeight: 1.3,
             }}>{layout.name}</div>
             {isActive && (
               <div style={{
-                width: '18px', height: '18px', borderRadius: '50%', background: 'hsl(var(--primary))',
-                color: '#fff', fontSize: '10px', fontWeight: 700, margin: '6px auto 0',
+                width: '16px', height: '16px', borderRadius: '50%', background: 'hsl(var(--primary))',
+                color: '#fff', fontSize: '9px', fontWeight: 700, margin: '5px auto 0',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>✓</div>
             )}
@@ -482,7 +483,7 @@ export default function PrintSettingsTab() {
               
               <div style={{ marginTop: '0px' }}>
                 <SectionLabel text="Item Table Customization" />
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
+                <div className="item-table-checkgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
                   <CheckRow checked={settings?.print_show_item_number ?? true} onChange={(v) => u({ print_show_item_number: v, print_show_index: v })} label="#" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_hsn_sac ?? true} onChange={(v) => u({ print_show_hsn_sac: v, print_show_code: v })} label="HSN/SAC" disabled={!isAdmin} />
                   <CheckRow checked={settings?.print_show_quantity ?? true} onChange={(v) => u({ print_show_quantity: v })} label="Quantity" disabled={!isAdmin} />
@@ -751,6 +752,35 @@ export default function PrintSettingsTab() {
           }
           .print-preview-fab {
             display: flex !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .printer-tab-btn {
+            padding: 10px 8px !important;
+            font-size: 10.5px !important;
+            gap: 5px !important;
+          }
+          .printer-tab-full {
+            display: none !important;
+          }
+          .printer-tab-short {
+            display: inline !important;
+          }
+          .layout-picker-scroll {
+            gap: 8px !important;
+          }
+          .layout-picker-card {
+            min-width: 80px !important;
+            padding: 10px 8px !important;
+          }
+          .layout-picker-icon {
+            width: 36px !important;
+            height: 46px !important;
+            font-size: 17px !important;
+            margin-bottom: 6px !important;
+          }
+          .item-table-checkgrid {
+            grid-template-columns: 1fr !important;
           }
         }
         @keyframes slideUp {
