@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from 'sonner';
-import { exportToExcel, exportDayWiseSummary } from '@/lib/exportToExcel';
+import { exportToExcel, exportDayWiseSummary, exportMultiTableCsv } from '@/lib/exportToExcel';
 import { cn } from '@/lib/utils';
 import DraftBillModal from '@/components/bills/DraftBillModal';
 import { useExpenseTracking } from '@/hooks/useBillingSystem';
@@ -554,19 +554,95 @@ export default function Dashboard() {
   const displayName = profileDisplayName || user?.email?.split('@')[0] || 'User';
 
   // Download handler for Today's data
-  const handleDownloadToday = () => {
-    const row: import('@/lib/exportToExcel').DayWiseSummaryRow = {
-      day: format(today, 'dd MMM yyyy'),
-      orders: todayStats?.orders || 0,
-      daySales: todayStats?.sales || 0,
-      dayProfit: todayStats?.profit || 0,
-      cashCollection: todayPayments?.cash || 0,
-      onlineCollection: todayPayments?.online || 0,
-      dueCollection: todayPayments?.dueCollectionSum || 0,
-      dueAmount: todayStats?.dueAmount || 0,
-    };
-    exportDayWiseSummary([row], `todays-performance-${format(today, 'yyyy-MM-dd')}`);
-    toast.success('Today\'s data exported');
+  const handleDownloadToday = async () => {
+    try {
+      // Fetch all today's completed bills with customer info
+      const { data: todayBills, error: billsErr } = await supabase
+        .from('bills')
+        .select('bill_number, subtotal, discount_amount, tax_amount, total_amount, payment_type, payment_status, paid_amount, due_amount, profit, completed_at, customers(name)')
+        .eq('status', 'completed')
+        .gte('completed_at', startOfToday.toISOString());
+
+      if (billsErr) throw billsErr;
+
+      // Build Table 1: Today's Sales
+      const salesRows = (todayBills || []).map((b: any) => {
+        const isDue = b.payment_status === 'unpaid' || b.payment_status === 'partial';
+        const paymentMethod = isDue && Number(b.paid_amount || 0) === 0
+          ? 'Due'
+          : isDue
+            ? `${(b.payment_type || 'cash').toUpperCase()} (Partial)`
+            : (b.payment_type || 'cash').toUpperCase();
+        return {
+          billNumber: b.bill_number || '',
+          customer: b.customers?.name || 'Walk-in',
+          time: b.completed_at ? format(new Date(b.completed_at), 'hh:mm a') : '',
+          total: Number(b.total_amount || 0),
+          discount: Number(b.discount_amount || 0),
+          tax: Number(b.tax_amount || 0),
+          subtotal: Number(b.subtotal || 0),
+          paymentMethod,
+          collectedAmount: isDue && Number(b.paid_amount || 0) === 0 ? 0 : Number(b.paid_amount || b.total_amount || 0),
+          profit: Number(b.profit || 0),
+        };
+      });
+
+      // Fetch today's due collections (payments made today for older bills)
+      const { data: duePayments, error: payErr } = await (supabase
+        .from('bill_payments' as any)
+        .select('amount, payment_mode, created_at, notes, bills!inner(bill_number, profit, created_at, customers(name))')
+        .eq('business_id', businessId)
+        .gte('created_at', startOfToday.toISOString()) as any);
+
+      if (payErr) throw payErr;
+
+      // Build Table 2: Due Collections Received
+      const dueCollectionRows = ((duePayments || []) as any[])
+        .filter((p: any) => p.notes === 'due_bill' || new Date(p.bills.created_at).getTime() < startOfToday.getTime())
+        .map((p: any) => ({
+          billNumber: p.bills?.bill_number || '',
+          customer: p.bills?.customers?.name || 'Walk-in',
+          time: p.created_at ? format(new Date(p.created_at), 'hh:mm a') : '',
+          total: '',
+          discount: '',
+          tax: '',
+          subtotal: '',
+          paymentMethod: (p.payment_mode || '').toUpperCase(),
+          collectedAmount: Number(p.amount || 0),
+          profit: Number(p.bills?.profit || 0),
+        }));
+
+      const salesColumns = [
+        { key: 'billNumber', header: 'Bill Number' },
+        { key: 'customer', header: 'Customer' },
+        { key: 'time', header: 'Time' },
+        { key: 'total', header: 'Total', format: (v: unknown) => v === '' ? '' : Number(v).toFixed(2) },
+        { key: 'discount', header: 'Discount', format: (v: unknown) => v === '' ? '' : Number(v).toFixed(2) },
+        { key: 'tax', header: 'Tax', format: (v: unknown) => v === '' ? '' : Number(v).toFixed(2) },
+        { key: 'subtotal', header: 'Subtotal', format: (v: unknown) => v === '' ? '' : Number(v).toFixed(2) },
+        { key: 'paymentMethod', header: 'Payment Method' },
+        { key: 'collectedAmount', header: 'Collected Amount', format: (v: unknown) => v === '' ? '' : Number(v).toFixed(2) },
+        { key: 'profit', header: 'Profit', format: (v: unknown) => v === '' ? '' : Number(v).toFixed(2) },
+      ];
+
+      const tables = [
+        { title: "Today's Sales", data: salesRows, columns: salesColumns },
+      ];
+
+      if (dueCollectionRows.length > 0) {
+        tables.push({ title: 'Due Collections Received', data: dueCollectionRows, columns: salesColumns });
+      }
+
+      if (salesRows.length === 0 && dueCollectionRows.length === 0) {
+        toast.error('No data to export for today');
+        return;
+      }
+
+      exportMultiTableCsv(tables, `todays-performance-${format(today, 'yyyy-MM-dd')}`);
+      toast.success('Today\'s data exported');
+    } catch {
+      toast.error('Failed to export today\'s data');
+    }
   };
 
   // Download handler for Monthly data (day-wise breakdown)

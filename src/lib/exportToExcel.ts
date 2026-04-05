@@ -41,6 +41,57 @@ export function exportToExcel<T extends object>(
 }
 
 /**
+ * Build CSV section string for a single table (with title header)
+ */
+function buildCsvSection<T extends object>(
+  title: string,
+  data: T[],
+  columns: { key: keyof T; header: string; format?: (value: unknown) => string }[]
+): string {
+  const titleRow = `"${title}"` + ',' + columns.slice(1).map(() => '""').join(',');
+  const headers = columns.map(col => `"${col.header}"`).join(',');
+  const rows = data.map(item => {
+    return columns.map(col => {
+      const value = item[col.key];
+      const formatted = col.format ? col.format(value) : String(value ?? '');
+      return `"${formatted.replace(/"/g, '""')}"`;
+    }).join(',');
+  });
+  return titleRow + '\n' + headers + '\n' + rows.join('\n');
+}
+
+/**
+ * Export multiple tables in a single CSV file (separated by empty rows)
+ */
+export function exportMultiTableCsv(
+  tables: {
+    title: string;
+    data: any[];
+    columns: { key: string; header: string; format?: (value: unknown) => string }[];
+  }[],
+  filename: string
+) {
+  const BOM = '\uFEFF';
+  const sections = tables
+    .filter(t => t.data.length > 0)
+    .map(t => buildCsvSection(t.title, t.data, t.columns as any));
+
+  if (sections.length === 0) return;
+
+  const csvContent = BOM + sections.join('\n\n\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filename}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+/**
  * Export day-wise performance summary to Excel-compatible CSV
  */
 export interface DayWiseSummaryRow {
