@@ -559,11 +559,29 @@ export default function Dashboard() {
       // Fetch all today's completed bills with customer info
       const { data: todayBills, error: billsErr } = await supabase
         .from('bills')
-        .select('bill_number, subtotal, discount_amount, tax_amount, total_amount, payment_type, payment_status, paid_amount, due_amount, profit, completed_at, customers(name)')
+        .select('id, bill_number, subtotal, discount_amount, tax_amount, total_amount, payment_type, payment_status, paid_amount, due_amount, profit, completed_at, customers(name)')
         .eq('status', 'completed')
         .gte('completed_at', startOfToday.toISOString());
 
       if (billsErr) throw billsErr;
+
+      // Fetch all today's payments to get cash/online breakdown per bill
+      const { data: allPayments, error: allPayErr } = await (supabase
+        .from('bill_payments' as any)
+        .select('bill_id, amount, payment_mode, created_at, notes, bills!inner(bill_number, profit, created_at, customers(name))')
+        .eq('business_id', businessId)
+        .gte('created_at', startOfToday.toISOString()) as any);
+
+      if (allPayErr) throw allPayErr;
+
+      // Build per-bill cash/online breakdown from payments
+      const billPaymentMap: Record<string, { cash: number; online: number }> = {};
+      ((allPayments || []) as any[]).forEach((p: any) => {
+        const billId = p.bill_id;
+        if (!billPaymentMap[billId]) billPaymentMap[billId] = { cash: 0, online: 0 };
+        if (p.payment_mode === 'cash') billPaymentMap[billId].cash += Number(p.amount || 0);
+        else if (p.payment_mode === 'upi' || p.payment_mode === 'card') billPaymentMap[billId].online += Number(p.amount || 0);
+      });
 
       // Build Table 1: Today's Sales
       const salesRows = (todayBills || []).map((b: any) => {
@@ -573,6 +591,7 @@ export default function Dashboard() {
           : isDue
             ? `${(b.payment_type || 'cash').toUpperCase()} (Partial)`
             : (b.payment_type || 'cash').toUpperCase();
+        const bp = billPaymentMap[b.id] || { cash: 0, online: 0 };
         return {
           billNumber: b.bill_number || '',
           customer: b.customers?.name || 'Walk-in',
@@ -582,55 +601,66 @@ export default function Dashboard() {
           tax: Number(b.tax_amount || 0),
           subtotal: Number(b.subtotal || 0),
           paymentMethod,
+          cashCollection: isDue && Number(b.paid_amount || 0) === 0 ? 0 : bp.cash,
+          onlineCollection: isDue && Number(b.paid_amount || 0) === 0 ? 0 : bp.online,
           collectedAmount: isDue && Number(b.paid_amount || 0) === 0 ? 0 : Number(b.paid_amount || b.total_amount || 0),
           profit: Number(b.profit || 0),
         };
       });
 
-      // Fetch today's due collections (payments made today for older bills)
-      const { data: duePayments, error: payErr } = await (supabase
-        .from('bill_payments' as any)
-        .select('amount, payment_mode, created_at, notes, bills!inner(bill_number, profit, created_at, customers(name))')
-        .eq('business_id', businessId)
-        .gte('created_at', startOfToday.toISOString()) as any);
-
-      if (payErr) throw payErr;
-
       // Build Table 2: Due Collections Received
-      const dueCollectionRows = ((duePayments || []) as any[])
+      const dueCollectionRows = ((allPayments || []) as any[])
         .filter((p: any) => p.notes === 'due_bill' || new Date(p.bills.created_at).getTime() < startOfToday.getTime())
-        .map((p: any) => ({
-          billNumber: p.bills?.bill_number || '',
-          customer: p.bills?.customers?.name || 'Walk-in',
-          time: p.created_at ? format(new Date(p.created_at), 'hh:mm a') : '',
-          total: '',
-          discount: '',
-          tax: '',
-          subtotal: '',
-          paymentMethod: (p.payment_mode || '').toUpperCase(),
-          collectedAmount: Number(p.amount || 0),
-          profit: Number(p.bills?.profit || 0),
-        }));
+        .map((p: any) => {
+          const isCash = p.payment_mode === 'cash';
+          const isOnline = p.payment_mode === 'upi' || p.payment_mode === 'card';
+          return {
+            billNumber: p.bills?.bill_number || '',
+            customer: p.bills?.customers?.name || 'Walk-in',
+            billDate: p.bills?.created_at ? format(new Date(p.bills.created_at), 'dd/MM/yyyy') : '',
+            time: p.created_at ? format(new Date(p.created_at), 'hh:mm a') : '',
+            paymentMethod: (p.payment_mode || '').toUpperCase(),
+            cashCollection: isCash ? Number(p.amount || 0) : 0,
+            onlineCollection: isOnline ? Number(p.amount || 0) : 0,
+            collectedAmount: Number(p.amount || 0),
+            profit: Number(p.bills?.profit || 0),
+          };
+        });
 
+      const fmtNum = (v: unknown) => v === '' ? '' : Number(v).toFixed(2);
       const salesColumns = [
         { key: 'billNumber', header: 'Bill Number' },
         { key: 'customer', header: 'Customer' },
         { key: 'time', header: 'Time' },
-        { key: 'total', header: 'Total', format: (v: unknown) => v === '' ? '' : Number(v).toFixed(2) },
-        { key: 'discount', header: 'Discount', format: (v: unknown) => v === '' ? '' : Number(v).toFixed(2) },
-        { key: 'tax', header: 'Tax', format: (v: unknown) => v === '' ? '' : Number(v).toFixed(2) },
-        { key: 'subtotal', header: 'Subtotal', format: (v: unknown) => v === '' ? '' : Number(v).toFixed(2) },
+        { key: 'total', header: 'Total', format: fmtNum },
+        { key: 'discount', header: 'Discount', format: fmtNum },
+        { key: 'tax', header: 'Tax', format: fmtNum },
+        { key: 'subtotal', header: 'Subtotal', format: fmtNum },
         { key: 'paymentMethod', header: 'Payment Method' },
-        { key: 'collectedAmount', header: 'Collected Amount', format: (v: unknown) => v === '' ? '' : Number(v).toFixed(2) },
-        { key: 'profit', header: 'Profit', format: (v: unknown) => v === '' ? '' : Number(v).toFixed(2) },
+        { key: 'cashCollection', header: 'Cash Collection', format: fmtNum },
+        { key: 'onlineCollection', header: 'Online Collection', format: fmtNum },
+        { key: 'collectedAmount', header: 'Collected Amount', format: fmtNum },
+        { key: 'profit', header: 'Profit', format: fmtNum },
       ];
 
-      const tables = [
+      const dueColumns = [
+        { key: 'billNumber', header: 'Bill Number' },
+        { key: 'customer', header: 'Customer' },
+        { key: 'billDate', header: 'Bill Date' },
+        { key: 'time', header: 'Payment Time' },
+        { key: 'paymentMethod', header: 'Payment Method' },
+        { key: 'cashCollection', header: 'Cash Collection', format: fmtNum },
+        { key: 'onlineCollection', header: 'Online Collection', format: fmtNum },
+        { key: 'collectedAmount', header: 'Collected Amount', format: fmtNum },
+        { key: 'profit', header: 'Profit', format: fmtNum },
+      ];
+
+      const tables: { title: string; data: any[]; columns: any[] }[] = [
         { title: "Today's Sales", data: salesRows, columns: salesColumns },
       ];
 
       if (dueCollectionRows.length > 0) {
-        tables.push({ title: 'Due Collections Received', data: dueCollectionRows, columns: salesColumns });
+        tables.push({ title: 'Due Collections Received', data: dueCollectionRows, columns: dueColumns });
       }
 
       if (salesRows.length === 0 && dueCollectionRows.length === 0) {
