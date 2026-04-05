@@ -548,7 +548,7 @@ export default function Products() {
                             const ppc = Number(e.target.value) || 0;
                             setPcsPerCase(ppc);
                             if (ppc > 0 && stockCases > 0) {
-                              setStockQty(Math.round(stockCases * ppc * 100) / 100);
+                              setStockQty(Math.round(stockCases * ppc));
                             }
                           }} />
                         </div>
@@ -558,7 +558,7 @@ export default function Products() {
                             const cases = Number(e.target.value) || 0;
                             setStockCases(cases);
                             if (pcsPerCase > 0) {
-                              setStockQty(Math.round(cases * pcsPerCase * 100) / 100);
+                              setStockQty(Math.round(cases * pcsPerCase));
                             }
                           }} />
                         </div>

@@ -159,7 +159,7 @@ export default function ManageProducts() {
         ? Number(changes[product.id].items_per_case)
         : product.items_per_case;
       if (ppc > 0) {
-        const newStock = Math.round(newVal * ppc * 100) / 100;
+        const newStock = Math.round(newVal * ppc);
         setChanges(prev => ({
           ...prev,
           [product.id]: {
