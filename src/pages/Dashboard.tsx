@@ -758,6 +758,9 @@ export default function Dashboard() {
         onlineCollection: number;
         dueCashCollection: number;
         dueOnlineCollection: number;
+        totalCash: number;
+        totalOnline: number;
+        totalCollection: number;
         dueBillsCleared: number;
         dayProfit: number;
         dueAmount: number;
@@ -770,6 +773,7 @@ export default function Dashboard() {
           daySales: 0, dayDiscount: 0, dayTax: 0, daySubtotal: 0,
           cashCollection: 0, onlineCollection: 0,
           dueCashCollection: 0, dueOnlineCollection: 0,
+          totalCash: 0, totalOnline: 0, totalCollection: 0,
           dueBillsCleared: 0, dayProfit: 0, dueAmount: 0,
         };
         return dayMap[dateStr];
@@ -835,9 +839,14 @@ export default function Dashboard() {
         });
       }
 
-      // Set due bills cleared count
+      // Set due bills cleared count + compute total collection columns
       Object.entries(dueBillsClearedPerDay).forEach(([d, billSet]) => {
         if (dayMap[d]) dayMap[d].dueBillsCleared = billSet.size;
+      });
+      Object.values(dayMap).forEach(r => {
+        r.totalCash = r.cashCollection + r.dueCashCollection;
+        r.totalOnline = r.onlineCollection + r.dueOnlineCollection;
+        r.totalCollection = r.totalCash + r.totalOnline;
       });
 
       const dayRows = Object.values(dayMap).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -857,6 +866,9 @@ export default function Dashboard() {
         { key: 'onlineCollection', header: 'Online Collection', format: fmtN },
         { key: 'dueCashCollection', header: 'Due Cash Collection', format: fmtN },
         { key: 'dueOnlineCollection', header: 'Due Online Collection', format: fmtN },
+        { key: 'totalCash', header: 'Total Cash Collection', format: fmtN },
+        { key: 'totalOnline', header: 'Total Online Collection', format: fmtN },
+        { key: 'totalCollection', header: 'Total Collection', format: fmtN },
         { key: 'dueBillsCleared', header: 'Due Bills Cleared' },
         { key: 'dueAmount', header: 'Due Amount Pending', format: fmtN },
         { key: 'dayProfit', header: 'Day Profit', format: fmtN },
@@ -872,6 +884,9 @@ export default function Dashboard() {
       const totOnline = dayRows.reduce((s, r) => s + r.onlineCollection, 0);
       const totDueCash = dayRows.reduce((s, r) => s + r.dueCashCollection, 0);
       const totDueOnline = dayRows.reduce((s, r) => s + r.dueOnlineCollection, 0);
+      const totTotalCash = dayRows.reduce((s, r) => s + r.totalCash, 0);
+      const totTotalOnline = dayRows.reduce((s, r) => s + r.totalOnline, 0);
+      const totTotalCollection = dayRows.reduce((s, r) => s + r.totalCollection, 0);
       const totDueCleared = dayRows.reduce((s, r) => s + r.dueBillsCleared, 0);
       const totDueAmount = dayRows.reduce((s, r) => s + r.dueAmount, 0);
       const totProfit = dayRows.reduce((s, r) => s + r.dayProfit, 0);
@@ -889,6 +904,9 @@ export default function Dashboard() {
           { label: 'Online Collection', value: totOnline.toFixed(2) },
           { label: 'Due Cash Collection', value: totDueCash.toFixed(2) },
           { label: 'Due Online Collection', value: totDueOnline.toFixed(2) },
+          { label: 'Total Cash Collection', value: totTotalCash.toFixed(2) },
+          { label: 'Total Online Collection', value: totTotalOnline.toFixed(2) },
+          { label: 'Total Collection', value: totTotalCollection.toFixed(2) },
           { label: 'Due Bills Cleared', value: totDueCleared },
           { label: 'Due Amount Pending', value: totDueAmount.toFixed(2) },
         ],
@@ -897,26 +915,6 @@ export default function Dashboard() {
       const monthlyTables: ExcelTableDef[] = [
         { title: 'Day-Wise Performance', titleColor: '1F4E79', data: dayRows, columns: dayColumns },
       ];
-
-      // Table 3: Collection Totals
-      const totalCashCollection = totCash + totDueCash;
-      const totalOnlineCollection = totOnline + totDueOnline;
-      const totalCollection = totalCashCollection + totalOnlineCollection;
-
-      const collectionTotalsData = [
-        { label: 'Cash Collection', regular: totCash, due: totDueCash, total: totalCashCollection },
-        { label: 'Online Collection', regular: totOnline, due: totDueOnline, total: totalOnlineCollection },
-        { label: 'Total Collection', regular: totCash + totOnline, due: totDueCash + totDueOnline, total: totalCollection },
-      ];
-
-      const collectionColumns = [
-        { key: 'label', header: 'Collection Type' },
-        { key: 'regular', header: 'Regular Collection', format: fmtN },
-        { key: 'due', header: 'Due Collection', format: fmtN },
-        { key: 'total', header: 'Total', format: fmtN },
-      ];
-
-      monthlyTables.push({ title: 'Collection Summary', titleColor: '27AE60', data: collectionTotalsData, columns: collectionColumns });
 
       exportStyledExcel(monthlyTables, monthlySummary, `monthly-performance-${format(today, 'yyyy-MM')}`);
       toast.success('Monthly data exported');
