@@ -27,7 +27,10 @@ import {
   Download,
   ChevronRight,
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, isSameDay } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportToExcel, exportDayWiseSummary, exportStyledExcel } from '@/lib/exportToExcel';
 import type { ExcelTableDef, ExcelSummaryDef } from '@/lib/exportToExcel';
@@ -227,6 +230,43 @@ export default function Dashboard() {
   });
 
   const [activeModalData, setActiveModalData] = useState<{ type: 'dueBills' | 'dueCollections', title: string, data: any[] } | null>(null);
+
+  // Date picker for daily performance download
+  const [downloadDate, setDownloadDate] = useState<Date>(today);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(today);
+
+  // Fetch dates that have data (bills or payments) for the calendar month being viewed
+  const { data: activeDates } = useQuery({
+    queryKey: ['activeDates', businessId, format(calendarMonth, 'yyyy-MM')],
+    queryFn: async () => {
+      const monthStart = startOfMonth(calendarMonth);
+      const monthEndDate = endOfMonth(calendarMonth);
+
+      // Fetch bill dates
+      const { data: billDates } = await supabase
+        .from('bills')
+        .select('completed_at')
+        .eq('status', 'completed')
+        .gte('completed_at', monthStart.toISOString())
+        .lte('completed_at', monthEndDate.toISOString());
+
+      // Fetch payment dates (due collections from older bills)
+      const { data: paymentDates } = await (supabase
+        .from('bill_payments' as any)
+        .select('created_at')
+        .eq('business_id', businessId)
+        .gte('created_at', monthStart.toISOString())
+        .lte('created_at', monthEndDate.toISOString()) as any);
+
+      const dateSet = new Set<string>();
+      (billDates || []).forEach((b: any) => dateSet.add(format(new Date(b.completed_at), 'yyyy-MM-dd')));
+      ((paymentDates || []) as any[]).forEach((p: any) => dateSet.add(format(new Date(p.created_at), 'yyyy-MM-dd')));
+
+      return Array.from(dateSet).map(d => new Date(d + 'T00:00:00'));
+    },
+    enabled: !!businessId && calendarOpen,
+  });
 
   // Month selector for monthly performance download
   const [downloadMonth, setDownloadMonth] = useState(() => format(today, 'yyyy-MM'));
@@ -557,24 +597,30 @@ export default function Dashboard() {
   const greeting = getGreeting();
   const displayName = profileDisplayName || user?.email?.split('@')[0] || 'User';
 
-  // Download handler for Today's data
+  // Download handler for selected date's data
   const handleDownloadToday = async () => {
     try {
-      // Fetch all today's completed bills with customer info
+      const selectedDayStart = startOfDay(downloadDate);
+      const selectedDayEnd = endOfDay(downloadDate);
+      const dayLabel = format(downloadDate, 'dd MMM yyyy');
+
+      // Fetch all completed bills on selected date with customer info
       const { data: todayBills, error: billsErr } = await supabase
         .from('bills')
         .select('id, bill_number, subtotal, discount_amount, tax_amount, total_amount, payment_type, payment_status, paid_amount, due_amount, profit, completed_at, customers(name)')
         .eq('status', 'completed')
-        .gte('completed_at', startOfToday.toISOString());
+        .gte('completed_at', selectedDayStart.toISOString())
+        .lte('completed_at', selectedDayEnd.toISOString());
 
       if (billsErr) throw billsErr;
 
-      // Fetch all today's payments to get cash/online breakdown per bill
+      // Fetch all payments on selected date to get cash/online breakdown per bill
       const { data: allPayments, error: allPayErr } = await (supabase
         .from('bill_payments' as any)
         .select('bill_id, amount, payment_mode, created_at, notes, bills!inner(bill_number, total_amount, discount_amount, tax_amount, subtotal, payment_type, profit, created_at, customers(name))')
         .eq('business_id', businessId)
-        .gte('created_at', startOfToday.toISOString()) as any);
+        .gte('created_at', selectedDayStart.toISOString())
+        .lte('created_at', selectedDayEnd.toISOString()) as any);
 
       if (allPayErr) throw allPayErr;
 
@@ -614,7 +660,7 @@ export default function Dashboard() {
 
       // Build Table 2: Due Collections Received (with bill details)
       const dueCollectionRows = ((allPayments || []) as any[])
-        .filter((p: any) => p.notes === 'due_bill' || new Date(p.bills.created_at).getTime() < startOfToday.getTime())
+        .filter((p: any) => p.notes === 'due_bill' || new Date(p.bills.created_at).getTime() < selectedDayStart.getTime())
         .map((p: any) => {
           const isCash = p.payment_mode === 'cash';
           const isOnline = p.payment_mode === 'upi' || p.payment_mode === 'card';
@@ -681,7 +727,7 @@ export default function Dashboard() {
       const totalDueProfit = dueCollectionRows.reduce((s, r) => s + r.profit, 0);
 
       const summary: ExcelSummaryDef = {
-        title: `Daily Summary — ${format(today, 'dd MMM yyyy')}`,
+        title: `Daily Summary — ${dayLabel}`,
         items: [
           { label: 'Total Bills', value: totalBills },
           { label: 'Due Bills', value: dueBills },
@@ -706,12 +752,12 @@ export default function Dashboard() {
       }
 
       if (salesRows.length === 0 && dueCollectionRows.length === 0) {
-        toast.error('No data to export for today');
+        toast.error(`No data to export for ${dayLabel}`);
         return;
       }
 
-      exportStyledExcel(tables, summary, `todays-performance-${format(today, 'yyyy-MM-dd')}`);
-      toast.success('Today\'s data exported');
+      exportStyledExcel(tables, summary, `daily-performance-${format(downloadDate, 'yyyy-MM-dd')}`);
+      toast.success(`${dayLabel} data exported`);
     } catch {
       toast.error('Failed to export today\'s data');
     }
@@ -965,6 +1011,50 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div className="spos-section-label">Today's Performance</div>
         <div className="flex items-center gap-2">
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5">
+                <CalendarIcon className="h-3 w-3" />
+                <span className="hidden sm:inline">{isSameDay(downloadDate, today) ? 'Today' : format(downloadDate, 'dd MMM')}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={downloadDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setDownloadDate(date);
+                    setCalendarOpen(false);
+                  }
+                }}
+                month={calendarMonth}
+                onMonthChange={setCalendarMonth}
+                disabled={(date) => date > today}
+                modifiers={{
+                  hasData: activeDates || [],
+                }}
+                modifiersClassNames={{
+                  hasData: 'rdp-day-has-data',
+                }}
+                initialFocus
+              />
+              <style>{`
+                .rdp-day-has-data::after {
+                  content: '';
+                  position: absolute;
+                  bottom: 2px;
+                  left: 50%;
+                  transform: translateX(-50%);
+                  width: 5px;
+                  height: 5px;
+                  border-radius: 50%;
+                  background-color: #ef4444;
+                }
+                .rdp-day-has-data { position: relative; }
+              `}</style>
+            </PopoverContent>
+          </Popover>
           <Button variant="outline" size="sm" className="h-7 text-xs gap-1.5" onClick={handleDownloadToday}>
             <Download className="h-3 w-3" />
             <span className="hidden sm:inline">Download</span>
