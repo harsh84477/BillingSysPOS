@@ -949,6 +949,17 @@ export default function Billing() {
           </Badge>
         )}
 
+        {/* Stock Quantity Badge — top-left */}
+        <Badge
+          variant="secondary"
+          className={cn(
+            'absolute top-1 left-1 text-[9px] px-1.5 py-0 z-10 font-bold',
+            stockBadgeClass
+          )}
+        >
+          {availableStock}
+        </Badge>
+
         {/* Out-of-stock indicator */}
         {isOutOfStock && (
           <Badge
