@@ -196,7 +196,10 @@ export default function AppLayout() {
 
         {/* Collapse Toggle */}
         <button onClick={toggleSidebar} className="spos-sidebar-toggle" title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-          {sidebarCollapsed ? <PanelLeftOpen style={{ width: 16, height: 16 }} /> : <PanelLeftClose style={{ width: 16, height: 16 }} />}
+          {sidebarCollapsed
+            ? <PanelLeftOpen style={{ width: 16, height: 16 }} />
+            : <><PanelLeftClose style={{ width: 16, height: 16 }} /><span className="spos-sidebar-toggle-label">Collapse</span></>
+          }
         </button>
 
         {/* Navigation Sections */}

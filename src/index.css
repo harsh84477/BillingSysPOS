@@ -486,23 +486,29 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 6px 0;
-  color: rgba(255, 255, 255, 0.45);
+  padding: 9px 0;
+  color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
   background: none;
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
   transition: color 0.15s, background 0.15s;
+  position: relative;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 .spos-sidebar-toggle:hover {
-  color: rgba(255, 255, 255, 0.85);
-  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.09);
 }
 
 /* ─── Collapsed sidebar state (desktop toggle) ─── */
 .spos-sidebar.spos-sidebar-collapsed {
-  width: 64px;
+  width: 56px;
 }
 
 .spos-sidebar.spos-sidebar-collapsed .spos-sidebar-logo-text,
@@ -511,8 +517,16 @@
 .spos-sidebar.spos-sidebar-collapsed .spos-sidebar-username,
 .spos-sidebar.spos-sidebar-collapsed .spos-sidebar-role,
 .spos-sidebar.spos-sidebar-collapsed .spos-sidebar-badge,
-.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-nav-item span {
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-nav-item span,
+.spos-sidebar.spos-sidebar-collapsed .spos-sidebar-toggle-label {
   display: none;
+}
+
+.spos-sidebar-toggle-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: inherit;
+  opacity: 0.8;
 }
 
 .spos-sidebar.spos-sidebar-collapsed .spos-sidebar-nav-item {
@@ -536,7 +550,7 @@
 }
 
 .spos-main-collapsed {
-  margin-left: 64px !important;
+  margin-left: 56px !important;
 }
 
 .spos-sidebar-logo {
