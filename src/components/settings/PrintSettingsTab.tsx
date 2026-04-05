@@ -2,117 +2,96 @@ import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessSettings, useUpdateBusinessSettings } from '@/hooks/useBusinessSettings';
 import { InvoiceTemplate } from '../bills/InvoiceTemplate';
-import {
-  SettingsCard, Toggle, Counter, SettingRow, SectionLabel, TextInput, TextArea,
-  FieldLabel, ButtonGroup, SelectInput, SaveBtn, InfoBox, ColStack, TwoColGrid,
-  TabBar, T, op,
-} from '@/components/settings/SettingsUI';
+import { Toggle, Counter, T, op } from '@/components/settings/SettingsUI';
 
-/* ═══════════════════════════════════════════════════
-   Layouts
-   ═══════════════════════════════════════════════════ */
+/* ─── Layout lists ─── */
 const REGULAR_LAYOUTS = [
   { id: 'urban_bill_style', name: 'Urban Bill', icon: '🏙️' },
-  { id: 'gst_theme_6', name: 'GST Theme 6', icon: '📋' },
-  { id: 'double_divine', name: 'Double Divine', icon: '✨' },
-  { id: 'french_elite', name: 'French Elite', icon: '🏛️' },
-  { id: 'theme_1', name: 'Theme 1', icon: '📄' },
+  { id: 'gst_theme_6',     name: 'GST Theme 6', icon: '📋' },
+  { id: 'classic_lite',    name: 'Classic Lite', icon: '📄' },
+  { id: 'modern_dark',     name: 'Modern Dark',  icon: '🌙' },
+  { id: 'double_divine',   name: 'Double Divine', icon: '✨' },
+  { id: 'french_elite',    name: 'French Elite', icon: '🏛️' },
 ];
 const THERMAL_LAYOUTS = [
   { id: 'theme_1', name: 'Theme 1', icon: '🧾' },
   { id: 'theme_2', name: 'Theme 2', icon: '📜' },
   { id: 'theme_3', name: 'Theme 3', icon: '📑' },
   { id: 'theme_4', name: 'Theme 4', icon: '📃' },
-  { id: 'theme_5', name: 'Theme 5', icon: '🧾' },
+  { id: 'theme_5', name: 'Theme 5', icon: '🗒️' },
 ];
 
-/* ═══════════════════════════════════════════════════
-   Sub-Tab Switcher
-   ═══════════════════════════════════════════════════ */
-function PrinterTabBar({ active, onSelect }: { active: 'regular' | 'thermal'; onSelect: (v: 'regular' | 'thermal') => void }) {
+/* ─── Section header ─── */
+function Sec({ title }: { title: string }) {
   return (
-    <div className="printer-tab-bar" style={{
-      display: 'flex', gap: '0', background: T.color.cardBg,
-      borderRadius: '12px', overflow: 'hidden',
-      border: `1.5px solid ${T.color.border}`, boxShadow: T.shadow.card,
-    }}>
-      {([
-        { id: 'regular' as const, label: 'REGULAR PRINTER', shortLabel: 'REGULAR', icon: '🖨️' },
-        { id: 'thermal' as const, label: 'THERMAL PRINTER', shortLabel: 'THERMAL', icon: '🧾' },
-      ]).map(tab => {
-        const isActive = tab.id === active;
-        return (
-          <button key={tab.id} type="button" onClick={() => onSelect(tab.id)} className="printer-tab-btn" style={{
-            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            gap: '6px', padding: '12px 16px',
-            fontSize: '11.5px', fontWeight: isActive ? 700 : 500,
-            letterSpacing: '0.04em', textTransform: 'uppercase' as const,
-            color: isActive ? '#fff' : T.color.textSec,
-            background: isActive
-              ? `linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))`
-              : 'transparent',
-            border: 'none', cursor: 'pointer',
-            transition: 'all 0.25s cubic-bezier(.4,0,.2,1)',
-            fontFamily: T.font, whiteSpace: 'nowrap' as const,
-            borderBottom: isActive ? '3px solid hsl(var(--primary))' : '3px solid transparent',
-            boxShadow: isActive ? `0 2px 12px ${op('hsl(var(--primary))', 25)}` : 'none',
-          }}>
-            <span style={{ fontSize: '15px' }}>{tab.icon}</span>
-            <span className="printer-tab-full">{tab.label}</span>
-            <span className="printer-tab-short" style={{ display: 'none' }}>{tab.shortLabel}</span>
-          </button>
-        );
-      })}
+    <div style={{ padding: '22px 0 10px' }}>
+      <div style={{ fontSize: '15px', fontWeight: 700, color: T.color.textPri }}>{title}</div>
+      <div style={{ height: '1.5px', background: `linear-gradient(to right, hsl(var(--primary)), transparent)`, marginTop: '6px', borderRadius: '2px' }} />
     </div>
   );
 }
 
-/* ═══════════════════════════════════════════════════
-   Layout Picker
-   ═══════════════════════════════════════════════════ */
-function LayoutPicker({ layouts, selected, onSelect, disabled }: {
+/* ─── Row: label + right control ─── */
+function Row({ label, desc, right, noBorder }: { label: string; desc?: string; right: React.ReactNode; noBorder?: boolean }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      gap: '16px', padding: '13px 0',
+      borderBottom: noBorder ? 'none' : `1px solid ${op(T.color.border, 60)}`,
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '13.5px', fontWeight: 550, color: T.color.textPri, lineHeight: 1.3 }}>{label}</div>
+        {desc && <div style={{ fontSize: '11.5px', color: T.color.textMuted, marginTop: '2px', lineHeight: 1.4 }}>{desc}</div>}
+      </div>
+      <div style={{ flexShrink: 0 }}>{right}</div>
+    </div>
+  );
+}
+
+/* ─── Checkbox row ─── */
+function Check({ checked, onChange, label, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 0',
+      borderBottom: `1px solid ${op(T.color.border, 50)}`, cursor: disabled ? 'not-allowed' : 'pointer',
+    }} onClick={() => !disabled && onChange(!checked)}>
+      <div style={{
+        width: '20px', height: '20px', borderRadius: '5px', flexShrink: 0,
+        border: `2px solid ${checked ? 'hsl(var(--primary))' : T.color.border}`,
+        background: checked ? 'hsl(var(--primary))' : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.18s', opacity: disabled ? 0.5 : 1,
+      }}>
+        {checked && <span style={{ color: '#fff', fontSize: '11px', fontWeight: 800, lineHeight: 1 }}>✓</span>}
+      </div>
+      <span style={{ fontSize: '13.5px', fontWeight: 500, color: T.color.textPri, opacity: disabled ? 0.5 : 1 }}>{label}</span>
+    </div>
+  );
+}
+
+/* ─── 2×2 Layout Grid ─── */
+function LayoutGrid({ layouts, selected, onSelect, disabled }: {
   layouts: { id: string; name: string; icon: string }[];
   selected: string; onSelect: (id: string) => void; disabled?: boolean;
 }) {
   return (
-    <div className="layout-picker-scroll scrollbar-hide" style={{
-      display: 'flex', gap: '10px', overflowX: 'auto' as const,
-      padding: '4px 2px 8px', WebkitOverflowScrolling: 'touch' as const,
-      scrollbarWidth: 'none',
-    }}>
-      {layouts.map(layout => {
-        const isActive = selected === layout.id;
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', padding: '4px 0 8px' }}>
+      {layouts.map(l => {
+        const active = selected === l.id;
         return (
-          <button key={layout.id} type="button" className="layout-picker-card"
-            onClick={() => !disabled && onSelect(layout.id)} disabled={disabled}
+          <button key={l.id} type="button" disabled={disabled}
+            onClick={() => !disabled && onSelect(l.id)}
             style={{
-              minWidth: '100px', padding: '12px 10px', borderRadius: '10px',
-              cursor: disabled ? 'not-allowed' : 'pointer',
-              border: `2px solid ${isActive ? 'hsl(var(--primary))' : T.color.border}`,
-              background: isActive ? op('hsl(var(--primary))', 6) : T.color.cardBg,
-              boxShadow: isActive ? `0 0 0 3px ${op('hsl(var(--primary))', 10)}, 0 4px 12px ${op('hsl(var(--primary))', 12)}` : T.shadow.card,
-              transition: 'all 0.25s', textAlign: 'center' as const, fontFamily: T.font, flexShrink: 0,
-              opacity: disabled ? 0.5 : 1, transform: isActive ? 'translateY(-2px)' : 'none',
-            }}
-            onMouseEnter={e => { if (!disabled && !isActive) { e.currentTarget.style.boxShadow = T.shadow.cardHover; e.currentTarget.style.transform = 'translateY(-2px)'; } }}
-            onMouseLeave={e => { if (!disabled && !isActive) { e.currentTarget.style.boxShadow = T.shadow.card; e.currentTarget.style.transform = 'none'; } }}
-          >
-            <div className="layout-picker-icon" style={{
-              width: '44px', height: '56px', margin: '0 auto 8px', borderRadius: '6px',
-              background: op(T.color.textPri, 5), border: `1px solid ${op(T.color.border, 60)}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px',
-            }}>{layout.icon}</div>
-            <div style={{
-              fontSize: '10.5px', fontWeight: isActive ? 700 : 500,
-              color: isActive ? 'hsl(var(--primary))' : T.color.textPri, lineHeight: 1.3,
-            }}>{layout.name}</div>
-            {isActive && (
-              <div style={{
-                width: '16px', height: '16px', borderRadius: '50%', background: 'hsl(var(--primary))',
-                color: '#fff', fontSize: '9px', fontWeight: 700, margin: '5px auto 0',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>✓</div>
-            )}
+              padding: '16px 10px', borderRadius: '12px', textAlign: 'center' as const,
+              border: `2px solid ${active ? 'hsl(var(--primary))' : T.color.border}`,
+              background: active ? op('hsl(var(--primary))', 6) : T.color.cardBg,
+              boxShadow: active ? `0 0 0 3px ${op('hsl(var(--primary))', 12)}` : T.shadow.card,
+              cursor: disabled ? 'not-allowed' : 'pointer', fontFamily: T.font,
+              opacity: disabled ? 0.5 : 1, transition: 'all 0.2s',
+            }}>
+            <div style={{ fontSize: '28px', marginBottom: '8px', lineHeight: 1 }}>{l.icon}</div>
+            <div style={{ fontSize: '12px', fontWeight: active ? 700 : 500, color: active ? 'hsl(var(--primary))' : T.color.textPri, lineHeight: 1.3 }}>{l.name}</div>
+            {active && <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: 'hsl(var(--primary))', color: '#fff', fontSize: '9px', fontWeight: 800, margin: '6px auto 0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✓</div>}
           </button>
         );
       })}
@@ -120,77 +99,30 @@ function LayoutPicker({ layouts, selected, onSelect, disabled }: {
   );
 }
 
-/* ═══════════════════════════════════════════════════
-   CheckRow
-   ═══════════════════════════════════════════════════ */
-function CheckRow({ checked, onChange, label, inputPlaceholder, inputValue, onInputChange, disabled }: {
-  checked: boolean; onChange: (v: boolean) => void; label: string;
-  inputPlaceholder?: string; inputValue?: string; onInputChange?: (v: string) => void; disabled?: boolean;
-}) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 0',
-      borderBottom: `1px solid ${op(T.color.border, 40)}`,
-    }}>
-      <button type="button" onClick={() => !disabled && onChange(!checked)} disabled={disabled}
-        style={{
-          width: '20px', height: '20px', borderRadius: '5px', flexShrink: 0,
-          border: `2px solid ${checked ? 'hsl(var(--primary))' : T.color.border}`,
-          background: checked ? 'hsl(var(--primary))' : 'transparent',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all 0.2s', opacity: disabled ? 0.5 : 1,
-        }}>
-        {checked && <span style={{ color: '#fff', fontSize: '12px', fontWeight: 700 }}>✓</span>}
-      </button>
-      {inputPlaceholder ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' as const, gap: '4px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 500, color: T.color.textMuted }}>{label}</span>
-          <input value={inputValue || ''} onChange={e => onInputChange?.(e.target.value)}
-            placeholder={inputPlaceholder} disabled={disabled || !checked}
-            style={{
-              padding: '7px 12px', fontSize: '13px', borderRadius: '8px',
-              border: `1.5px solid ${T.color.border}`, background: T.color.inputBg,
-              outline: 'none', fontFamily: T.font, color: T.color.textPri,
-              opacity: (!checked || disabled) ? 0.5 : 1, transition: 'all 0.2s',
-            }} />
-        </div>
-      ) : (
-        <span style={{ fontSize: '13px', fontWeight: 500, color: T.color.textPri }}>{label}</span>
-      )}
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════════════
-   PageSizeSelector
-   ═══════════════════════════════════════════════════ */
-function PageSizeSelector({ value, onChange, disabled }: {
+/* ─── Pill button group ─── */
+function PillGroup({ options, value, onChange, disabled }: {
+  options: { value: string; label: string; icon?: string }[];
   value: string; onChange: (v: string) => void; disabled?: boolean;
 }) {
-  const sizes = [
-    { id: '2inch', label: '2 inch', sub: '58mm' },
-    { id: '3inch', label: '3 inch', sub: '80mm' },
-    { id: '4inch', label: '4 inch', sub: '80mm' },
-    { id: 'custom', label: 'Custom', sub: '(Chars)' },
-  ];
   return (
-    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const }}>
-      {sizes.map(s => {
-        const active = value === s.id;
+    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px' }}>
+      {options.map(o => {
+        const active = value === o.value;
         return (
-          <button key={s.id} type="button" disabled={disabled}
-            onClick={() => !disabled && onChange(s.id)}
+          <button key={o.value} type="button" disabled={disabled}
+            onClick={() => !disabled && onChange(o.value)}
             style={{
-              padding: '8px 14px', borderRadius: '8px',
-              border: `2px solid ${active ? 'hsl(var(--primary))' : T.color.border}`,
-              background: active ? op('hsl(var(--primary))', 8) : T.color.cardBg,
-              cursor: disabled ? 'not-allowed' : 'pointer', transition: 'all 0.2s',
-              fontFamily: T.font, opacity: disabled ? 0.5 : 1,
-              boxShadow: active ? `0 0 0 2px ${op('hsl(var(--primary))', 12)}` : 'none',
+              padding: '7px 16px', borderRadius: '20px', fontFamily: T.font,
+              fontSize: '12.5px', fontWeight: active ? 700 : 500,
+              border: `1.5px solid ${active ? 'hsl(var(--primary))' : T.color.border}`,
+              background: active ? 'hsl(var(--primary))' : T.color.cardBg,
+              color: active ? '#fff' : T.color.textPri,
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              opacity: disabled ? 0.5 : 1, transition: 'all 0.18s',
+              display: 'flex', alignItems: 'center', gap: '5px',
             }}>
-            <div style={{ fontSize: '12px', fontWeight: active ? 700 : 500, color: active ? 'hsl(var(--primary))' : T.color.textPri }}>{s.label}</div>
-            <div style={{ fontSize: '10px', color: T.color.textMuted }}>{s.sub}</div>
+            {o.icon && <span style={{ fontSize: '13px' }}>{o.icon}</span>}
+            {o.label}
           </button>
         );
       })}
@@ -198,24 +130,56 @@ function PageSizeSelector({ value, onChange, disabled }: {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   LIVE INVOICE PREVIEW — Regular
-   ═══════════════════════════════════════════════════════════════ */
-function RegularPreview({ s }: { s: any }) {
-  // We use the unified InvoiceTemplate that powers the actual print operation
+/* ─── Label above field ─── */
+function FieldLbl({ children }: { children: React.ReactNode }) {
+  return <div style={{ fontSize: '11px', fontWeight: 600, color: T.color.textMuted, letterSpacing: '0.07em', textTransform: 'uppercase' as const, marginBottom: '6px' }}>{children}</div>;
+}
+
+/* ─── Text input ─── */
+function Input({ value, onChange, placeholder, disabled }: { value: string; onChange: (v: string) => void; placeholder?: string; disabled?: boolean }) {
   return (
-    <InvoiceTemplate 
-      settings={s} 
-      isPreview={true} 
-      bill={null} 
-      items={[]} 
+    <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled}
+      style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', borderRadius: '10px', border: `1.5px solid ${T.color.border}`, background: T.color.inputBg, outline: 'none', fontFamily: T.font, color: T.color.textPri, boxSizing: 'border-box' as const, opacity: disabled ? 0.5 : 1, transition: 'border 0.18s' }}
+      onFocus={e => { e.currentTarget.style.borderColor = 'hsl(var(--primary))'; }}
+      onBlur={e => { e.currentTarget.style.borderColor = T.color.border; }}
     />
   );
 }
 
+/* ─── Textarea ─── */
+function Textarea({ value, onChange, placeholder, disabled, rows = 4 }: { value: string; onChange: (v: string) => void; placeholder?: string; disabled?: boolean; rows?: number }) {
+  return (
+    <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} rows={rows}
+      style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', borderRadius: '10px', border: `1.5px solid ${T.color.border}`, background: T.color.inputBg, outline: 'none', fontFamily: T.font, color: T.color.textPri, boxSizing: 'border-box' as const, opacity: disabled ? 0.5 : 1, resize: 'vertical' as const, transition: 'border 0.18s' }}
+      onFocus={e => { e.currentTarget.style.borderColor = 'hsl(var(--primary))'; }}
+      onBlur={e => { e.currentTarget.style.borderColor = T.color.border; }}
+    />
+  );
+}
+
+/* ─── Card wrapper ─── */
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ background: T.color.cardBg, borderRadius: '14px', border: `1px solid ${T.color.border}`, boxShadow: T.shadow.card, padding: '0 18px' }}>
+      {children}
+    </div>
+  );
+}
+
+/* ─── Divider inside card ─── */
+function Divider() {
+  return <div style={{ height: '1px', background: op(T.color.border, 50), margin: '0' }} />;
+}
 
 /* ═══════════════════════════════════════════════════════════════
-   LIVE INVOICE PREVIEW — Thermal
+   LIVE PREVIEW — Regular
+   ═══════════════════════════════════════════════════════════════ */
+function RegularPreview({ s }: { s: any }) {
+  return <InvoiceTemplate settings={s} isPreview={true} bill={null} items={[]} />;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LIVE PREVIEW — Thermal
    ═══════════════════════════════════════════════════════════════ */
 function ThermalPreview({ s }: { s: any }) {
   const companyName = s?.print_thermal_company_name_text || s?.business_name || 'My Company';
@@ -228,566 +192,416 @@ function ThermalPreview({ s }: { s: any }) {
   const pageSize = s?.print_thermal_page_size || '4inch';
   const maxW = pageSize === '2inch' ? '220px' : pageSize === '3inch' ? '280px' : '340px';
   const fs = pageSize === '2inch' ? '9px' : '11px';
-
   const sampleItems = [
     { name: 'Britannia Good Day', qty: 2, price: 45.00, amt: 90.00 },
     { name: 'Cadbury Dairy Milk', qty: 3, price: 50.00, amt: 150.00 },
-    { name: 'Colgate MaxFresh', qty: 1, price: 85.00, amt: 85.00 },
+    { name: 'Colgate MaxFresh',   qty: 1, price: 85.00, amt: 85.00 },
   ];
-  const subTotal = 325.00;
-  const discount = 15.00;
-  const tax = 16.25;
   const grandTotal = 326.25;
-
   return (
-    <div style={{
-      background: '#fff', color: '#111', fontFamily: "'Courier New', monospace",
-      fontSize: fs, lineHeight: 1.5, padding: '16px 12px',
-      maxWidth: maxW, margin: '0 auto', minHeight: '300px',
-      fontWeight: isBold ? 700 : 400,
-    }}>
-      {/* Header */}
+    <div style={{ background: '#fff', color: '#111', fontFamily: "'Courier New', monospace", fontSize: fs, lineHeight: 1.5, padding: '16px 12px', maxWidth: maxW, margin: '0 auto', fontWeight: isBold ? 700 : 400 }}>
       <div style={{ textAlign: 'center', borderBottom: '2px dashed #aaa', paddingBottom: '8px', marginBottom: '8px' }}>
-        {(s?.print_thermal_company_name ?? true) && (
-          <div style={{ fontSize: pageSize === '2inch' ? '12px' : '14px', fontWeight: 800, letterSpacing: '0.02em' }}>{companyName}</div>
-        )}
-        {showAddr && <div style={{ fontSize: pageSize === '2inch' ? '8px' : '9px', marginTop: '2px' }}>Koramangala, Bangalore, Karnataka</div>}
-        {showPhone && <div style={{ fontSize: pageSize === '2inch' ? '8px' : '9px' }}>Ph: {phone}</div>}
-        {showEmail && <div style={{ fontSize: pageSize === '2inch' ? '8px' : '9px' }}>{s?.email || 'email@example.com'}</div>}
-        {showGstin && s?.gst_number && <div style={{ fontSize: pageSize === '2inch' ? '8px' : '9px' }}>GSTIN: {s.gst_number}</div>}
+        {(s?.print_thermal_company_name ?? true) && <div style={{ fontSize: pageSize === '2inch' ? '12px' : '14px', fontWeight: 800 }}>{companyName}</div>}
+        {showAddr && <div style={{ fontSize: '9px', marginTop: '2px' }}>Koramangala, Bangalore, Karnataka</div>}
+        {showPhone && <div style={{ fontSize: '9px' }}>Ph: {phone}</div>}
+        {showEmail && <div style={{ fontSize: '9px' }}>{s?.email || 'email@example.com'}</div>}
+        {showGstin && s?.gst_number && <div style={{ fontSize: '9px' }}>GSTIN: {s.gst_number}</div>}
       </div>
-
-      {/* Bill Info */}
-      <div style={{ fontSize: pageSize === '2inch' ? '8px' : '9px', marginBottom: '6px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <span>Bill No: INV-101</span><span>Date: 06/04/2026</span>
-        </div>
+      <div style={{ fontSize: '9px', marginBottom: '6px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Bill No: INV-101</span><span>06/04/2026</span></div>
         <div>Customer: <strong>Walk-in Customer</strong></div>
       </div>
-
-      {/* Items */}
       <div style={{ borderTop: '1px dashed #999', borderBottom: '1px dashed #999', padding: '4px 0', margin: '4px 0' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '18px 1fr 30px 50px 55px', gap: '2px', fontSize: pageSize === '2inch' ? '8px' : '9px', fontWeight: 800, marginBottom: '3px', borderBottom: '1px dashed #ccc', paddingBottom: '3px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '18px 1fr 28px 48px 52px', gap: '2px', fontSize: '9px', fontWeight: 800, borderBottom: '1px dashed #ccc', paddingBottom: '3px', marginBottom: '3px' }}>
           <span>#</span><span>Item</span><span>Qty</span><span>Rate</span><span style={{ textAlign: 'right' }}>Amt</span>
         </div>
         {sampleItems.map((item, i) => (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: '18px 1fr 30px 50px 55px', gap: '2px', fontSize: pageSize === '2inch' ? '8px' : '9px', padding: '2px 0' }}>
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '18px 1fr 28px 48px 52px', gap: '2px', fontSize: '9px', padding: '2px 0' }}>
             <span>{i + 1}</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
-            <span>{item.qty}</span><span>{item.price.toFixed(2)}</span>
-            <span style={{ textAlign: 'right' }}>{item.amt.toFixed(2)}</span>
+            <span>{item.qty}</span><span>{item.price.toFixed(2)}</span><span style={{ textAlign: 'right' }}>{item.amt.toFixed(2)}</span>
           </div>
         ))}
       </div>
-
-      {/* Totals */}
-      <div style={{ fontSize: pageSize === '2inch' ? '8px' : '9px', padding: '4px 0', borderBottom: '1px dashed #999' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal</span><span>{subTotal.toFixed(2)}</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Discount</span><span>-{discount.toFixed(2)}</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tax (5%)</span><span>{tax.toFixed(2)}</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: pageSize === '2inch' ? '10px' : '12px', marginTop: '4px', borderTop: '1px dashed #ccc', paddingTop: '4px' }}>
+      <div style={{ fontSize: '9px', padding: '4px 0', borderBottom: '1px dashed #999' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal</span><span>325.00</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Discount</span><span>-15.00</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tax (5%)</span><span>16.25</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '12px', marginTop: '4px', borderTop: '1px dashed #ccc', paddingTop: '4px' }}>
           <span>TOTAL</span><span>₹{grandTotal.toFixed(2)}</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}><span>Received</span><span>{grandTotal.toFixed(2)}</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Received</span><span>{grandTotal.toFixed(2)}</span></div>
         <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Balance</span><span>0.00</span></div>
       </div>
-
-      {/* Footer */}
-      <div style={{ textAlign: 'center', padding: '8px 0', fontSize: pageSize === '2inch' ? '8px' : '9px', color: '#666' }}>
-        <div>{s?.print_terms_conditions || 'Thank you for your purchase!'}</div>
+      <div style={{ textAlign: 'center', padding: '8px 0', fontSize: '9px', color: '#666' }}>
+        {s?.print_terms_conditions || 'Thank you for your purchase!'}
       </div>
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MAIN PRINT SETTINGS TAB
+   MAIN COMPONENT
    ═══════════════════════════════════════════════════════════════ */
 export default function PrintSettingsTab() {
   const { isAdmin } = useAuth();
   const { data: globalSettings } = useBusinessSettings();
   const updateSettings = useUpdateBusinessSettings();
-  
+
   const [localSettings, setLocalSettings] = useState<any>({});
-  
-  const settings = useMemo(() => ({
-    ...(globalSettings || {}),
-    ...localSettings
-  }), [globalSettings, localSettings]);
+  const settings = useMemo(() => ({ ...(globalSettings || {}), ...localSettings }), [globalSettings, localSettings]);
 
-  const u = (patch: any) => {
-    if (!isAdmin) return;
-    setLocalSettings((prev: any) => ({ ...prev, ...patch }));
-  };
-
+  const u = (patch: any) => { if (!isAdmin) return; setLocalSettings((p: any) => ({ ...p, ...patch })); };
   const hasChanges = Object.keys(localSettings).length > 0;
   const isSaving = updateSettings.isPending;
-
   const saveAll = () => {
     if (!hasChanges || !isAdmin) return;
-    updateSettings.mutate(localSettings, {
-      onSuccess: () => {
-        setLocalSettings({});
-      }
-    });
+    updateSettings.mutate(localSettings, { onSuccess: () => setLocalSettings({}) });
   };
-  
-  const renderSaveBtn = () => (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '16px', borderTop: '1px solid #e2e8f0', marginTop: '8px' }}>
-      <SaveBtn label="Save Changes" onClick={saveAll} disabled={!hasChanges || isSaving} />
-    </div>
-  );
 
   const [printerTab, setPrinterTab] = useState<'regular' | 'thermal'>('regular');
-  const [regularSubTab, setRegularSubTab] = useState<'layout' | 'colors'>('layout');
-  const [showMobilePreview, setShowMobilePreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const previewContent = (
-    <div style={{
-      borderRadius: '8px', overflow: 'hidden',
-      boxShadow: '0 2px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05)',
-    }}>
+    <div style={{ borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 16px rgba(0,0,0,0.08)' }}>
       {printerTab === 'regular' ? <RegularPreview s={settings} /> : <ThermalPreview s={settings} />}
     </div>
   );
 
   return (
-    <div style={{ width: '100%' }}>
-      {/* Printer Type Switcher — full width */}
-      <PrinterTabBar active={printerTab} onSelect={setPrinterTab} />
+    <div style={{ maxWidth: '600px', margin: '0 auto', fontFamily: T.font }}>
 
-      {/* Two-column layout: Controls left, Preview right */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 400px',
-        gap: '24px', marginTop: '20px', alignItems: 'start',
-      }} className="print-settings-grid">
-        {/* ═══ LEFT: Controls ═══ */}
-        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '20px' }}>
-
-          {/* ─── REGULAR CONTROLS ─── */}
-          {printerTab === 'regular' && (<>
-            <SettingsCard title="Appearance" subtitle="Customize layout and colors for regular printing" icon="🎨" accent="hsl(var(--primary))" footer={renderSaveBtn()}>
-              <div style={{ marginBottom: '16px' }}>
-                <TabBar 
-                  tabs={[
-                    { id: 'layout', label: 'CHANGE LAYOUT', icon: '📄' },
-                    { id: 'colors', label: 'CHANGE COLORS', icon: '🎨' }
-                  ]}
-                  active={regularSubTab}
-                  onSelect={(id) => setRegularSubTab(id as any)}
-                />
-              </div>
-              
-              {regularSubTab === 'layout' && (
-                <LayoutPicker layouts={REGULAR_LAYOUTS} selected={settings?.print_regular_layout || 'gst_theme_6'} onSelect={(id) => u({ print_regular_layout: id })} disabled={!isAdmin} />
-              )}
-              {regularSubTab === 'colors' && (
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', padding: '12px 0' }}>
-                  {['#7c3aed', '#2563eb', '#ea580c', '#16a34a', '#db2777', '#475569', '#000000', '#dc2626'].map(color => {
-                    const isActive = (settings?.print_accent_color === color || settings?.print_primary_color === color);
-                    return (
-                      <button key={color} type="button" 
-                        onClick={() => u({ print_accent_color: color, print_primary_color: color })}
-                        disabled={!isAdmin}
-                        style={{
-                          width: '38px', height: '38px', borderRadius: '50%',
-                          background: color, border: isActive ? '3px solid #fff' : '3px solid transparent',
-                          cursor: !isAdmin ? 'not-allowed' : 'pointer',
-                          boxShadow: isActive ? `0 0 0 2px ${color}, 0 4px 8px ${op(color, 30)}` : '0 2px 4px rgba(0,0,0,0.1)',
-                          transition: 'all 0.2s', opacity: isAdmin ? 1 : 0.5,
-                          transform: isActive ? 'scale(1.1)' : 'scale(1)',
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </SettingsCard>
-
-            <SettingsCard title="Print Company Info / Header" subtitle="Configure what company details appear on printed invoices" icon="🏢" accent="#10b981" footer={renderSaveBtn()}>
-              <SettingRow label="Make Regular Printer Default" desc="Use regular printer as the default printing method"
-                right={<Toggle on={settings?.print_regular_default ?? false} onChange={(v) => u({ print_regular_default: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Print repeat header in all pages" desc="Repeat company header on every page of multi-page invoices"
-                right={<Toggle on={settings?.print_repeat_header ?? false} onChange={(v) => u({ print_repeat_header: v })} disabled={!isAdmin} />} />
-
-              <SectionLabel text="Company Details" />
-              <CheckRow checked={true} onChange={() => {}} // Dummy, Title is always visible if set
-                label="Document Title" inputPlaceholder="e.g. ESTIMATE or INVOICE"
-                inputValue={settings?.invoice_title || 'INVOICE'}
-                onInputChange={(v) => u({ invoice_title: v })} disabled={!isAdmin} />
-              <CheckRow checked={settings?.print_company_name ?? true} onChange={(v) => u({ print_company_name: v })}
-                label="Company Name" inputPlaceholder="My Company"
-                inputValue={settings?.print_company_name_text || settings?.business_name || ''}
-                onInputChange={(v) => u({ print_company_name_text: v })} disabled={!isAdmin} />
-              <CheckRow checked={settings?.print_company_logo ?? false} onChange={(v) => u({ print_company_logo: v })}
-                label="Company Logo" disabled={!isAdmin} />
-              <CheckRow checked={settings?.print_show_address ?? true} onChange={(v) => u({ print_show_address: v })}
-                label="Address" inputPlaceholder="Business address"
-                inputValue={settings?.address || ''} disabled={!isAdmin} />
-              <CheckRow checked={settings?.print_show_email ?? true} onChange={(v) => u({ print_show_email: v })}
-                label="Email" inputPlaceholder="email@example.com"
-                inputValue={settings?.email || ''} disabled={!isAdmin} />
-              <CheckRow checked={settings?.print_show_phone ?? true} onChange={(v) => u({ print_show_phone: v })}
-                label="Phone Number" inputPlaceholder="Phone number"
-                inputValue={settings?.phone || ''} disabled={!isAdmin} />
-              <CheckRow checked={settings?.print_show_gstin ?? true} onChange={(v) => u({ print_show_gstin: v })}
-                label="GSTIN on Sale" disabled={!isAdmin} />
-
-              <SectionLabel text="Page Setup" />
-              <SettingRow label="Paper Size" desc="Select paper size for printing"
-                right={<SelectInput value={settings?.print_paper_size || 'A4'} onChange={(v) => u({ print_paper_size: v })} disabled={!isAdmin}
-                  options={[{ value: 'A4', label: 'A4' }, { value: 'A5', label: 'A5' }, { value: 'Letter', label: 'Letter' }, { value: 'Legal', label: 'Legal' }]} />} />
-              <SettingRow label="Orientation" desc="Page print orientation"
-                right={<SelectInput value={settings?.print_orientation || 'portrait'} onChange={(v) => u({ print_orientation: v })} disabled={!isAdmin}
-                  options={[{ value: 'portrait', label: 'Portrait' }, { value: 'landscape', label: 'Landscape' }]} />} />
-              <SettingRow label="Company Name Text Size" desc="Size of the company name on invoice"
-                right={<SelectInput value={settings?.print_company_name_size || 'large'} onChange={(v) => u({ print_company_name_size: v })} disabled={!isAdmin}
-                  options={[{ value: 'v.small', label: 'V. Small' }, { value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }, { value: 'v.large', label: 'V. Large' }, { value: 'e.large', label: 'E. Large' }]} />} />
-              <SettingRow label="Invoice Text Size" desc="Size of content text on invoice" noBorder
-                right={<SelectInput value={settings?.print_invoice_text_size || 'medium'} onChange={(v) => u({ print_invoice_text_size: v })} disabled={!isAdmin}
-                  options={[{ value: 'v.small', label: 'V. Small' }, { value: 'small', label: 'Small' }, { value: 'medium', label: 'Medium' }, { value: 'large', label: 'Large' }, { value: 'v.large', label: 'V. Large' }, { value: 'e.large', label: 'E. Large' }]} />} />
-            </SettingsCard>
-
-            <SettingsCard title="Print Copies & Layout Setup" subtitle="Configure number of copies and extra spacing" icon="📄" accent="#0ea5e9" footer={renderSaveBtn()}>
-              <SettingRow label="Print Original/Duplicate" desc="Enable copy labels on prints" noBorder={!(settings?.print_original_duplicate ?? true)}
-                right={<Toggle on={settings?.print_original_duplicate ?? true} onChange={(v) => u({ print_original_duplicate: v })} disabled={!isAdmin} />} />
-              
-              {(settings?.print_original_duplicate ?? true) && (
-                <div style={{ marginLeft: '12px', paddingLeft: '16px', borderLeft: `2px solid ${T.color.border}`, display: 'flex', flexDirection: 'column', gap: '0px', marginBottom: '16px', paddingBottom: '16px', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
-                  <SectionLabel text="Choose default no. of copies" />
-                  <CheckRow checked={settings?.print_copy_original ?? true} onChange={(v) => u({ print_copy_original: v })} label="Original (ORIGINAL FOR RECIPIENT)" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_copy_duplicate ?? true} onChange={(v) => u({ print_copy_duplicate: v })} label="Duplicate (DUPLICATE FOR TRANSPORTER)" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_copy_triplicate ?? true} onChange={(v) => u({ print_copy_triplicate: v })} label="Triplicate (TRIPLICATE FOR SUPPLIER)" disabled={!isAdmin} />
-                </div>
-              )}
-
-              <SettingRow label="Extra space on Top" desc="Add margin at the top of the printed page (mm)" 
-                right={
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Counter value={settings?.print_extra_space_top ?? 0} min={0} max={200} onChange={(v) => u({ print_extra_space_top: v })} disabled={!isAdmin} />
-                    <span style={{ fontSize: '12px', color: T.color.textMuted }}>mm</span>
-                  </div>
-                } />
-              
-              <SettingRow label="Content Margin" desc="Space around edges of the document (px)" noBorder
-                right={
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Counter value={settings?.print_content_padding ?? 20} min={0} max={100} onChange={(v) => u({ print_content_padding: v })} disabled={!isAdmin} />
-                    <span style={{ fontSize: '12px', color: T.color.textMuted }}>px</span>
-                  </div>
-                } />
-            </SettingsCard>
-
-            <SettingsCard title="Item Table" subtitle="Configure columns and rows in the invoice table" icon="📜" accent="#eab308" footer={renderSaveBtn()}>
-              <SettingRow label="Min No. of Rows in Item Table" desc="Ensure consistency by forcing empty rows"
-                right={<Counter value={settings?.print_min_table_rows ?? 0} min={0} max={20} onChange={(v) => u({ print_min_table_rows: v })} disabled={!isAdmin} />} />
-              
-              <div style={{ marginTop: '0px' }}>
-                <SectionLabel text="Item Table Customization" />
-                <div className="item-table-checkgrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
-                  <CheckRow checked={settings?.print_show_item_number ?? true} onChange={(v) => u({ print_show_item_number: v, print_show_index: v })} label="#" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_show_hsn_sac ?? true} onChange={(v) => u({ print_show_hsn_sac: v, print_show_code: v })} label="HSN/SAC" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_show_quantity ?? true} onChange={(v) => u({ print_show_quantity: v })} label="Quantity" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_show_mrp ?? false} onChange={(v) => u({ print_show_mrp: v })} label="MRP Column" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_show_price_unit ?? true} onChange={(v) => u({ print_show_price_unit: v })} label="Price/unit" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_show_discount ?? true} onChange={(v) => u({ print_show_discount: v })} label="Discount" disabled={!isAdmin} />
-                  <CheckRow checked={settings?.print_show_gst ?? true} onChange={(v) => u({ print_show_gst: v, print_show_tax: v })} label="GST" disabled={!isAdmin} />
-                </div>
-              </div>
-            </SettingsCard>
-
-            <SettingsCard title="Totals & Taxes" subtitle="Control which totals and tax details appear on printed invoices" icon="🧮" accent="#f97316" footer={renderSaveBtn()}>
-              <SettingRow label="Total Item Quantity" desc="Show total number of items on invoice"
-                right={<Toggle on={settings?.print_total_item_quantity ?? true} onChange={(v) => u({ print_total_item_quantity: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Amount with Decimal" desc="Display amounts with decimal precision (e.g. ₹ 0.00)"
-                right={<Toggle on={settings?.print_amount_decimal ?? true} onChange={(v) => u({ print_amount_decimal: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Received Amount" desc="Show received payment amount on invoice"
-                right={<Toggle on={settings?.print_received_amount ?? true} onChange={(v) => u({ print_received_amount: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Balance Amount" desc="Show remaining balance amount"
-                right={<Toggle on={settings?.print_balance_amount ?? true} onChange={(v) => u({ print_balance_amount: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Current Balance of Party" desc="Show customer's current outstanding balance"
-                right={<Toggle on={settings?.print_current_balance ?? false} onChange={(v) => u({ print_current_balance: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Tax Details" desc="Display GST/tax breakdown on invoice"
-                right={<Toggle on={settings?.print_tax_details ?? true} onChange={(v) => u({ print_tax_details: v })} disabled={!isAdmin} />} />
-              <SettingRow label="You Saved" desc="Show total discount/savings amount to customer"
-                right={<Toggle on={settings?.print_you_saved ?? true} onChange={(v) => u({ print_you_saved: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Print Amount with Grouping" desc="Format large numbers with commas (e.g. 1,00,000)"
-                right={<Toggle on={settings?.print_amount_grouping ?? true} onChange={(v) => u({ print_amount_grouping: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Amount in Words" desc="Print total amount in words below the total" noBorder
-                right={
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Toggle on={settings?.print_amount_words ?? false} onChange={(v) => u({ print_amount_words: v })} disabled={!isAdmin} />
-                    {(settings?.print_amount_words) && (
-                      <SelectInput value={settings?.print_amount_words_format || 'indian'} onChange={(v) => u({ print_amount_words_format: v })} disabled={!isAdmin}
-                        options={[{ value: 'indian', label: 'Indian' }, { value: 'international', label: 'International' }]} />
-                    )}
-                  </div>
-                } />
-            </SettingsCard>
-
-            <SettingsCard title="Bank Details" subtitle="Display bank account and payment options" icon="🏦" accent="#10b981" footer={renderSaveBtn()}>
-              <SettingRow label="Enable Bank Details" desc="Show bank information on printed invoices" noBorder={!(settings?.print_bank_details ?? true)}
-                right={<Toggle on={settings?.print_bank_details ?? true} onChange={(v) => u({ print_bank_details: v })} disabled={!isAdmin} />} />
-              
-              {(settings?.print_bank_details ?? true) && (
-                <div style={{ padding: '0 0 16px', display: 'flex', flexDirection: 'column', gap: '12px', borderBottom: `1px solid ${op(T.color.border, 50)}`, marginBottom: '12px' }}>
-                  <div>
-                    <FieldLabel>Bank Name</FieldLabel>
-                    <TextInput value={settings?.print_bank_name || ''} onChange={(e) => u({ print_bank_name: e.target.value })} placeholder="e.g. HDFC Bank" disabled={!isAdmin} />
-                  </div>
-                  <div>
-                    <FieldLabel>Account Number</FieldLabel>
-                    <TextInput value={settings?.print_bank_account || ''} onChange={(e) => u({ print_bank_account: e.target.value })} placeholder="e.g. 1234567890" disabled={!isAdmin} />
-                  </div>
-                  <div>
-                    <FieldLabel>IFSC Code</FieldLabel>
-                    <TextInput value={settings?.print_bank_ifsc || ''} onChange={(e) => u({ print_bank_ifsc: e.target.value })} placeholder="e.g. HDFC0001234" disabled={!isAdmin} />
-                  </div>
-                  <div style={{ marginTop: '8px' }}>
-                    <CheckRow checked={settings?.print_upi_qr ?? true} onChange={(v) => u({ print_upi_qr: v })} label="Print UPI QR Code" disabled={!isAdmin} />
-                    {(settings?.print_upi_qr ?? true) && (
-                      <div style={{ paddingLeft: '32px', marginTop: '-4px', marginBottom: '8px' }}>
-                        <TextInput value={settings?.upi_id || ''} onChange={(e) => u({ upi_id: e.target.value })} placeholder="e.g. yourname@bank" hint="Required for the dynamic QR code to work properly." disabled={!isAdmin} />
-                      </div>
-                    )}
-                    <CheckRow checked={settings?.print_pay_now_btn ?? true} onChange={(v) => u({ print_pay_now_btn: v })} label="Print 'PAY NOW' button" disabled={!isAdmin} />
-                  </div>
-                </div>
-              )}
-            </SettingsCard>
-
-            <SettingsCard title="Footer" subtitle="Customize the footer section of your printed invoices" icon="📝" accent="#8b5cf6" footer={renderSaveBtn()}>
-              <SettingRow label="Print Description" desc="Show sale description on invoice"
-                right={<Toggle on={settings?.print_description ?? false} onChange={(v) => u({ print_description: v })} disabled={!isAdmin} />} />
-              <div style={{ padding: '12px 0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 550, color: T.color.textPri }}>Terms and Conditions</span>
-                </div>
-                <textarea value={settings?.print_terms_conditions || ''} onChange={(e) => u({ print_terms_conditions: e.target.value })}
-                  placeholder="Thanks for doing business with us!" disabled={!isAdmin} rows={3}
-                  style={{ width: '100%', padding: '10px 13px', fontSize: '13px', borderRadius: '10px', border: `1.5px solid ${T.color.border}`,
-                    background: T.color.inputBg, outline: 'none', fontFamily: T.font, color: T.color.textPri,
-                    resize: 'vertical' as const, boxSizing: 'border-box' as const, opacity: !isAdmin ? 0.5 : 1 }} />
-              </div>
-              <SettingRow label="Print Received by details" desc="Add received by name on invoice"
-                right={<Toggle on={settings?.print_received_by ?? true} onChange={(v) => u({ print_received_by: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Print Delivered by details" desc="Add delivered by name on invoice"
-                right={<Toggle on={settings?.print_delivered_by ?? false} onChange={(v) => u({ print_delivered_by: v })} disabled={!isAdmin} />} />
-              <div style={{ padding: '10px 0', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Toggle on={settings?.print_show_signature ?? false} onChange={(v) => u({ print_show_signature: v })} disabled={!isAdmin} />
-                  <span style={{ fontSize: '13px', fontWeight: 550, color: T.color.textPri }}>Print Signature</span>
-                </div>
-                {(settings?.print_show_signature ?? false) && (
-                  <div style={{ marginTop: '12px', paddingLeft: '56px' }}>
-                    <FieldLabel>Signature Text</FieldLabel>
-                    <TextInput value={settings?.print_signature_text || ''} onChange={(e) => u({ print_signature_text: e.target.value })}
-                      placeholder="Authorized Signatory" disabled={!isAdmin} />
-                  </div>
-                )}
-              </div>
-              <SettingRow label="Payment Mode" desc="Show payment method used on invoice"
-                right={<Toggle on={settings?.print_payment_mode ?? false} onChange={(v) => u({ print_payment_mode: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Print Acknowledgement" desc="Include customer acknowledgement section" noBorder
-                right={<Toggle on={settings?.print_acknowledgement ?? true} onChange={(v) => u({ print_acknowledgement: v })} disabled={!isAdmin} />} />
-            </SettingsCard>
-          </>)}
-
-          {/* ─── THERMAL CONTROLS ─── */}
-          {printerTab === 'thermal' && (<>
-            <SettingsCard title="Change Layout" subtitle="Select a print layout template for thermal receipt printing" icon="🎨" accent="hsl(var(--primary))" footer={renderSaveBtn()}>
-              <LayoutPicker layouts={THERMAL_LAYOUTS} selected={settings?.print_thermal_layout || 'theme_1'} onSelect={(id) => u({ print_thermal_layout: id })} disabled={!isAdmin} />
-            </SettingsCard>
-
-            <SettingsCard title="Thermal Printer Configuration" subtitle="Configure thermal receipt printer hardware settings" icon="⚙️" accent="#3b82f6" footer={renderSaveBtn()}>
-              <SettingRow label="Make Thermal Printer Default" desc="Use thermal printer as the default printing method"
-                right={<Toggle on={settings?.print_thermal_default ?? false} onChange={(v) => u({ print_thermal_default: v })} disabled={!isAdmin} />} />
-              <div style={{ padding: '12px 0', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
-                <div style={{ marginBottom: '10px' }}>
-                  <div style={{ fontSize: '13.5px', fontWeight: 550, color: T.color.textPri }}>Page Size</div>
-                  <div style={{ fontSize: '11.5px', color: T.color.textMuted, marginTop: '2px' }}>Select the width of your thermal receipt paper</div>
-                </div>
-                <PageSizeSelector value={settings?.print_thermal_page_size || '4inch'} onChange={(v) => u({ print_thermal_page_size: v })} disabled={!isAdmin} />
-              </div>
-              <SettingRow label="Printing Type" desc="Text mode for speed, Graphic for rich layouts"
-                right={<SelectInput value={settings?.print_thermal_printing_type || 'text'} onChange={(v) => u({ print_thermal_printing_type: v })} disabled={!isAdmin}
-                  options={[{ value: 'text', label: 'Text Printing' }, { value: 'graphic', label: 'Graphic Printing' }]} />} />
-              <SettingRow label="Use Text Styling (Bold)" desc="Apply bold text styling for emphasis on receipts"
-                right={<Toggle on={settings?.print_thermal_bold ?? true} onChange={(v) => u({ print_thermal_bold: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Auto Cut Paper After Printing" desc="Automatically cut receipt paper when printing is done"
-                right={<Toggle on={settings?.print_thermal_auto_cut ?? false} onChange={(v) => u({ print_thermal_auto_cut: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Open Cash Drawer After Printing" desc="Trigger cash drawer to open when a receipt is printed"
-                right={<Toggle on={settings?.print_thermal_open_drawer ?? false} onChange={(v) => u({ print_thermal_open_drawer: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Extra lines at the end" desc="Add blank lines after receipt content"
-                right={<Counter value={settings?.print_thermal_extra_lines ?? 0} min={0} max={10} onChange={(v) => u({ print_thermal_extra_lines: v })} disabled={!isAdmin} />} />
-              <SettingRow label="Number of copies" desc="Print multiple copies of each receipt" noBorder
-                right={<Counter value={settings?.print_thermal_copies ?? 1} min={1} max={5} onChange={(v) => u({ print_thermal_copies: v })} disabled={!isAdmin} />} />
-            </SettingsCard>
-
-            <SettingsCard title="Print Company Info / Header" subtitle="Configure company details on thermal receipts" icon="🏢" accent="#10b981" footer={renderSaveBtn()}>
-              <CheckRow checked={settings?.print_thermal_company_name ?? true} onChange={(v) => u({ print_thermal_company_name: v })}
-                label="Company Name" inputPlaceholder="My Company"
-                inputValue={settings?.print_thermal_company_name_text || settings?.business_name || ''}
-                onInputChange={(v) => u({ print_thermal_company_name_text: v })} disabled={!isAdmin} />
-              <CheckRow checked={settings?.print_thermal_company_logo ?? false} onChange={(v) => u({ print_thermal_company_logo: v })}
-                label="Company Logo" disabled={!isAdmin} />
-              <CheckRow checked={settings?.print_thermal_show_address ?? true} onChange={(v) => u({ print_thermal_show_address: v })}
-                label="Address" disabled={!isAdmin} />
-              <CheckRow checked={settings?.print_thermal_show_email ?? false} onChange={(v) => u({ print_thermal_show_email: v })}
-                label="Email" disabled={!isAdmin} />
-              <CheckRow checked={settings?.print_thermal_show_phone ?? true} onChange={(v) => u({ print_thermal_show_phone: v })}
-                label="Phone Number" disabled={!isAdmin} />
-              <CheckRow checked={settings?.print_thermal_show_gstin ?? true} onChange={(v) => u({ print_thermal_show_gstin: v })}
-                label="GSTIN on Sale" disabled={!isAdmin} />
-              <InfoBox bg={op('#10b981', 8)} border={`1px solid ${op('#10b981', 25)}`} icon="💡" title="Tip" titleColor="#10b981" value="Configure your thermal printer driver first for best results. Ensure the correct paper width is selected." />
-            </SettingsCard>
-          </>)}
-        </div>
-
-        {/* ═══ RIGHT: Live Preview (Sticky — desktop only) ═══ */}
-        <div className="print-preview-desktop" style={{ position: 'sticky' as const, top: '20px', alignSelf: 'start' }}>
-          <div style={{
-            background: T.color.cardBg, borderRadius: '14px',
-            border: `1px solid ${T.color.border}`, boxShadow: T.shadow.card,
-            overflow: 'hidden',
-          }}>
-            {/* Preview Header */}
-            <div style={{
-              padding: '12px 16px', borderBottom: `1px solid ${T.color.border}`,
-              background: `linear-gradient(135deg, ${op('hsl(var(--primary))', 6)} 0%, transparent 100%)`,
-              display: 'flex', alignItems: 'center', gap: '8px',
+      {/* ── Printer type switcher ── */}
+      <div style={{ display: 'flex', background: op(T.color.border, 30), borderRadius: '12px', padding: '4px', gap: '4px', marginBottom: '4px' }}>
+        {([
+          { id: 'regular' as const, label: 'Regular Printer', icon: '🖨️' },
+          { id: 'thermal' as const, label: 'Thermal Printer', icon: '🧾' },
+        ]).map(tab => {
+          const active = tab.id === printerTab;
+          return (
+            <button key={tab.id} type="button" onClick={() => setPrinterTab(tab.id)} style={{
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+              padding: '11px 12px', borderRadius: '9px', border: 'none', cursor: 'pointer',
+              fontFamily: T.font, fontSize: '13px', fontWeight: active ? 700 : 500,
+              color: active ? '#fff' : T.color.textSec,
+              background: active ? `linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))` : 'transparent',
+              boxShadow: active ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+              transition: 'all 0.2s',
             }}>
-              <span style={{ fontSize: '14px' }}>👁️</span>
-              <span style={{ fontSize: '12.5px', fontWeight: 700, color: T.color.textPri, letterSpacing: '-0.01em' }}>
-                Live Preview — {printerTab === 'regular' ? 'Regular Invoice' : 'Thermal Receipt'}
-              </span>
-            </div>
-
-            {/* Preview Content */}
-            <div style={{
-              maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' as const,
-              padding: '12px', background: '#f0f1f3',
-            }} className="custom-scrollbar">
-              {previewContent}
-            </div>
-          </div>
-        </div>
+              <span>{tab.icon}</span>
+              <span className="ps-tab-label">{tab.label}</span>
+              <span className="ps-tab-short" style={{ display: 'none' }}>{tab.id === 'regular' ? 'Regular' : 'Thermal'}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* ═══ Floating Preview Button (mobile only) ═══ */}
-      <button
-        type="button"
-        className="print-preview-fab"
-        onClick={() => setShowMobilePreview(true)}
-        style={{
-          display: 'none', /* shown via CSS on mobile */
-          position: 'fixed' as const, bottom: '24px', right: '24px', zIndex: 999,
-          width: '56px', height: '56px', borderRadius: '50%',
-          background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))',
-          color: '#fff', border: 'none', cursor: 'pointer',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.2), 0 2px 6px rgba(0,0,0,0.1)',
-          fontSize: '22px', alignItems: 'center', justifyContent: 'center',
-          transition: 'transform 0.2s, box-shadow 0.2s',
-        }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; }}
-        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-      >
-        👁️
-      </button>
+      {/* ══════════ REGULAR PRINTER SETTINGS ══════════ */}
+      {printerTab === 'regular' && (
+        <>
+          {/* ── Appearance ── */}
+          <Sec title="Appearance" />
+          <Card>
+            <div style={{ padding: '16px 0' }}>
+              <LayoutGrid
+                layouts={REGULAR_LAYOUTS}
+                selected={settings?.print_regular_layout || 'urban_bill_style'}
+                onSelect={id => u({ print_regular_layout: id })}
+                disabled={!isAdmin}
+              />
+            </div>
+          </Card>
 
-      {/* ═══ Full-screen Preview Drawer (mobile) ═══ */}
-      {showMobilePreview && (
+          {/* ── Company Info / Header ── */}
+          <Sec title="Company Info/Header" />
+          <Card>
+            <Row label="Print Company Logo" right={<Toggle on={settings?.print_company_logo ?? false} onChange={v => u({ print_company_logo: v })} disabled={!isAdmin} />} />
+            <Row label="Extra Space on Top (mm)" right={<Counter value={settings?.print_extra_space_top ?? 0} min={0} max={200} onChange={v => u({ print_extra_space_top: v })} disabled={!isAdmin} />} />
+            <Row label="Show Address" right={<Toggle on={settings?.print_show_address ?? true} onChange={v => u({ print_show_address: v })} disabled={!isAdmin} />} />
+            <Row label="Show Phone Number" right={<Toggle on={settings?.print_show_phone ?? true} onChange={v => u({ print_show_phone: v })} disabled={!isAdmin} />} />
+            <Row label="Show Email" right={<Toggle on={settings?.print_show_email ?? true} onChange={v => u({ print_show_email: v })} disabled={!isAdmin} />} />
+            <Row label="Show GSTIN on Invoice" right={<Toggle on={settings?.print_show_gstin ?? true} onChange={v => u({ print_show_gstin: v })} disabled={!isAdmin} />} />
+            <Row label="Company Name" right={<Toggle on={settings?.print_company_name ?? true} onChange={v => u({ print_company_name: v })} disabled={!isAdmin} />} />
+            <Row label="Repeat header on all pages" noBorder right={<Toggle on={settings?.print_repeat_header ?? false} onChange={v => u({ print_repeat_header: v })} disabled={!isAdmin} />} />
+          </Card>
+
+          {/* ── Page Setup ── */}
+          <Sec title="Page Setup" />
+          <Card>
+            <div style={{ padding: '14px 0', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
+              <FieldLbl>Paper Size</FieldLbl>
+              <PillGroup
+                value={settings?.print_paper_size || 'A4'}
+                onChange={v => u({ print_paper_size: v })}
+                disabled={!isAdmin}
+                options={[
+                  { value: 'A4', label: 'A4' },
+                  { value: 'A5', label: 'A5' },
+                  { value: 'Letter', label: 'Letter' },
+                  { value: 'Legal', label: 'Legal' },
+                ]}
+              />
+            </div>
+            <div style={{ padding: '14px 0', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
+              <FieldLbl>Orientation</FieldLbl>
+              <PillGroup
+                value={settings?.print_orientation || 'portrait'}
+                onChange={v => u({ print_orientation: v })}
+                disabled={!isAdmin}
+                options={[
+                  { value: 'portrait', label: 'Portrait', icon: '🖨️' },
+                  { value: 'landscape', label: 'Landscape', icon: '🛫' },
+                ]}
+              />
+            </div>
+            <Row label="Regular Printer Default" right={<Toggle on={settings?.print_regular_default ?? false} onChange={v => u({ print_regular_default: v })} disabled={!isAdmin} />} />
+            <Row label="Company Name Size" right={
+              <select value={settings?.print_company_name_size || 'large'} onChange={e => u({ print_company_name_size: e.target.value })} disabled={!isAdmin}
+                style={{ padding: '7px 10px', borderRadius: '8px', border: `1.5px solid ${T.color.border}`, background: T.color.inputBg, fontFamily: T.font, fontSize: '13px', color: T.color.textPri, outline: 'none', cursor: 'pointer', opacity: !isAdmin ? 0.5 : 1 }}>
+                {['v.small','small','medium','large','v.large','e.large'].map(s => <option key={s} value={s}>{s.replace('v.','V. ').replace('e.','E. ').replace(/^\w/, c => c.toUpperCase())}</option>)}
+              </select>
+            } />
+            <Row label="Invoice Text Size" noBorder right={
+              <select value={settings?.print_invoice_text_size || 'medium'} onChange={e => u({ print_invoice_text_size: e.target.value })} disabled={!isAdmin}
+                style={{ padding: '7px 10px', borderRadius: '8px', border: `1.5px solid ${T.color.border}`, background: T.color.inputBg, fontFamily: T.font, fontSize: '13px', color: T.color.textPri, outline: 'none', cursor: 'pointer', opacity: !isAdmin ? 0.5 : 1 }}>
+                {['v.small','small','medium','large','v.large','e.large'].map(s => <option key={s} value={s}>{s.replace('v.','V. ').replace('e.','E. ').replace(/^\w/, c => c.toUpperCase())}</option>)}
+              </select>
+            } />
+          </Card>
+
+          {/* ── Item Table Customization ── */}
+          <Sec title="Item Table Customization" />
+          <Card>
+            <Check checked={settings?.print_show_hsn_sac ?? true} onChange={v => u({ print_show_hsn_sac: v, print_show_code: v })} label="HSN/SAC Code" disabled={!isAdmin} />
+            <Check checked={settings?.print_show_item_number ?? true} onChange={v => u({ print_show_item_number: v, print_show_index: v })} label="Item Description (#)" disabled={!isAdmin} />
+            <Check checked={settings?.print_show_price_unit ?? true} onChange={v => u({ print_show_price_unit: v })} label="Unit Price" disabled={!isAdmin} />
+            <Check checked={settings?.print_show_discount ?? true} onChange={v => u({ print_show_discount: v })} label="Discount %" disabled={!isAdmin} />
+            <Check checked={settings?.print_show_quantity ?? true} onChange={v => u({ print_show_quantity: v })} label="Quantity" disabled={!isAdmin} />
+            <Check checked={settings?.print_show_gst ?? true} onChange={v => u({ print_show_gst: v, print_show_tax: v })} label="GST Column" disabled={!isAdmin} />
+            <Check checked={settings?.print_show_mrp ?? false} onChange={v => u({ print_show_mrp: v })} label="MRP Column" disabled={!isAdmin} />
+            <div style={{ padding: '14px 0' }}>
+              <Row label="Min No. of Rows" noBorder right={<Counter value={settings?.print_min_table_rows ?? 5} min={0} max={20} onChange={v => u({ print_min_table_rows: v })} disabled={!isAdmin} />} />
+            </div>
+          </Card>
+
+          {/* ── Totals & Taxes ── */}
+          <Sec title="Totals & Taxes" />
+          <Card>
+            <Row label="Show GST Summary" right={<Toggle on={settings?.print_tax_details ?? true} onChange={v => u({ print_tax_details: v })} disabled={!isAdmin} />} />
+            <Row label="Total Item Quantity" right={<Toggle on={settings?.print_total_item_quantity ?? true} onChange={v => u({ print_total_item_quantity: v })} disabled={!isAdmin} />} />
+            <Row label="Received Amount" right={<Toggle on={settings?.print_received_amount ?? true} onChange={v => u({ print_received_amount: v })} disabled={!isAdmin} />} />
+            <Row label="Balance Amount" right={<Toggle on={settings?.print_balance_amount ?? true} onChange={v => u({ print_balance_amount: v })} disabled={!isAdmin} />} />
+            <Row label="Amount with Decimal" right={<Toggle on={settings?.print_amount_decimal ?? true} onChange={v => u({ print_amount_decimal: v })} disabled={!isAdmin} />} />
+            <Row label="You Saved" right={<Toggle on={settings?.print_you_saved ?? true} onChange={v => u({ print_you_saved: v })} disabled={!isAdmin} />} />
+            <Row label="Amount in Words" noBorder right={<Toggle on={settings?.print_amount_words ?? false} onChange={v => u({ print_amount_words: v })} disabled={!isAdmin} />} />
+          </Card>
+
+          {/* ── Bank Details & Footer ── */}
+          <Sec title="Bank Details & Footer" />
+          <Card>
+            <div style={{ padding: '14px 0', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
+              <FieldLbl>Bank Information</FieldLbl>
+              <Textarea
+                value={[
+                  settings?.print_bank_name ? `Bank: ${settings.print_bank_name}` : '',
+                  settings?.print_bank_account ? `A/C No: ${settings.print_bank_account}` : '',
+                  settings?.print_bank_ifsc ? `IFSC: ${settings.print_bank_ifsc}` : '',
+                ].filter(Boolean).join('\n') || ''}
+                onChange={v => {
+                  const lines = v.split('\n');
+                  const patch: any = {};
+                  lines.forEach(line => {
+                    if (line.startsWith('Bank:')) patch.print_bank_name = line.replace('Bank:', '').trim();
+                    else if (line.startsWith('A/C No:')) patch.print_bank_account = line.replace('A/C No:', '').trim();
+                    else if (line.startsWith('IFSC:')) patch.print_bank_ifsc = line.replace('IFSC:', '').trim();
+                  });
+                  u(patch);
+                }}
+                placeholder="Enter Bank Name, A/C No, IFSC..."
+                disabled={!isAdmin}
+                rows={3}
+              />
+            </div>
+            <div style={{ padding: '14px 0', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
+              <FieldLbl>Footer Text</FieldLbl>
+              <Input
+                value={settings?.print_terms_conditions || ''}
+                onChange={v => u({ print_terms_conditions: v })}
+                placeholder="Thank you for your business!"
+                disabled={!isAdmin}
+              />
+            </div>
+            <div style={{ padding: '14px 0', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
+              <Row label="Show UPI QR Code" noBorder right={<Toggle on={settings?.print_upi_qr ?? true} onChange={v => u({ print_upi_qr: v })} disabled={!isAdmin} />} />
+              {(settings?.print_upi_qr ?? true) && (
+                <div style={{ marginTop: '8px' }}>
+                  <FieldLbl>UPI ID</FieldLbl>
+                  <Input value={settings?.upi_id || ''} onChange={v => u({ upi_id: v })} placeholder="e.g. yourname@bank" disabled={!isAdmin} />
+                </div>
+              )}
+            </div>
+            <div style={{ padding: '14px 0' }}>
+              <FieldLbl>Default No. of Copies</FieldLbl>
+              <PillGroup
+                value={String(settings?.print_default_copies ?? 1)}
+                onChange={v => u({ print_default_copies: Number(v) })}
+                disabled={!isAdmin}
+                options={[
+                  { value: '1', label: '1 Copy' },
+                  { value: '2', label: '2 Copies' },
+                  { value: '3', label: '3 Copies' },
+                ]}
+              />
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* ══════════ THERMAL PRINTER SETTINGS ══════════ */}
+      {printerTab === 'thermal' && (
+        <>
+          {/* ── Layout ── */}
+          <Sec title="Appearance" />
+          <Card>
+            <div style={{ padding: '16px 0' }}>
+              <LayoutGrid
+                layouts={THERMAL_LAYOUTS}
+                selected={settings?.print_thermal_layout || 'theme_1'}
+                onSelect={id => u({ print_thermal_layout: id })}
+                disabled={!isAdmin}
+              />
+            </div>
+          </Card>
+
+          {/* ── Paper & Hardware ── */}
+          <Sec title="Paper & Hardware" />
+          <Card>
+            <div style={{ padding: '14px 0', borderBottom: `1px solid ${op(T.color.border, 50)}` }}>
+              <FieldLbl>Paper Size</FieldLbl>
+              <PillGroup
+                value={settings?.print_thermal_page_size || '4inch'}
+                onChange={v => u({ print_thermal_page_size: v })}
+                disabled={!isAdmin}
+                options={[
+                  { value: '2inch', label: '2" (58mm)' },
+                  { value: '3inch', label: '3" (80mm)' },
+                  { value: '4inch', label: '4" (80mm)' },
+                  { value: 'custom', label: 'Custom' },
+                ]}
+              />
+            </div>
+            <Row label="Make Thermal Printer Default" right={<Toggle on={settings?.print_thermal_default ?? false} onChange={v => u({ print_thermal_default: v })} disabled={!isAdmin} />} />
+            <Row label="Bold Text Styling" right={<Toggle on={settings?.print_thermal_bold ?? true} onChange={v => u({ print_thermal_bold: v })} disabled={!isAdmin} />} />
+            <Row label="Auto Cut Paper" right={<Toggle on={settings?.print_thermal_auto_cut ?? false} onChange={v => u({ print_thermal_auto_cut: v })} disabled={!isAdmin} />} />
+            <Row label="Open Cash Drawer" right={<Toggle on={settings?.print_thermal_open_drawer ?? false} onChange={v => u({ print_thermal_open_drawer: v })} disabled={!isAdmin} />} />
+            <Row label="Extra Lines at End" right={<Counter value={settings?.print_thermal_extra_lines ?? 0} min={0} max={10} onChange={v => u({ print_thermal_extra_lines: v })} disabled={!isAdmin} />} />
+            <Row label="Number of Copies" noBorder right={<Counter value={settings?.print_thermal_copies ?? 1} min={1} max={5} onChange={v => u({ print_thermal_copies: v })} disabled={!isAdmin} />} />
+          </Card>
+
+          {/* ── Company Info ── */}
+          <Sec title="Company Info / Header" />
+          <Card>
+            <Check checked={settings?.print_thermal_company_name ?? true} onChange={v => u({ print_thermal_company_name: v })} label="Company Name" disabled={!isAdmin} />
+            <Check checked={settings?.print_thermal_show_address ?? true} onChange={v => u({ print_thermal_show_address: v })} label="Address" disabled={!isAdmin} />
+            <Check checked={settings?.print_thermal_show_phone ?? true} onChange={v => u({ print_thermal_show_phone: v })} label="Phone Number" disabled={!isAdmin} />
+            <Check checked={settings?.print_thermal_show_email ?? false} onChange={v => u({ print_thermal_show_email: v })} label="Email" disabled={!isAdmin} />
+            <Check checked={settings?.print_thermal_show_gstin ?? true} onChange={v => u({ print_thermal_show_gstin: v })} label="GSTIN on Sale" disabled={!isAdmin} />
+            <Check checked={settings?.print_thermal_company_logo ?? false} onChange={v => u({ print_thermal_company_logo: v })} label="Company Logo" disabled={!isAdmin} />
+          </Card>
+
+          {/* ── Footer ── */}
+          <Sec title="Footer" />
+          <Card>
+            <div style={{ padding: '14px 0' }}>
+              <FieldLbl>Footer Text</FieldLbl>
+              <Input value={settings?.print_terms_conditions || ''} onChange={v => u({ print_terms_conditions: v })} placeholder="Thank you for your purchase!" disabled={!isAdmin} />
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* ── Instant Preview ── */}
+      <div style={{ marginTop: '24px' }}>
+        <button type="button" onClick={() => setShowPreview(true)} style={{
+          width: '100%', padding: '28px 20px', borderRadius: '16px',
+          background: 'linear-gradient(135deg, #1a2d5a, #253d7a)',
+          border: 'none', cursor: 'pointer', fontFamily: T.font,
+          display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: '6px',
+          transition: 'opacity 0.2s', boxShadow: '0 4px 20px rgba(26,45,90,0.3)',
+        }}
+          onMouseEnter={e => { e.currentTarget.style.opacity = '0.92'; }}
+          onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
+        >
+          <span style={{ fontSize: '30px', marginBottom: '2px' }}>🖨️</span>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: '16px' }}>Instant Preview</span>
+          <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '12.5px' }}>Preview your print layout on-the-go</span>
+        </button>
+      </div>
+
+      {/* ── Save Changes ── */}
+      <div style={{ marginTop: '12px', marginBottom: '32px' }}>
+        <button
+          type="button"
+          onClick={saveAll}
+          disabled={!hasChanges || isSaving || !isAdmin}
+          style={{
+            width: '100%', padding: '16px', borderRadius: '12px', border: 'none',
+            background: hasChanges && isAdmin ? 'hsl(var(--primary))' : op(T.color.textMuted, 20),
+            color: hasChanges && isAdmin ? '#fff' : T.color.textMuted,
+            fontFamily: T.font, fontSize: '14px', fontWeight: 700,
+            letterSpacing: '0.06em', textTransform: 'uppercase' as const,
+            cursor: !hasChanges || isSaving || !isAdmin ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: hasChanges && isAdmin ? '0 4px 14px rgba(0,0,0,0.15)' : 'none',
+          }}>
+          {isSaving ? 'Saving...' : 'Save Changes'}
+        </button>
+      </div>
+
+      {/* ── Preview Drawer ── */}
+      {showPreview && (
         <div style={{
           position: 'fixed' as const, inset: 0, zIndex: 1000,
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-          display: 'flex', flexDirection: 'column' as const,
-          animation: 'fadeIn 0.2s ease',
-        }} onClick={() => setShowMobilePreview(false)}>
-          <div
-            style={{
-              flex: 1, marginTop: '48px', borderRadius: '20px 20px 0 0',
-              background: T.color.cardBg, display: 'flex', flexDirection: 'column' as const,
-              overflow: 'hidden', animation: 'slideUp 0.3s ease',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Drawer Header */}
+          background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+          display: 'flex', flexDirection: 'column' as const, animation: 'psFadeIn 0.2s ease',
+        }} onClick={() => setShowPreview(false)}>
+          <div style={{
+            flex: 1, marginTop: '48px', borderRadius: '20px 20px 0 0',
+            background: T.color.cardBg, display: 'flex', flexDirection: 'column' as const,
+            overflow: 'hidden', animation: 'psSlideUp 0.3s cubic-bezier(.32,1.4,.48,1)',
+          }} onClick={e => e.stopPropagation()}>
             <div style={{
               padding: '16px 20px', borderBottom: `1px solid ${T.color.border}`,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '16px' }}>👁️</span>
+                <span style={{ fontSize: '18px' }}>🖨️</span>
                 <span style={{ fontSize: '14px', fontWeight: 700, color: T.color.textPri }}>
-                  Live Preview — {printerTab === 'regular' ? 'Regular Invoice' : 'Thermal Receipt'}
+                  {printerTab === 'regular' ? 'Regular Invoice Preview' : 'Thermal Receipt Preview'}
                 </span>
               </div>
-              <button type="button" onClick={() => setShowMobilePreview(false)} style={{
-                width: '36px', height: '36px', borderRadius: '50%',
-                border: `1px solid ${T.color.border}`, background: T.color.cardBg,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '18px', color: T.color.textPri, transition: 'background 0.2s',
+              <button type="button" onClick={() => setShowPreview(false)} style={{
+                width: '34px', height: '34px', borderRadius: '50%', border: `1px solid ${T.color.border}`,
+                background: T.color.cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: '16px', color: T.color.textPri,
               }}>✕</button>
             </div>
-
-            {/* Drawer Content */}
-            <div style={{
-              flex: 1, overflowY: 'auto' as const, padding: '16px',
-              background: '#f0f1f3', WebkitOverflowScrolling: 'touch' as const,
-            }} className="custom-scrollbar">
+            <div style={{ flex: 1, overflowY: 'auto' as const, padding: '16px', background: '#eef0f3' }} className="custom-scrollbar">
               {previewContent}
             </div>
           </div>
         </div>
       )}
 
-      {/* Responsive styles */}
       <style>{`
-        @media (max-width: 1024px) {
-          .print-settings-grid {
-            grid-template-columns: 1fr !important;
-          }
-          .print-preview-desktop {
-            display: none !important;
-          }
-          .print-preview-fab {
-            display: flex !important;
-          }
+        @media (max-width: 480px) {
+          .ps-tab-label { display: none !important; }
+          .ps-tab-short { display: inline !important; }
         }
-        @media (max-width: 640px) {
-          .printer-tab-btn {
-            padding: 10px 8px !important;
-            font-size: 10.5px !important;
-            gap: 5px !important;
-          }
-          .printer-tab-full {
-            display: none !important;
-          }
-          .printer-tab-short {
-            display: inline !important;
-          }
-          .layout-picker-scroll {
-            gap: 8px !important;
-          }
-          .layout-picker-card {
-            min-width: 80px !important;
-            padding: 10px 8px !important;
-          }
-          .layout-picker-icon {
-            width: 36px !important;
-            height: 46px !important;
-            font-size: 17px !important;
-            margin-bottom: 6px !important;
-          }
-          .item-table-checkgrid {
-            grid-template-columns: 1fr !important;
-          }
+        @keyframes psSlideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-        @keyframes fadeIn {
+        @keyframes psFadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
