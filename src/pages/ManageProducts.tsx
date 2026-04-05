@@ -320,8 +320,10 @@ export default function ManageProducts() {
       [{
         title: `Product Inventory (${filtered.length} items)`,
         titleColor: '1F4E79',
-        data: filtered,
+        data: filtered.map((p, i) => ({ ...p, _sr: i + 1 })),
         columns: [
+          { key: '_sr', header: 'Sr.No', format: (v) => Number(v) },
+          { key: 'image_url', header: 'Image URL', format: (v) => v || '' },
           { key: 'name', header: 'Product Name' },
           { key: 'item_code', header: 'Item Code', format: (v) => v || '' },
           { key: 'sku', header: 'SKU', format: (v) => v || '' },
@@ -330,13 +332,14 @@ export default function ManageProducts() {
           { key: 'selling_price', header: 'Selling Price', format: (v) => Number(v).toFixed(2) },
           { key: 'cost_price', header: 'Cost Price', format: (v) => Number(v).toFixed(2) },
           { key: 'wholesale_price', header: 'Wholesale Price', format: (v) => Number(v || 0).toFixed(2) },
+          { key: 'stock_quantity', header: 'Stock (PCS)', format: (v) => Number(v) },
           { key: 'items_per_case', header: 'PCS/Case', format: (v) => Number(v) || '' },
           { key: '_cases', header: 'Cases', format: (_v, _k, item: any) => {
             const ppc = Number(item?.items_per_case);
             const qty = Number(item?.stock_quantity);
             return ppc > 0 ? Math.round((qty / ppc) * 100) / 100 : '';
           }},
-          { key: 'stock_quantity', header: 'Stock (PCS)', format: (v) => Number(v) },
+          { key: 'low_stock_threshold', header: 'Low Stock Alert', format: (v) => Number(v) },
         ],
       }],
       null,

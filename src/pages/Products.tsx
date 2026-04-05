@@ -368,8 +368,10 @@ export default function Products() {
       [{
         title: `Product Inventory (${filteredProducts.length} items)`,
         titleColor: '1F4E79',
-        data: filteredProducts,
+        data: filteredProducts.map((p, i) => ({ ...p, _sr: i + 1 })),
         columns: [
+          { key: '_sr', header: 'Sr.No', format: (v) => Number(v) },
+          { key: 'image_url', header: 'Image URL', format: (v) => v || '' },
           { key: 'name', header: 'Product Name' },
           { key: 'item_code', header: 'Item Code', format: (v) => v || '' },
           { key: 'sku', header: 'SKU', format: (v) => v || '' },

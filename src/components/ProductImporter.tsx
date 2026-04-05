@@ -84,6 +84,7 @@ export function ProductImporter() {
                 const batchNumber = pick(row, 'Batch No.', 'Batch Number', 'batch_number', 'Batch') || null;
                 const expiryDate = pick(row, 'Expiry Date', 'expiry_date', 'Expiry') || null;
                 const discountPercent = pick(row, 'Discount %', 'Discount', 'discount_percent') || 0;
+                const imageUrl = pick(row, 'Image URL', 'image_url', 'Image', 'Product Image') || null;
 
                 if (!categoryMap.has(categoryName)) {
                     categoriesToCreate.add(categoryName);
@@ -107,6 +108,7 @@ export function ProductImporter() {
                     batch_number: batchNumber ? String(batchNumber) : null,
                     expiry_date: expiryDate ? String(expiryDate) : null,
                     discount_percent: Number(discountPercent) || 0,
+                    image_url: imageUrl ? String(imageUrl) : null,
                     is_active: true,
                 };
             }).filter(item => item.name); // Filter out rows without product name
@@ -167,6 +169,7 @@ export function ProductImporter() {
                 batch_number: item.batch_number,
                 expiry_date: item.expiry_date,
                 discount_percent: item.discount_percent,
+                image_url: item.image_url,
                 is_active: true,
                 business_id: businessId,
             }));
