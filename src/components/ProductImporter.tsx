@@ -29,7 +29,21 @@ export function ProductImporter() {
             const data = await file.arrayBuffer();
             const workbook = XLSX.read(data);
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+
+            // Auto-detect header row: scan for a row containing "Product Name" or "Name"
+            const allRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+            let headerRowIndex = 0;
+            const nameAliases = ['Product Name', 'Name', 'name', 'product_name'];
+            for (let i = 0; i < Math.min(allRows.length, 20); i++) {
+                const row = allRows[i];
+                if (Array.isArray(row) && row.some(cell => nameAliases.includes(String(cell).trim()))) {
+                    headerRowIndex = i;
+                    break;
+                }
+            }
+
+            // Re-parse using the detected header row
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex }) as any[];
 
             if (jsonData.length === 0) {
                 toast.error('The file appears to be empty.');
