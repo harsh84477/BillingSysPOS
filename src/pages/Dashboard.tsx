@@ -727,8 +727,19 @@ export default function Dashboard() {
         .gte('completed_at', monthStart.toISOString());
       if (error) throw error;
 
-      // Fetch all payments this month with bill info
-      const { data: payments, error: payError } = await (supabase
+      // Fetch ALL payments for bills created this month (to calculate historical due status)
+      const billIds = (bills || []).map((b: any) => b.id);
+      let allBillPayments: any[] = [];
+      if (billIds.length > 0) {
+        const { data: bp } = await (supabase
+          .from('bill_payments' as any)
+          .select('bill_id, amount, payment_mode, notes, created_at')
+          .in('bill_id', billIds) as any);
+        allBillPayments = (bp || []) as any[];
+      }
+
+      // Fetch payments made this month (for collection tracking, includes due payments from older bills)
+      const { data: monthPayments, error: payError } = await (supabase
         .from('bill_payments' as any)
         .select('bill_id, amount, payment_mode, notes, created_at, bills!inner(bill_number, created_at, profit, customers(name))')
         .eq('business_id', businessId)
@@ -764,41 +775,60 @@ export default function Dashboard() {
         return dayMap[dateStr];
       };
 
-      // Process bills
+      // Group all payments by bill_id for historical calculation
+      const paymentsByBill: Record<string, any[]> = {};
+      allBillPayments.forEach((p: any) => {
+        if (!paymentsByBill[p.bill_id]) paymentsByBill[p.bill_id] = [];
+        paymentsByBill[p.bill_id].push(p);
+      });
+
+      // Process bills — calculate due status based on payments received on/before bill creation date
       (bills || []).forEach((b: any) => {
-        const d = format(new Date(b.completed_at), 'dd MMM yyyy');
-        const r = getDay(d);
+        const billDate = format(new Date(b.completed_at), 'dd MMM yyyy');
+        const billDateEnd = new Date(b.completed_at);
+        billDateEnd.setHours(23, 59, 59, 999);
+        const r = getDay(billDate);
         r.orders++;
         r.daySales += Number(b.total_amount || 0);
         r.dayDiscount += Number(b.discount_amount || 0);
         r.dayTax += Number(b.tax_amount || 0);
         r.daySubtotal += Number(b.subtotal || 0);
         r.dayProfit += Number(b.profit || 0);
-        if (b.payment_status === 'unpaid' || b.payment_status === 'partial') {
+
+        // Calculate paid amount on or before this bill's date (historical accuracy)
+        const billPayments = paymentsByBill[b.id] || [];
+        const paidOnOrBeforeDate = billPayments
+          .filter((p: any) => new Date(p.created_at).getTime() <= billDateEnd.getTime())
+          .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+
+        const totalAmount = Number(b.total_amount || 0);
+        if (paidOnOrBeforeDate < totalAmount) {
+          // This bill was due on its creation date
           r.dueOrders++;
-          r.dueAmount += Number(b.due_amount || 0);
+          r.dueAmount += totalAmount - paidOnOrBeforeDate;
         }
       });
 
       // Track due bills cleared per day to count unique bills
       const dueBillsClearedPerDay: Record<string, Set<string>> = {};
 
-      // Process payments
-      if (!payError && payments) {
-        (payments as any[]).forEach((p: any) => {
-          const d = format(new Date(p.created_at), 'dd MMM yyyy');
-          const r = getDay(d);
-          const isDuePayment = p.notes === 'due_bill' || new Date(p.bills.created_at).getTime() < new Date(d).getTime();
+      // Process payments made this month (for collection tracking)
+      if (!payError && monthPayments) {
+        (monthPayments as any[]).forEach((p: any) => {
+          const paymentDate = format(new Date(p.created_at), 'dd MMM yyyy');
+          const billCreatedDate = format(new Date(p.bills.created_at), 'dd MMM yyyy');
+          const r = getDay(paymentDate);
+          const isDuePayment = p.notes === 'due_bill' || billCreatedDate !== paymentDate;
 
           if (isDuePayment) {
-            // Due bill collection
+            // Due bill collection (payment for an older bill)
             if (p.payment_mode === 'cash') r.dueCashCollection += Number(p.amount || 0);
             else if (p.payment_mode === 'upi' || p.payment_mode === 'card') r.dueOnlineCollection += Number(p.amount || 0);
             // Track unique bill IDs cleared
-            if (!dueBillsClearedPerDay[d]) dueBillsClearedPerDay[d] = new Set();
-            dueBillsClearedPerDay[d].add(p.bill_id);
+            if (!dueBillsClearedPerDay[paymentDate]) dueBillsClearedPerDay[paymentDate] = new Set();
+            dueBillsClearedPerDay[paymentDate].add(p.bill_id);
           } else {
-            // Regular collection
+            // Regular same-day collection
             if (p.payment_mode === 'cash') r.cashCollection += Number(p.amount || 0);
             else if (p.payment_mode === 'upi' || p.payment_mode === 'card') r.onlineCollection += Number(p.amount || 0);
           }
