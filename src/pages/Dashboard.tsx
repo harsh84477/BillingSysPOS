@@ -868,6 +868,26 @@ export default function Dashboard() {
         { title: 'Day-Wise Performance', titleColor: '1F4E79', data: dayRows, columns: dayColumns },
       ];
 
+      // Table 3: Collection Totals
+      const totalCashCollection = totCash + totDueCash;
+      const totalOnlineCollection = totOnline + totDueOnline;
+      const totalCollection = totalCashCollection + totalOnlineCollection;
+
+      const collectionTotalsData = [
+        { label: 'Cash Collection', regular: totCash, due: totDueCash, total: totalCashCollection },
+        { label: 'Online Collection', regular: totOnline, due: totDueOnline, total: totalOnlineCollection },
+        { label: 'Total Collection', regular: totCash + totOnline, due: totDueCash + totDueOnline, total: totalCollection },
+      ];
+
+      const collectionColumns = [
+        { key: 'label', header: 'Collection Type' },
+        { key: 'regular', header: 'Regular Collection', format: fmtN },
+        { key: 'due', header: 'Due Collection', format: fmtN },
+        { key: 'total', header: 'Total', format: fmtN },
+      ];
+
+      monthlyTables.push({ title: 'Collection Summary', titleColor: '27AE60', data: collectionTotalsData, columns: collectionColumns });
+
       exportStyledExcel(monthlyTables, monthlySummary, `monthly-performance-${format(today, 'yyyy-MM')}`);
       toast.success('Monthly data exported');
     } catch { toast.error('Failed to export monthly data'); }
