@@ -43,33 +43,62 @@ export function ProductImporter() {
             const categoryMap = new Map<string, string>(); // Name -> ID
             const categoriesToCreate = new Set<string>();
 
+            // Helper to find a value from multiple possible header names
+            const pick = (row: any, ...keys: string[]) => {
+                for (const k of keys) {
+                    if (row[k] !== undefined && row[k] !== null && row[k] !== '') return row[k];
+                }
+                return undefined;
+            };
+
             // Normalize keys and gather categories
             const standardizedData = jsonData.map(row => {
-                // Map various possible header names to our internal keys
-                const name = row['Product Name'] || row['Name'] || row['name'];
-                const categoryName = row['Category'] || row['category'] || 'Uncategorized';
-                const sellingPrice = row['Selling Price'] || row['Price'] || row['selling_price'] || 0;
-                const costPrice = row['Cost Price'] || row['Cost'] || row['cost_price'] || 0;
-                const stock = row['Stock'] || row['Quantity'] || row['stock_quantity'] || 0;
-                const lowStock = row['Low Stock Alert'] || row['Low Stock'] || row['low_stock_threshold'] || 10;
+                const name = pick(row, 'Product Name', 'Name', 'name', 'product_name');
+                const categoryName = pick(row, 'Category', 'category', 'Category Name') || 'Uncategorized';
+                const sellingPrice = pick(row, 'Selling Price', 'Price', 'selling_price', 'Sell Price') || 0;
+                const costPrice = pick(row, 'Cost Price', 'Cost', 'cost_price') || 0;
+                const mrpPrice = pick(row, 'MRP', 'mrp_price', 'MRP Price') || sellingPrice;
+                const wholesalePrice = pick(row, 'Wholesale Price', 'Wholesale', 'wholesale_price') || 0;
+                const stock = pick(row, 'Stock', 'Quantity', 'stock_quantity', 'Stock (PCS)', 'Stock Qty') || 0;
+                const lowStock = pick(row, 'Low Stock Alert', 'Low Stock', 'low_stock_threshold') || 10;
+                const itemsPerCase = pick(row, 'PCS/Case', 'Items/Case', 'items_per_case', 'Pcs Per Case') || 0;
+                const itemCode = pick(row, 'Item Code', 'item_code', 'Code') || null;
+                const sku = pick(row, 'SKU', 'sku') || null;
+                const hsnCode = pick(row, 'HSN Code', 'hsn_code', 'HSN') || null;
+                const barcode = pick(row, 'Barcode', 'barcode', 'Bar Code') || null;
+                const baseUnit = pick(row, 'Unit', 'base_unit', 'Base Unit') || 'PCS';
+                const batchNumber = pick(row, 'Batch No.', 'Batch Number', 'batch_number', 'Batch') || null;
+                const expiryDate = pick(row, 'Expiry Date', 'expiry_date', 'Expiry') || null;
+                const discountPercent = pick(row, 'Discount %', 'Discount', 'discount_percent') || 0;
 
                 if (!categoryMap.has(categoryName)) {
                     categoriesToCreate.add(categoryName);
                 }
 
                 return {
-                    name: String(name),
+                    name: name ? String(name) : '',
                     categoryName: String(categoryName),
-                    selling_price: Number(sellingPrice),
-                    cost_price: Number(costPrice),
-                    stock_quantity: Number(stock),
-                    low_stock_threshold: Number(lowStock),
-                    is_active: true
+                    selling_price: Number(sellingPrice) || 0,
+                    cost_price: Number(costPrice) || 0,
+                    mrp_price: Number(mrpPrice) || Number(sellingPrice) || 0,
+                    wholesale_price: Number(wholesalePrice) || 0,
+                    stock_quantity: Number(stock) || 0,
+                    low_stock_threshold: Number(lowStock) || 10,
+                    items_per_case: Number(itemsPerCase) || 0,
+                    item_code: itemCode ? String(itemCode) : null,
+                    sku: sku ? String(sku) : null,
+                    hsn_code: hsnCode ? String(hsnCode) : null,
+                    barcode: barcode ? String(barcode) : null,
+                    base_unit: String(baseUnit).toUpperCase(),
+                    batch_number: batchNumber ? String(batchNumber) : null,
+                    expiry_date: expiryDate ? String(expiryDate) : null,
+                    discount_percent: Number(discountPercent) || 0,
+                    is_active: true,
                 };
             }).filter(item => item.name); // Filter out rows without product name
 
             if (standardizedData.length === 0) {
-                toast.error('No valid product definition found. Check headers (Product Name, Category, Price, Stock).');
+                toast.error('No valid product rows found. Ensure the sheet has a "Product Name" or "Name" column.');
                 return;
             }
 
@@ -111,8 +140,19 @@ export function ProductImporter() {
                 category_id: categoryMap.get(item.categoryName.toLowerCase()) || categoryMap.get(item.categoryName) || null,
                 selling_price: item.selling_price,
                 cost_price: item.cost_price,
+                mrp_price: item.mrp_price,
+                wholesale_price: item.wholesale_price,
                 stock_quantity: item.stock_quantity,
                 low_stock_threshold: item.low_stock_threshold,
+                items_per_case: item.items_per_case,
+                item_code: item.item_code,
+                sku: item.sku,
+                hsn_code: item.hsn_code,
+                barcode: item.barcode,
+                base_unit: item.base_unit,
+                batch_number: item.batch_number,
+                expiry_date: item.expiry_date,
+                discount_percent: item.discount_percent,
                 is_active: true,
                 business_id: businessId,
             }));

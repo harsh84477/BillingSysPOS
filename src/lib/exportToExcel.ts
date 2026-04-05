@@ -122,7 +122,7 @@ export interface ExcelTableDef {
   title: string;
   titleColor: string;   // hex e.g. '1F4E79'
   data: any[];
-  columns: { key: string; header: string; format?: (v: unknown) => string | number }[];
+  columns: { key: string; header: string; format?: (v: unknown, key?: string, item?: any) => string | number }[];
 }
 
 export interface ExcelSummaryDef {
@@ -253,7 +253,7 @@ export function exportStyledExcel(
       const bgColor = idx % 2 === 0 ? 'F2F7FB' : 'FFFFFF';
       table.columns.forEach((col, c) => {
         const raw = item[col.key];
-        const formatted = col.format ? col.format(raw) : (raw ?? '');
+        const formatted = col.format ? col.format(raw, col.key, item) : (raw ?? '');
         const val = typeof formatted === 'number' ? formatted : String(formatted);
         setCell(row, c, styledCell(val, {
           fill: { fgColor: { rgb: bgColor } },

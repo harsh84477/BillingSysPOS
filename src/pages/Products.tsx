@@ -45,6 +45,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { exportToExcel } from '@/lib/exportToExcel';
+import { exportStyledExcel } from '@/lib/exportToExcel';
 import { ProductImporter } from '@/components/ProductImporter';
 
 // ────────────────────────────────────────────────────────────
@@ -132,6 +133,11 @@ export default function Products() {
   const [imageUrl, setImageUrl] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  // Stock auto-calc state
+  const [stockQty, setStockQty] = useState(0);
+  const [pcsPerCase, setPcsPerCase] = useState(0);
+  const [stockCases, setStockCases] = useState(0);
 
   // Collapsible sections in form
   const [showCodes, setShowCodes] = useState(false);
@@ -272,6 +278,12 @@ export default function Products() {
         setImagePreview(null);
       }
       setImageFile(null);
+      // Stock auto-calc
+      const qty = product.stock_quantity || 0;
+      const ppc = product.items_per_case || 0;
+      setStockQty(qty);
+      setPcsPerCase(ppc);
+      setStockCases(ppc > 0 ? Math.round((qty / ppc) * 100) / 100 : 0);
       // Auto-open sections if product has data
       setShowCodes(!!(product.item_code || product.sku || product.hsn_code || product.barcode));
       setShowUnits(!!(product.secondary_unit));
@@ -283,6 +295,9 @@ export default function Products() {
       setImageUrl('');
       setImageFile(null);
       setImagePreview(null);
+      setStockQty(0);
+      setPcsPerCase(0);
+      setStockCases(0);
       setShowCodes(false);
       setShowUnits(false);
       setShowBatch(false);
@@ -344,26 +359,50 @@ export default function Products() {
   // ── Export ──
   const handleExportExcel = () => {
     if (filteredProducts.length === 0) { toast.error('No data to export'); return; }
-    exportToExcel(
-      filteredProducts,
-      [
-        { key: 'name', header: 'Product Name' },
-        { key: 'item_code', header: 'Item Code' },
-        { key: 'sku', header: 'SKU' },
-        { key: 'hsn_code', header: 'HSN Code' },
-        { key: 'barcode', header: 'Barcode' },
-        { key: 'categories', header: 'Category', format: (v) => (v as { name: string } | null)?.name || 'None' },
-        { key: 'selling_price', header: 'Selling Price', format: (v) => Number(v).toFixed(2) },
-        { key: 'cost_price', header: 'Cost Price', format: (v) => Number(v).toFixed(2) },
-        { key: 'wholesale_price', header: 'Wholesale Price', format: (v) => Number(v).toFixed(2) },
-        { key: 'stock_quantity', header: 'Stock' },
-        { key: 'base_unit', header: 'Unit' },
-        { key: 'items_per_case', header: 'Items/Case' },
-        { key: 'low_stock_threshold', header: 'Low Stock Alert' },
-        { key: 'batch_number', header: 'Batch No.' },
-        { key: 'expiry_date', header: 'Expiry Date' },
-        { key: 'is_active', header: 'Status', format: (v) => v ? 'Active' : 'Inactive' },
-      ],
+
+    const lowStockCount = filteredProducts.filter(p => p.stock_quantity <= p.low_stock_threshold).length;
+    const totalStockValue = filteredProducts.reduce((s, p) => s + (p.cost_price * p.stock_quantity), 0);
+    const totalRetailValue = filteredProducts.reduce((s, p) => s + (p.selling_price * p.stock_quantity), 0);
+
+    exportStyledExcel(
+      [{
+        title: `Product Inventory (${filteredProducts.length} items)`,
+        titleColor: '1F4E79',
+        data: filteredProducts,
+        columns: [
+          { key: 'name', header: 'Product Name' },
+          { key: 'item_code', header: 'Item Code', format: (v) => v || '' },
+          { key: 'sku', header: 'SKU', format: (v) => v || '' },
+          { key: 'hsn_code', header: 'HSN Code', format: (v) => v || '' },
+          { key: 'barcode', header: 'Barcode', format: (v) => v || '' },
+          { key: 'categories', header: 'Category', format: (v) => (v as { name: string } | null)?.name || '' },
+          { key: 'mrp_price', header: 'MRP', format: (v) => Number(v || 0).toFixed(2) },
+          { key: 'selling_price', header: 'Selling Price', format: (v) => Number(v).toFixed(2) },
+          { key: 'cost_price', header: 'Cost Price', format: (v) => Number(v).toFixed(2) },
+          { key: 'wholesale_price', header: 'Wholesale Price', format: (v) => Number(v || 0).toFixed(2) },
+          { key: 'stock_quantity', header: 'Stock (PCS)', format: (v) => Number(v) },
+          { key: 'items_per_case', header: 'PCS/Case', format: (v) => Number(v) || '' },
+          { key: '_cases', header: 'Cases', format: (_v, _k, item: any) => {
+            const ppc = Number(item?.items_per_case);
+            const qty = Number(item?.stock_quantity);
+            return ppc > 0 ? Math.round((qty / ppc) * 100) / 100 : '';
+          }},
+          { key: 'base_unit', header: 'Unit' },
+          { key: 'low_stock_threshold', header: 'Low Stock Alert', format: (v) => Number(v) },
+          { key: 'batch_number', header: 'Batch No.', format: (v) => v || '' },
+          { key: 'expiry_date', header: 'Expiry Date', format: (v) => v || '' },
+          { key: 'is_active', header: 'Status', format: (v) => v ? 'Active' : 'Inactive' },
+        ],
+      }],
+      {
+        title: 'Inventory Summary',
+        items: [
+          { label: 'Total Products', value: filteredProducts.length },
+          { label: 'Low Stock Items', value: lowStockCount },
+          { label: 'Stock Value (Cost)', value: `${currencySymbol}${totalStockValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          { label: 'Stock Value (Retail)', value: `${currencySymbol}${totalRetailValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+        ],
+      },
       `products-${format(new Date(), 'yyyy-MM-dd')}`
     );
     toast.success('Exported successfully');
@@ -500,19 +539,49 @@ export default function Products() {
                     </div>
 
                     {/* ── Stock ── */}
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="stock_quantity" className="text-xs">Stock Qty</Label>
-                        <Input id="stock_quantity" name="stock_quantity" type="number" min="0" defaultValue={editingProduct?.stock_quantity || 0} />
+                    <div className="p-3 rounded-lg border bg-muted/30">
+                      <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Stock</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label htmlFor="items_per_case" className="text-xs">PCS/Case</Label>
+                          <Input id="items_per_case" name="items_per_case" type="number" min="0" step="0.01" value={pcsPerCase} onChange={(e) => {
+                            const ppc = Number(e.target.value) || 0;
+                            setPcsPerCase(ppc);
+                            if (ppc > 0 && stockCases > 0) {
+                              setStockQty(Math.round(stockCases * ppc * 100) / 100);
+                            }
+                          }} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="stock_cases" className="text-xs">Cases</Label>
+                          <Input id="stock_cases" type="number" min="0" step="0.01" value={stockCases} onChange={(e) => {
+                            const cases = Number(e.target.value) || 0;
+                            setStockCases(cases);
+                            if (pcsPerCase > 0) {
+                              setStockQty(Math.round(cases * pcsPerCase * 100) / 100);
+                            }
+                          }} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="stock_quantity" className="text-xs">Stock Qty (Total PCS)</Label>
+                          <Input id="stock_quantity" name="stock_quantity" type="number" min="0" value={stockQty} onChange={(e) => {
+                            const qty = Number(e.target.value) || 0;
+                            setStockQty(qty);
+                            if (pcsPerCase > 0) {
+                              setStockCases(Math.round((qty / pcsPerCase) * 100) / 100);
+                            }
+                          }} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="low_stock_threshold" className="text-xs">Low Stock Alert</Label>
+                          <Input id="low_stock_threshold" name="low_stock_threshold" type="number" min="0" defaultValue={editingProduct?.low_stock_threshold || 10} />
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="items_per_case" className="text-xs">PCS/Case</Label>
-                        <Input id="items_per_case" name="items_per_case" type="number" min="0" step="0.01" defaultValue={editingProduct?.items_per_case || 0} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="low_stock_threshold" className="text-xs">Low Stock Alert</Label>
-                        <Input id="low_stock_threshold" name="low_stock_threshold" type="number" min="0" defaultValue={editingProduct?.low_stock_threshold || 10} />
-                      </div>
+                      {pcsPerCase > 0 && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {stockCases} case{stockCases !== 1 ? 's' : ''} × {pcsPerCase} pcs = <span className="font-semibold">{stockQty} pcs total</span>
+                        </p>
+                      )}
                     </div>
 
                     {/* ── Category + Icon ── */}
@@ -822,6 +891,7 @@ export default function Products() {
                     <TableHead>Category</TableHead>
                     <TableHead className="text-right">Price</TableHead>
                     <TableHead className="text-right">Stock</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">Cases</TableHead>
                     <TableHead className="hidden lg:table-cell">Unit</TableHead>
                     {isAdmin && <TableHead className="w-24">Actions</TableHead>}
                   </TableRow>
@@ -829,8 +899,9 @@ export default function Products() {
                 <TableBody>
                   {filteredProducts.map((product) => {
                     const isExpired = product.expiry_date && new Date(product.expiry_date) < new Date();
+                    const isLowStock = product.stock_quantity <= product.low_stock_threshold;
                     return (
-                      <TableRow key={product.id} className={isExpired ? 'bg-red-50/50 dark:bg-red-950/10' : ''}>
+                      <TableRow key={product.id} className={isExpired ? 'bg-red-50/50 dark:bg-red-950/10' : isLowStock ? 'bg-amber-50/50 dark:bg-amber-950/10' : ''}>
                         {isAdmin && (
                           <TableCell><Checkbox checked={selectedProductIds.has(product.id)} onCheckedChange={() => toggleSelectProduct(product.id)} /></TableCell>
                         )}
@@ -879,6 +950,13 @@ export default function Products() {
                               {product.stock_quantity}
                             </span>
                           </div>
+                        </TableCell>
+                        <TableCell className="text-right hidden sm:table-cell">
+                          <span className="text-muted-foreground">
+                            {product.items_per_case > 0
+                              ? (Math.round((product.stock_quantity / product.items_per_case) * 100) / 100)
+                              : '—'}
+                          </span>
                         </TableCell>
                         <TableCell className="hidden lg:table-cell">
                           <span className="text-xs text-muted-foreground">{product.base_unit || 'PCS'}</span>
