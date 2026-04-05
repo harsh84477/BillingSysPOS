@@ -218,7 +218,7 @@ function RegularPreview({ s }: { s: any }) {
    ═══════════════════════════════════════════════════════════════ */
 function ThermalPreview({ s }: { s: any }) {
   const companyName = s?.print_thermal_company_name_text || s?.business_name || 'My Company';
-  const phone = s?.phone || '9625507147';
+  const phone = s?.phone || '9876543210';
   const isBold = s?.print_thermal_bold ?? true;
   const showAddr = s?.print_thermal_show_address ?? true;
   const showPhone = s?.print_thermal_show_phone ?? true;
@@ -226,63 +226,73 @@ function ThermalPreview({ s }: { s: any }) {
   const showGstin = s?.print_thermal_show_gstin ?? true;
   const pageSize = s?.print_thermal_page_size || '4inch';
   const maxW = pageSize === '2inch' ? '220px' : pageSize === '3inch' ? '280px' : '340px';
+  const fs = pageSize === '2inch' ? '9px' : '11px';
+
+  const sampleItems = [
+    { name: 'Britannia Good Day', qty: 2, price: 45.00, amt: 90.00 },
+    { name: 'Cadbury Dairy Milk', qty: 3, price: 50.00, amt: 150.00 },
+    { name: 'Colgate MaxFresh', qty: 1, price: 85.00, amt: 85.00 },
+  ];
+  const subTotal = 325.00;
+  const discount = 15.00;
+  const tax = 16.25;
+  const grandTotal = 326.25;
 
   return (
     <div style={{
       background: '#fff', color: '#111', fontFamily: "'Courier New', monospace",
-      fontSize: '11px', lineHeight: 1.6, padding: '20px 16px',
-      maxWidth: maxW, margin: '0 auto', minHeight: '400px',
+      fontSize: fs, lineHeight: 1.5, padding: '16px 12px',
+      maxWidth: maxW, margin: '0 auto', minHeight: '300px',
       fontWeight: isBold ? 700 : 400,
     }}>
       {/* Header */}
-      <div style={{ textAlign: 'center', borderBottom: '2px dashed #aaa', paddingBottom: '10px', marginBottom: '10px' }}>
+      <div style={{ textAlign: 'center', borderBottom: '2px dashed #aaa', paddingBottom: '8px', marginBottom: '8px' }}>
         {(s?.print_thermal_company_name ?? true) && (
-          <div style={{ fontSize: '15px', fontWeight: 800, letterSpacing: '0.02em' }}>{companyName}</div>
+          <div style={{ fontSize: pageSize === '2inch' ? '12px' : '14px', fontWeight: 800, letterSpacing: '0.02em' }}>{companyName}</div>
         )}
-        {showPhone && <div style={{ fontSize: '10px' }}>Ph.No: {phone}</div>}
-        <div style={{ borderTop: '1px dotted #ccc', marginTop: '6px', paddingTop: '4px', fontSize: '10px' }}>
-          {showAddr && <div>Koramangala, Banglore, Karnataka</div>}
-          {showEmail && <div>{s?.email || 'email@example.com'}</div>}
-          {showGstin && s?.gst_number && <div>GSTIN: {s.gst_number}</div>}
-        </div>
+        {showAddr && <div style={{ fontSize: pageSize === '2inch' ? '8px' : '9px', marginTop: '2px' }}>Koramangala, Bangalore, Karnataka</div>}
+        {showPhone && <div style={{ fontSize: pageSize === '2inch' ? '8px' : '9px' }}>Ph: {phone}</div>}
+        {showEmail && <div style={{ fontSize: pageSize === '2inch' ? '8px' : '9px' }}>{s?.email || 'email@example.com'}</div>}
+        {showGstin && s?.gst_number && <div style={{ fontSize: pageSize === '2inch' ? '8px' : '9px' }}>GSTIN: {s.gst_number}</div>}
       </div>
 
-      {/* Party Info */}
-      <div style={{ fontSize: '10px', marginBottom: '8px' }}>
-        <div><strong>Vyapar tech solutions (Sample Party Name)</strong></div>
-        <div>Ph. No: +91-4356352</div>
-        <div>Date: 11/03/2020</div>
-        <div>Bill To:</div>
-        <div>Indranagar Road, Bangalore</div>
+      {/* Bill Info */}
+      <div style={{ fontSize: pageSize === '2inch' ? '8px' : '9px', marginBottom: '6px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>Bill No: INV-101</span><span>Date: 06/04/2026</span>
+        </div>
+        <div>Customer: <strong>Walk-in Customer</strong></div>
       </div>
 
       {/* Items */}
-      <div style={{ borderTop: '1px dashed #999', borderBottom: '1px dashed #999', padding: '6px 0', margin: '6px 0' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 50px 50px 60px', gap: '2px', fontSize: '10px', fontWeight: 800, marginBottom: '4px' }}>
-          <span>#</span><span>Name</span><span>Qty</span><span>Price</span><span style={{ textAlign: 'right' }}>Amount</span>
+      <div style={{ borderTop: '1px dashed #999', borderBottom: '1px dashed #999', padding: '4px 0', margin: '4px 0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '18px 1fr 30px 50px 55px', gap: '2px', fontSize: pageSize === '2inch' ? '8px' : '9px', fontWeight: 800, marginBottom: '3px', borderBottom: '1px dashed #ccc', paddingBottom: '3px' }}>
+          <span>#</span><span>Item</span><span>Qty</span><span>Rate</span><span style={{ textAlign: 'right' }}>Amt</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 50px 50px 60px', gap: '2px', fontSize: '10px', padding: '4px 0' }}>
-          <span>1</span><span>Britannia Chocolate Ca...</span><span>100 + 20...</span><span>100.00</span><span style={{ textAlign: 'right' }}>10,000.00</span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '20px 1fr 50px 50px 60px', gap: '2px', fontSize: '10px', padding: '4px 0' }}>
-          <span>2</span><span>Cadbury Chocolate</span><span>50 + 0p...</span><span>150.00</span><span style={{ textAlign: 'right' }}>7,500.00</span>
-        </div>
+        {sampleItems.map((item, i) => (
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '18px 1fr 30px 50px 55px', gap: '2px', fontSize: pageSize === '2inch' ? '8px' : '9px', padding: '2px 0' }}>
+            <span>{i + 1}</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</span>
+            <span>{item.qty}</span><span>{item.price.toFixed(2)}</span>
+            <span style={{ textAlign: 'right' }}>{item.amt.toFixed(2)}</span>
+          </div>
+        ))}
       </div>
 
       {/* Totals */}
-      <div style={{ fontSize: '10px', padding: '6px 0', borderBottom: '1px dashed #999' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total</span><span style={{ fontWeight: 800 }}>150 + 1</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Disc.(2%)</span><span>-1,500.00</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tax(5%)</span><span>500.00</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total Disc.</span><span>-1,500.00</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '12px', marginTop: '4px' }}><span>Total</span><span>20,000.00</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Received</span><span>20,000.00</span></div>
+      <div style={{ fontSize: pageSize === '2inch' ? '8px' : '9px', padding: '4px 0', borderBottom: '1px dashed #999' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal</span><span>{subTotal.toFixed(2)}</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Discount</span><span>-{discount.toFixed(2)}</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Tax (5%)</span><span>{tax.toFixed(2)}</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: pageSize === '2inch' ? '10px' : '12px', marginTop: '4px', borderTop: '1px dashed #ccc', paddingTop: '4px' }}>
+          <span>TOTAL</span><span>₹{grandTotal.toFixed(2)}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}><span>Received</span><span>{grandTotal.toFixed(2)}</span></div>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Balance</span><span>0.00</span></div>
       </div>
 
-      {/* Terms */}
-      <div style={{ textAlign: 'center', padding: '10px 0', fontSize: '10px', color: '#666' }}>
-        <div style={{ fontWeight: 700 }}>Terms & Conditions</div>
-        <div>{s?.print_terms_conditions || 'Thanks for doing business with us'}</div>
+      {/* Footer */}
+      <div style={{ textAlign: 'center', padding: '8px 0', fontSize: pageSize === '2inch' ? '8px' : '9px', color: '#666' }}>
+        <div>{s?.print_terms_conditions || 'Thank you for your purchase!'}</div>
       </div>
     </div>
   );
@@ -328,6 +338,16 @@ export default function PrintSettingsTab() {
 
   const [printerTab, setPrinterTab] = useState<'regular' | 'thermal'>('regular');
   const [regularSubTab, setRegularSubTab] = useState<'layout' | 'colors'>('layout');
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
+
+  const previewContent = (
+    <div style={{
+      borderRadius: '8px', overflow: 'hidden',
+      boxShadow: '0 2px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05)',
+    }}>
+      {printerTab === 'regular' ? <RegularPreview s={settings} /> : <ThermalPreview s={settings} />}
+    </div>
+  );
 
   return (
     <div style={{ width: '100%' }}>
@@ -336,7 +356,7 @@ export default function PrintSettingsTab() {
 
       {/* Two-column layout: Controls left, Preview right */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 420px',
+        display: 'grid', gridTemplateColumns: '1fr 400px',
         gap: '24px', marginTop: '20px', alignItems: 'start',
       }} className="print-settings-grid">
         {/* ═══ LEFT: Controls ═══ */}
@@ -622,8 +642,8 @@ export default function PrintSettingsTab() {
           </>)}
         </div>
 
-        {/* ═══ RIGHT: Live Preview (Sticky with fading edges) ═══ */}
-        <div style={{ position: 'sticky' as const, top: '20px', alignSelf: 'start' }}>
+        {/* ═══ RIGHT: Live Preview (Sticky — desktop only) ═══ */}
+        <div className="print-preview-desktop" style={{ position: 'sticky' as const, top: '20px', alignSelf: 'start' }}>
           <div style={{
             background: T.color.cardBg, borderRadius: '14px',
             border: `1px solid ${T.color.border}`, boxShadow: T.shadow.card,
@@ -641,47 +661,105 @@ export default function PrintSettingsTab() {
               </span>
             </div>
 
-            {/* Preview Content with fading edges */}
-            <div style={{ position: 'relative' as const }}>
-              {/* Top fade */}
-              <div style={{
-                position: 'absolute' as const, top: 0, left: 0, right: 0, height: '30px', zIndex: 2,
-                background: 'linear-gradient(to bottom, #f8f9fa, transparent)',
-                borderRadius: '0', pointerEvents: 'none' as const,
-              }} />
-
-              {/* Scrollable preview */}
-              <div style={{
-                maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' as const,
-                padding: '8px', background: '#f8f9fa',
-              }} className="custom-scrollbar">
-                <div style={{
-                  borderRadius: '8px', overflow: 'hidden',
-                  boxShadow: '0 2px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05)',
-                  transform: 'scale(0.92)', transformOrigin: 'top center',
-                  transition: 'all 0.3s ease',
-                }}>
-                  {printerTab === 'regular' ? <RegularPreview s={settings} /> : <ThermalPreview s={settings} />}
-                </div>
-              </div>
-
-              {/* Bottom fade */}
-              <div style={{
-                position: 'absolute' as const, bottom: 0, left: 0, right: 0, height: '40px', zIndex: 2,
-                background: 'linear-gradient(to top, #f8f9fa, transparent)',
-                pointerEvents: 'none' as const,
-              }} />
+            {/* Preview Content */}
+            <div style={{
+              maxHeight: 'calc(100vh - 180px)', overflowY: 'auto' as const,
+              padding: '12px', background: '#f0f1f3',
+            }} className="custom-scrollbar">
+              {previewContent}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Responsive: hide preview on mobile, stack on tablet */}
+      {/* ═══ Floating Preview Button (mobile only) ═══ */}
+      <button
+        type="button"
+        className="print-preview-fab"
+        onClick={() => setShowMobilePreview(true)}
+        style={{
+          display: 'none', /* shown via CSS on mobile */
+          position: 'fixed' as const, bottom: '24px', right: '24px', zIndex: 999,
+          width: '56px', height: '56px', borderRadius: '50%',
+          background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.85))',
+          color: '#fff', border: 'none', cursor: 'pointer',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.2), 0 2px 6px rgba(0,0,0,0.1)',
+          fontSize: '22px', alignItems: 'center', justifyContent: 'center',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+      >
+        👁️
+      </button>
+
+      {/* ═══ Full-screen Preview Drawer (mobile) ═══ */}
+      {showMobilePreview && (
+        <div style={{
+          position: 'fixed' as const, inset: 0, zIndex: 1000,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', flexDirection: 'column' as const,
+          animation: 'fadeIn 0.2s ease',
+        }} onClick={() => setShowMobilePreview(false)}>
+          <div
+            style={{
+              flex: 1, marginTop: '48px', borderRadius: '20px 20px 0 0',
+              background: T.color.cardBg, display: 'flex', flexDirection: 'column' as const,
+              overflow: 'hidden', animation: 'slideUp 0.3s ease',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Drawer Header */}
+            <div style={{
+              padding: '16px 20px', borderBottom: `1px solid ${T.color.border}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '16px' }}>👁️</span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: T.color.textPri }}>
+                  Live Preview — {printerTab === 'regular' ? 'Regular Invoice' : 'Thermal Receipt'}
+                </span>
+              </div>
+              <button type="button" onClick={() => setShowMobilePreview(false)} style={{
+                width: '36px', height: '36px', borderRadius: '50%',
+                border: `1px solid ${T.color.border}`, background: T.color.cardBg,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '18px', color: T.color.textPri, transition: 'background 0.2s',
+              }}>✕</button>
+            </div>
+
+            {/* Drawer Content */}
+            <div style={{
+              flex: 1, overflowY: 'auto' as const, padding: '16px',
+              background: '#f0f1f3', WebkitOverflowScrolling: 'touch' as const,
+            }} className="custom-scrollbar">
+              {previewContent}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Responsive styles */}
       <style>{`
         @media (max-width: 1024px) {
           .print-settings-grid {
             grid-template-columns: 1fr !important;
           }
+          .print-preview-desktop {
+            display: none !important;
+          }
+          .print-preview-fab {
+            display: flex !important;
+          }
+        }
+        @keyframes slideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
         }
       `}</style>
     </div>
