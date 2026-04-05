@@ -718,47 +718,157 @@ export default function Dashboard() {
   const handleDownloadMonthly = async () => {
     try {
       const monthStart = startOfThisMonth;
+
+      // Fetch all completed bills this month with details
       const { data: bills, error } = await supabase
         .from('bills')
-        .select('total_amount, profit, due_amount, payment_status, completed_at')
+        .select('id, bill_number, total_amount, subtotal, discount_amount, tax_amount, profit, due_amount, payment_status, payment_type, paid_amount, completed_at, customers(name)')
         .eq('status', 'completed')
         .gte('completed_at', monthStart.toISOString());
       if (error) throw error;
 
+      // Fetch all payments this month with bill info
       const { data: payments, error: payError } = await (supabase
         .from('bill_payments' as any)
-        .select('amount, payment_mode, notes, created_at, bills!inner(created_at)')
+        .select('bill_id, amount, payment_mode, notes, created_at, bills!inner(bill_number, created_at, profit, customers(name))')
         .eq('business_id', businessId)
         .gte('created_at', monthStart.toISOString()) as any);
 
-      const dayMap: Record<string, import('@/lib/exportToExcel').DayWiseSummaryRow> = {};
-      const getRow = (dateStr: string) => {
-        if (!dayMap[dateStr]) dayMap[dateStr] = { day: dateStr, orders: 0, daySales: 0, dayProfit: 0, cashCollection: 0, onlineCollection: 0, dueCollection: 0, dueAmount: 0 };
+      // Build day-wise summary
+      interface DayData {
+        date: string;
+        orders: number;
+        dueOrders: number;
+        daySales: number;
+        dayDiscount: number;
+        dayTax: number;
+        daySubtotal: number;
+        cashCollection: number;
+        onlineCollection: number;
+        dueCashCollection: number;
+        dueOnlineCollection: number;
+        dueBillsCleared: number;
+        dayProfit: number;
+        dueAmount: number;
+      }
+
+      const dayMap: Record<string, DayData> = {};
+      const getDay = (dateStr: string): DayData => {
+        if (!dayMap[dateStr]) dayMap[dateStr] = {
+          date: dateStr, orders: 0, dueOrders: 0,
+          daySales: 0, dayDiscount: 0, dayTax: 0, daySubtotal: 0,
+          cashCollection: 0, onlineCollection: 0,
+          dueCashCollection: 0, dueOnlineCollection: 0,
+          dueBillsCleared: 0, dayProfit: 0, dueAmount: 0,
+        };
         return dayMap[dateStr];
       };
 
+      // Process bills
       (bills || []).forEach((b: any) => {
         const d = format(new Date(b.completed_at), 'dd MMM yyyy');
-        const r = getRow(d);
+        const r = getDay(d);
         r.orders++;
         r.daySales += Number(b.total_amount || 0);
+        r.dayDiscount += Number(b.discount_amount || 0);
+        r.dayTax += Number(b.tax_amount || 0);
+        r.daySubtotal += Number(b.subtotal || 0);
         r.dayProfit += Number(b.profit || 0);
-        if (b.payment_status === 'unpaid' || b.payment_status === 'partial') r.dueAmount += Number(b.due_amount || 0);
+        if (b.payment_status === 'unpaid' || b.payment_status === 'partial') {
+          r.dueOrders++;
+          r.dueAmount += Number(b.due_amount || 0);
+        }
       });
 
+      // Track due bills cleared per day to count unique bills
+      const dueBillsClearedPerDay: Record<string, Set<string>> = {};
+
+      // Process payments
       if (!payError && payments) {
         (payments as any[]).forEach((p: any) => {
           const d = format(new Date(p.created_at), 'dd MMM yyyy');
-          const r = getRow(d);
-          if (p.payment_mode === 'cash') r.cashCollection += Number(p.amount || 0);
-          else if (p.payment_mode === 'upi' || p.payment_mode === 'card') r.onlineCollection += Number(p.amount || 0);
-          if (p.notes === 'due_bill') r.dueCollection += Number(p.amount || 0);
+          const r = getDay(d);
+          const isDuePayment = p.notes === 'due_bill' || new Date(p.bills.created_at).getTime() < new Date(d).getTime();
+
+          if (isDuePayment) {
+            // Due bill collection
+            if (p.payment_mode === 'cash') r.dueCashCollection += Number(p.amount || 0);
+            else if (p.payment_mode === 'upi' || p.payment_mode === 'card') r.dueOnlineCollection += Number(p.amount || 0);
+            // Track unique bill IDs cleared
+            if (!dueBillsClearedPerDay[d]) dueBillsClearedPerDay[d] = new Set();
+            dueBillsClearedPerDay[d].add(p.bill_id);
+          } else {
+            // Regular collection
+            if (p.payment_mode === 'cash') r.cashCollection += Number(p.amount || 0);
+            else if (p.payment_mode === 'upi' || p.payment_mode === 'card') r.onlineCollection += Number(p.amount || 0);
+          }
         });
       }
 
-      const rows = Object.values(dayMap).sort((a, b) => new Date(a.day).getTime() - new Date(b.day).getTime());
-      if (rows.length === 0) { toast.error('No data for this month'); return; }
-      exportDayWiseSummary(rows, `monthly-performance-${format(today, 'yyyy-MM')}`);
+      // Set due bills cleared count
+      Object.entries(dueBillsClearedPerDay).forEach(([d, billSet]) => {
+        if (dayMap[d]) dayMap[d].dueBillsCleared = billSet.size;
+      });
+
+      const dayRows = Object.values(dayMap).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      if (dayRows.length === 0) { toast.error('No data for this month'); return; }
+
+      const fmtN = (v: unknown) => v == null ? '' : Number(Number(v).toFixed(2));
+
+      const dayColumns = [
+        { key: 'date', header: 'Date' },
+        { key: 'orders', header: 'Orders' },
+        { key: 'dueOrders', header: 'Due Orders' },
+        { key: 'daySales', header: 'Day Sales', format: fmtN },
+        { key: 'daySubtotal', header: 'Subtotal', format: fmtN },
+        { key: 'dayDiscount', header: 'Discount', format: fmtN },
+        { key: 'dayTax', header: 'Tax', format: fmtN },
+        { key: 'cashCollection', header: 'Cash Collection', format: fmtN },
+        { key: 'onlineCollection', header: 'Online Collection', format: fmtN },
+        { key: 'dueCashCollection', header: 'Due Cash Collection', format: fmtN },
+        { key: 'dueOnlineCollection', header: 'Due Online Collection', format: fmtN },
+        { key: 'dueBillsCleared', header: 'Due Bills Cleared' },
+        { key: 'dueAmount', header: 'Due Amount Pending', format: fmtN },
+        { key: 'dayProfit', header: 'Day Profit', format: fmtN },
+      ];
+
+      // Monthly totals for summary
+      const totOrders = dayRows.reduce((s, r) => s + r.orders, 0);
+      const totDueOrders = dayRows.reduce((s, r) => s + r.dueOrders, 0);
+      const totSales = dayRows.reduce((s, r) => s + r.daySales, 0);
+      const totDiscount = dayRows.reduce((s, r) => s + r.dayDiscount, 0);
+      const totTax = dayRows.reduce((s, r) => s + r.dayTax, 0);
+      const totCash = dayRows.reduce((s, r) => s + r.cashCollection, 0);
+      const totOnline = dayRows.reduce((s, r) => s + r.onlineCollection, 0);
+      const totDueCash = dayRows.reduce((s, r) => s + r.dueCashCollection, 0);
+      const totDueOnline = dayRows.reduce((s, r) => s + r.dueOnlineCollection, 0);
+      const totDueCleared = dayRows.reduce((s, r) => s + r.dueBillsCleared, 0);
+      const totDueAmount = dayRows.reduce((s, r) => s + r.dueAmount, 0);
+      const totProfit = dayRows.reduce((s, r) => s + r.dayProfit, 0);
+
+      const monthlySummary: ExcelSummaryDef = {
+        title: `Monthly Summary — ${format(today, 'MMMM yyyy')}`,
+        items: [
+          { label: 'Total Orders', value: totOrders },
+          { label: 'Due Orders', value: totDueOrders },
+          { label: 'Total Sales', value: totSales.toFixed(2) },
+          { label: 'Total Discount', value: totDiscount.toFixed(2) },
+          { label: 'Total Tax', value: totTax.toFixed(2) },
+          { label: 'Total Profit', value: totProfit.toFixed(2) },
+          { label: 'Cash Collection', value: totCash.toFixed(2) },
+          { label: 'Online Collection', value: totOnline.toFixed(2) },
+          { label: 'Due Cash Collection', value: totDueCash.toFixed(2) },
+          { label: 'Due Online Collection', value: totDueOnline.toFixed(2) },
+          { label: 'Due Bills Cleared', value: totDueCleared },
+          { label: 'Due Amount Pending', value: totDueAmount.toFixed(2) },
+        ],
+      };
+
+      const monthlyTables: ExcelTableDef[] = [
+        { title: 'Day-Wise Performance', titleColor: '1F4E79', data: dayRows, columns: dayColumns },
+      ];
+
+      exportStyledExcel(monthlyTables, monthlySummary, `monthly-performance-${format(today, 'yyyy-MM')}`);
       toast.success('Monthly data exported');
     } catch { toast.error('Failed to export monthly data'); }
   };
