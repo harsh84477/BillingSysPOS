@@ -11,11 +11,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  ArrowLeft, Save, Search, Filter, Check, X, Loader2,
+  ArrowLeft, Save, Search, Filter, Check, X, Loader2, Download, FileSpreadsheet,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { exportStyledExcel } from '@/lib/exportToExcel';
+import { ProductImporter } from '@/components/ProductImporter';
 
 interface Product {
   id: string;
@@ -28,10 +31,11 @@ interface Product {
   cost_price: number;
   wholesale_price: number;
   stock_quantity: number;
+  items_per_case: number;
   categories?: { name: string; color: string | null } | null;
 }
 
-type EditableField = 'name' | 'item_code' | 'sku' | 'category_id' | 'mrp_price' | 'selling_price' | 'cost_price' | 'wholesale_price' | 'stock_quantity';
+type EditableField = 'name' | 'item_code' | 'sku' | 'category_id' | 'mrp_price' | 'selling_price' | 'cost_price' | 'wholesale_price' | 'stock_quantity' | 'items_per_case' | 'cases';
 
 const COLUMNS: { key: EditableField; label: string; type: 'text' | 'number' | 'category'; width: string }[] = [
   { key: 'name',            label: 'Product Name',   type: 'text',     width: 'min-w-[180px]' },
@@ -42,6 +46,8 @@ const COLUMNS: { key: EditableField; label: string; type: 'text' | 'number' | 'c
   { key: 'selling_price',   label: 'Selling Price',   type: 'number',   width: 'min-w-[100px]' },
   { key: 'cost_price',      label: 'Cost Price',      type: 'number',   width: 'min-w-[90px]' },
   { key: 'wholesale_price', label: 'Wholesale',       type: 'number',   width: 'min-w-[90px]' },
+  { key: 'items_per_case',  label: 'PCS/Case',         type: 'number',   width: 'min-w-[80px]' },
+  { key: 'cases',           label: 'Cases',            type: 'number',   width: 'min-w-[80px]' },
   { key: 'stock_quantity',  label: 'Stock',            type: 'number',   width: 'min-w-[80px]' },
 ];
 
@@ -104,6 +110,16 @@ export default function ManageProducts() {
 
   // Get current cell value (with pending changes applied)
   const getCellValue = useCallback((product: Product, field: EditableField) => {
+    if (field === 'cases') {
+      // Computed: stock_quantity / items_per_case
+      const qty = changes[product.id]?.stock_quantity !== undefined
+        ? Number(changes[product.id].stock_quantity)
+        : product.stock_quantity;
+      const ppc = changes[product.id]?.items_per_case !== undefined
+        ? Number(changes[product.id].items_per_case)
+        : product.items_per_case;
+      return ppc > 0 ? Math.round((qty / ppc) * 100) / 100 : 0;
+    }
     if (changes[product.id]?.[field] !== undefined) {
       return changes[product.id][field];
     }
@@ -136,6 +152,34 @@ export default function ManageProducts() {
     } else {
       newVal = editValue.trim() || null;
     }
+
+    // Handle virtual 'cases' field: update stock_quantity = cases * items_per_case
+    if (field === 'cases') {
+      const ppc = changes[product.id]?.items_per_case !== undefined
+        ? Number(changes[product.id].items_per_case)
+        : product.items_per_case;
+      if (ppc > 0) {
+        const newStock = Math.round(newVal * ppc * 100) / 100;
+        setChanges(prev => ({
+          ...prev,
+          [product.id]: {
+            ...prev[product.id],
+            stock_quantity: newStock,
+          },
+        }));
+      }
+      return;
+    }
+
+    // If items_per_case changed, also update stock if there were cases set
+    if (field === 'items_per_case') {
+      const currentStock = changes[product.id]?.stock_quantity !== undefined
+        ? Number(changes[product.id].stock_quantity)
+        : product.stock_quantity;
+      // Just save the new items_per_case, cases column will recompute automatically
+    }
+
+    // If stock_quantity changed, cases column will recompute automatically via getCellValue
 
     const original = product[field];
     // Only track if value actually changed from original
@@ -215,9 +259,12 @@ export default function ManageProducts() {
       const entries = Object.entries(changes);
       let successCount = 0;
       for (const [productId, fieldChanges] of entries) {
+        // Strip virtual fields before saving
+        const { cases, ...dbFields } = fieldChanges as any;
+        if (Object.keys(dbFields).length === 0) continue;
         const { error } = await supabase
           .from('products')
-          .update(fieldChanges)
+          .update(dbFields)
           .eq('id', productId);
         if (error) throw error;
         successCount++;
@@ -257,6 +304,38 @@ export default function ManageProducts() {
     return cat?.color || undefined;
   };
 
+  // Export products
+  const handleExportExcel = () => {
+    if (filtered.length === 0) { toast.error('No data to export'); return; }
+    exportStyledExcel(
+      [{
+        title: `Product Inventory (${filtered.length} items)`,
+        titleColor: '1F4E79',
+        data: filtered,
+        columns: [
+          { key: 'name', header: 'Product Name' },
+          { key: 'item_code', header: 'Item Code', format: (v) => v || '' },
+          { key: 'sku', header: 'SKU', format: (v) => v || '' },
+          { key: 'categories', header: 'Category', format: (v) => (v as { name: string } | null)?.name || '' },
+          { key: 'mrp_price', header: 'MRP', format: (v) => Number(v || 0).toFixed(2) },
+          { key: 'selling_price', header: 'Selling Price', format: (v) => Number(v).toFixed(2) },
+          { key: 'cost_price', header: 'Cost Price', format: (v) => Number(v).toFixed(2) },
+          { key: 'wholesale_price', header: 'Wholesale Price', format: (v) => Number(v || 0).toFixed(2) },
+          { key: 'items_per_case', header: 'PCS/Case', format: (v) => Number(v) || '' },
+          { key: '_cases', header: 'Cases', format: (_v, _k, item: any) => {
+            const ppc = Number(item?.items_per_case);
+            const qty = Number(item?.stock_quantity);
+            return ppc > 0 ? Math.round((qty / ppc) * 100) / 100 : '';
+          }},
+          { key: 'stock_quantity', header: 'Stock (PCS)', format: (v) => Number(v) },
+        ],
+      }],
+      null,
+      `products-${format(new Date(), 'yyyy-MM-dd')}`
+    );
+    toast.success('Exported successfully');
+  };
+
   return (
     <div className="flex flex-col h-full" style={{ gap: 16 }}>
       {/* Header */}
@@ -272,12 +351,18 @@ export default function ManageProducts() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {changedCount > 0 && (
             <Badge variant="secondary" className="text-xs">
               {changedCount} unsaved change{changedCount > 1 ? 's' : ''}
             </Badge>
           )}
+          <ProductImporter />
+          <Button onClick={handleExportExcel} variant="outline" size="sm">
+            <Download className="mr-1 sm:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Export Excel</span>
+            <span className="sm:hidden">Export</span>
+          </Button>
           <Button
             onClick={handleSaveAll}
             disabled={changedCount === 0 || saving}
@@ -433,7 +518,7 @@ export default function ManageProducts() {
                                   </Badge>
                                 ) : '—'
                               ) : col.type === 'number' ? (
-                                col.key === 'stock_quantity'
+                                col.key === 'stock_quantity' || col.key === 'cases' || col.key === 'items_per_case'
                                   ? (value ?? 0)
                                   : `${currencySymbol}${Number(value ?? 0).toFixed(2)}`
                               ) : (
