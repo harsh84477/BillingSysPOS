@@ -12,6 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { BillDetailsDialog } from '@/components/bills/BillDetailsDialog';
 import { printBillReceipt } from '@/components/bills/BillReceiptPrint';
@@ -94,6 +97,8 @@ export default function Customers() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [storeTypeFilter, setStoreTypeFilter] = useState('all');
+  const [pincodeFilter, setPincodeFilter] = useState('all');
 
   /* bills panel state */
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -147,7 +152,7 @@ export default function Customers() {
   const filteredCustomers = useMemo(() =>
     customers.filter(c => {
       const q = searchQuery.toLowerCase();
-      return (
+      const matchSearch = (
         c.name.toLowerCase().includes(q) ||
         (c.email || '').toLowerCase().includes(q) ||
         (c.phone || '').includes(searchQuery) ||
@@ -156,9 +161,22 @@ export default function Customers() {
         (c.pincode || '').includes(searchQuery) ||
         (c.address || '').toLowerCase().includes(q)
       );
+      
+      const matchStoreType = storeTypeFilter === 'all' || c.store_type === storeTypeFilter;
+      const matchPincode = pincodeFilter === 'all' || c.pincode === pincodeFilter;
+
+      return matchSearch && matchStoreType && matchPincode;
     }),
-    [customers, searchQuery],
+    [customers, searchQuery, storeTypeFilter, pincodeFilter],
   );
+
+  const uniqueStoreTypes = useMemo(() => 
+    Array.from(new Set(customers.map(c => c.store_type).filter(Boolean))) as string[], 
+  [customers]);
+  
+  const uniquePincodes = useMemo(() => 
+    Array.from(new Set(customers.map(c => c.pincode).filter(Boolean))) as string[], 
+  [customers]);
 
   // ── mutations ──
   const saveMutation = useMutation({
@@ -433,9 +451,35 @@ export default function Customers() {
                     <Label htmlFor="location_name">Location Name</Label>
                     <Input id="location_name" name="location_name" placeholder="e.g. Saket" defaultValue={editingCustomer?.location_name || ''} />
                   </div>
-                   <div className="space-y-1.5">
-                    <Label htmlFor="pincode">Pincode</Label>
-                    <Input id="pincode" name="pincode" placeholder="e.g. 110017" defaultValue={editingCustomer?.pincode || ''} />
+                   <div className="space-y-1.5 text-left">
+                    <Label htmlFor="pincode" className="flex items-center justify-between">
+                      Pincode
+                      <span id="pincode_loader" className="text-[10px] text-muted-foreground hidden">Loading...</span>
+                    </Label>
+                    <Input id="pincode" name="pincode" placeholder="e.g. 110017" defaultValue={editingCustomer?.pincode || ''} 
+                      onChange={async (e) => {
+                        const pin = e.target.value;
+                        if (pin.length === 6 && /^\d+$/.test(pin)) {
+                          const loader = document.getElementById('pincode_loader');
+                          if (loader) loader.classList.remove('hidden');
+                          try {
+                            const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+                            const data = await res.json();
+                            if (data && data[0] && data[0].Status === 'Success') {
+                              const po = data[0].PostOffice[0];
+                              const locInput = document.getElementById('location_name') as HTMLInputElement;
+                              if (locInput && !locInput.value) {
+                                locInput.value = `${po.Name}, ${po.District}`;
+                              }
+                            }
+                          } catch (err) {
+                            console.error('Pincode fetch error', err);
+                          } finally {
+                            if (loader) loader.classList.add('hidden');
+                          }
+                        }
+                      }}
+                    />
                   </div>
                 </div>
                 <div className="space-y-1.5">
@@ -454,20 +498,48 @@ export default function Customers() {
         )}
       </div>
 
-      {/* Search bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search name, phone, location, pincode, store type…"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-        {searchQuery && (
-          <button className="absolute right-3 top-1/2 -translate-y-1/2" onClick={() => setSearchQuery('')}>
-            <X className="h-4 w-4 text-muted-foreground" />
-          </button>
-        )}
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search name, phone, location, pincode, store type…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+          {searchQuery && (
+            <button className="absolute right-3 top-1/2 -translate-y-1/2" onClick={() => setSearchQuery('')}>
+              <X className="h-4 w-4 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex gap-2 shrink-0 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
+           <Select value={storeTypeFilter} onValueChange={setStoreTypeFilter}>
+             <SelectTrigger className="w-[140px] h-10 shrink-0">
+               <SelectValue placeholder="Store Type" />
+             </SelectTrigger>
+             <SelectContent>
+               <SelectItem value="all">All Types</SelectItem>
+               {uniqueStoreTypes.map(type => (
+                 <SelectItem key={type} value={type}>{type}</SelectItem>
+               ))}
+             </SelectContent>
+           </Select>
+
+           <Select value={pincodeFilter} onValueChange={setPincodeFilter}>
+             <SelectTrigger className="w-[120px] h-10 shrink-0">
+               <SelectValue placeholder="Pincode" />
+             </SelectTrigger>
+             <SelectContent>
+               <SelectItem value="all">All Pincodes</SelectItem>
+               {uniquePincodes.map(pin => (
+                 <SelectItem key={pin} value={pin}>{pin}</SelectItem>
+               ))}
+             </SelectContent>
+           </Select>
+        </div>
       </div>
 
       {/* Count */}
