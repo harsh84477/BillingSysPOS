@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessSettings, useUpdateBusinessSettings } from '@/hooks/useBusinessSettings';
+import { usePosLayout } from '@/hooks/usePosLayout';
 import { toast } from 'sonner';
 import { 
   SettingsCard, ColStack, SettingRow, Toggle, SectionLabel, SelectInput, Counter, InfoBox, op 
@@ -10,6 +11,7 @@ export default function POSTab() {
   const { isAdmin } = useAuth();
   const { data: settings } = useBusinessSettings();
   const updateSettings = useUpdateBusinessSettings();
+  const { desktopLayout, setDesktopLayout, mobileLayout, setMobileLayout } = usePosLayout();
 
   const u = (v: any) => isAdmin && updateSettings.mutate(v);
 
@@ -83,11 +85,33 @@ export default function POSTab() {
       </SettingsCard>
 
       <SettingsCard title="Grid & Sizes" subtitle="Configure product grid and sizes for POS screen" icon="📱" accent="#3b82f6">
-        <SettingRow label="Desktop Columns" desc="Number of product columns (2–8)"
+        <SectionLabel text="Visual Layout" />
+        <SettingRow label="Desktop Layout" desc="List or Grid view for computer"
+          right={<SelectInput
+            value={desktopLayout}
+            onChange={(v) => setDesktopLayout(v as any)}
+            options={[
+              { value: 'grid', label: 'Grid View' },
+              { value: 'list', label: 'List View' }
+            ]}
+          />}
+        />
+        <SettingRow label="Mobile Layout" desc="List or Grid view for mobile screen"
+          right={<SelectInput
+            value={mobileLayout}
+            onChange={(v) => setMobileLayout(v as any)}
+            options={[
+              { value: 'grid', label: 'Grid View' },
+              { value: 'list', label: 'List View' }
+            ]}
+          />}
+        />
+        <SectionLabel text="Grid Configurations" />
+        <SettingRow label="Desktop Columns" desc="Number of product columns (2–8) in Grid View"
           right={<Counter value={settings?.product_columns ?? 5} min={2} max={8} onChange={(v) => u({ product_columns: v })} disabled={!isAdmin} />} />
         <SettingRow label="Grid Gap" desc="Spacing between cards (px)"
           right={<Counter value={settings?.grid_gap ?? 8} min={4} max={30} onChange={(v) => u({ grid_gap: v })} disabled={!isAdmin} />} />
-        <SettingRow label="Mobile Columns" desc="Number of columns on mobile" noBorder
+        <SettingRow label="Mobile Columns" desc="Number of columns on mobile in Grid View" noBorder
           right={<Counter value={settings?.mobile_product_columns ?? 3} min={2} max={4} onChange={(v) => u({ mobile_product_columns: v })} disabled={!isAdmin} />} />
       </SettingsCard>
     </ColStack>

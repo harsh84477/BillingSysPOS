@@ -7,6 +7,7 @@ import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useNavigate } from 'react-router-dom';
 import { useBilling } from '@/hooks/useBillingSystem';
+import { usePosLayout } from '@/hooks/usePosLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -127,6 +128,7 @@ export default function Billing() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
+  const { desktopLayout, mobileLayout } = usePosLayout();
   const { isTrial, isActive, isExpired, canCreateBill, planName, loading: subscriptionLoading } = useSubscription();
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -875,6 +877,7 @@ export default function Billing() {
   const isNative = Capacitor.isNativePlatform();
   const [mobileBillOpen, setMobileBillOpen] = useState(false);
   const useMobileLayout = isNative || isMobileScreen;
+  const activeLayout = isMobileScreen ? mobileLayout : desktopLayout;
 
   const handleAddCase = (product: typeof products[0], caseQty: number) => {
     const available = product.stock_quantity - (product.reserved_quantity || 0);
@@ -1012,6 +1015,67 @@ export default function Billing() {
           </span>
         </div>
       </button>
+    );
+  });
+
+  const ProductListCard = React.memo(({ product }: { product: typeof products[0] }) => {
+    const iconName = product.icon || 'Package';
+    const IconComponent = ICON_MAP[iconName] || Package;
+    const availableStock = product.stock_quantity - (product.reserved_quantity || 0);
+    const isOutOfStock = availableStock <= 0;
+    
+    // Add case button and add 1 button
+    const caseSize = Number((product as any).items_per_case || 0);
+
+    return (
+      <div onClick={() => addToCart(product)} className="cursor-pointer flex items-center gap-4 rounded-xl border border-border bg-card p-3 shadow-sm hover:shadow-md transition-shadow group w-full mb-2">
+        {/* Left: Image / Icon */}
+        <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-lg overflow-hidden bg-muted flex items-center justify-center relative">
+         {(product as any).image_url ? (
+           <img src={(product as any).image_url} alt={product.name} className="w-full h-full object-cover" />
+         ) : (
+           <IconComponent className="h-10 w-10 text-muted-foreground opacity-50" />
+         )}
+         {isOutOfStock && (
+           <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+             <span className="text-[10px] font-bold text-red-600 bg-red-100 px-1 py-0.5 rounded">OUT</span>
+           </div>
+         )}
+        </div>
+
+        {/* Center: Details */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center text-left">
+          <h3 className="font-bold text-sm sm:text-lg text-foreground truncate">{product.name}</h3>
+          <div className="font-bold text-base sm:text-xl text-foreground mt-0.5">
+            {currencySymbol}{Number(product.selling_price).toFixed(2)}
+          </div>
+          {showProductCode && product.sku && (
+            <div className="text-[10px] text-muted-foreground font-mono mt-1">{product.sku}</div>
+          )}
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {caseSize > 0 && (
+             <Button 
+               variant="outline" 
+               className="h-10 px-3 sm:px-4 text-[11px] sm:text-sm font-bold gap-1 sm:gap-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 border-emerald-200"
+               onClick={(e) => { e.stopPropagation(); handleAddCase(product, caseSize); }}
+               disabled={isOutOfStock}
+             >
+               <Package className="h-4 w-4" /> 
+               ADD CASE
+             </Button>
+          )}
+          <Button 
+            className="h-10 px-3 sm:px-4 text-[11px] sm:text-sm font-bold gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200 shadow-none border"
+            onClick={(e) => { e.stopPropagation(); addToCart(product); }}
+            disabled={isOutOfStock}
+          >
+            <Plus className="h-4 w-4" /> ADD 1
+          </Button>
+        </div>
+      </div>
     );
   });
 
@@ -1620,16 +1684,23 @@ export default function Billing() {
             </div>
           ) : (
             <div
-              className="pos-product-grid pb-20 sm:pb-4 pt-2 px-3 transition-all duration-300"
-              style={{
+              className={cn(
+                "pb-20 sm:pb-4 pt-2 px-3 transition-all duration-300",
+                activeLayout === 'list' ? "flex flex-col" : "pos-product-grid"
+              )}
+              style={activeLayout === 'grid' ? {
                 display: 'grid',
                 gridTemplateColumns: `repeat(var(--pos-cols, ${productColumns}), minmax(0, 1fr))`,
                 gap: `${gridGap}px`,
                 ['--pos-cols-desktop' as string]: productColumns,
-              }}
+              } : {}}
             >
               {filteredProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                activeLayout === 'list' ? (
+                  <ProductListCard key={product.id} product={product} />
+                ) : (
+                  <ProductCard key={product.id} product={product} />
+                )
               ))}
             </div>
           )}
