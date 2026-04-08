@@ -521,7 +521,6 @@ export default function Customers() {
             <span className="hidden sm:inline">Manage All</span>
             <span className="sm:hidden">Edit All</span>
           </Button>
-          {isAdmin && <CustomerImporter />}
           <Button onClick={handleExportCustomers} variant="outline" size="sm">
             <Download className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Export Excel</span>

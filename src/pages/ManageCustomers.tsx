@@ -230,6 +230,31 @@ export default function ManageCustomers() {
     }, 100);
   }, [commitEdit]);
 
+  // Export raw data template for easy importing
+  const handleExportData = () => {
+    if (filtered.length === 0) { toast.error('No data to export'); return; }
+    exportStyledExcel(
+      [{
+        title: `Customer Data Template (${filtered.length} items)`,
+        titleColor: '1F4E79',
+        data: filtered,
+        columns: [
+          { key: 'name', header: 'Name' },
+          { key: 'phone', header: 'Phone', format: v => v || '' },
+          { key: 'email', header: 'Email', format: v => v || '' },
+          { key: 'store_type', header: 'Store Type', format: v => v || '' },
+          { key: 'location_name', header: 'Location Name', format: v => v || '' },
+          { key: 'pincode', header: 'Pincode', format: v => v || '' },
+          { key: 'address', header: 'Address', format: v => v || '' },
+          { key: 'notes', header: 'Notes', format: v => v || '' },
+        ],
+      }],
+      null,
+      `customer-upload-${format(new Date(), 'yyyy-MM-dd')}`
+    );
+    toast.success('Exported template successfully. You can safely import this file later.');
+  };
+
   return (
     <div className="flex flex-col h-full" style={{ gap: 16 }}>
       {/* Header */}
@@ -252,6 +277,11 @@ export default function ManageCustomers() {
             </Badge>
           )}
           <CustomerImporter />
+          <Button onClick={handleExportData} variant="outline" size="sm" title="Download simple export template for re-uploading">
+            <Download className="mr-1 sm:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Export Template</span>
+            <span className="sm:hidden">Template</span>
+          </Button>
           <Button
             onClick={handleSaveAll}
             disabled={changedCount === 0 || saving}
