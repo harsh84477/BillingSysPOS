@@ -48,6 +48,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  ArrowRight,
   Sparkles,
   AlertCircle,
   Package,
