@@ -262,6 +262,7 @@ export default function Customers() {
     const totalMRP = rows.reduce((acc, b) => acc + b.total_mrp, 0);
     const totalSales = rows.reduce((acc, b) => acc + Number(b.total_amount), 0);
     const totalMargin = totalMRP - totalSales;
+    const totalMarginPct = totalMRP > 0 ? ((totalMargin / totalMRP) * 100).toFixed(2) + '%' : '0%';
     
     exportStyledExcel(
       [
@@ -274,6 +275,11 @@ export default function Customers() {
             { key: 'created_at', header: 'Date', format: v => format(new Date(v as string), 'dd/MM/yyyy HH:mm') },
             { key: 'total_amount', header: 'Price', format: v => Number(v) },
             { key: 'margin', header: 'Customer Margin', format: (_, __, item: any) => Number((item.total_mrp || 0) - Number(item.total_amount || 0)) },
+            { key: 'margin_pct', header: 'Margin %', format: (_, __, item: any) => {
+                const m = Number(item.total_mrp || 0);
+                const c = Number(item.total_amount || 0);
+                return m > 0 ? ((m - c) / m * 100).toFixed(2) + '%' : '0%';
+            } },
             { key: 'status', header: 'Status' },
             { key: 'total_mrp', header: 'Total MRP', format: v => Number(v) },
           ]
@@ -285,7 +291,7 @@ export default function Customers() {
           { label: 'Total Number of Bills', value: rows.length },
           { label: 'Total Purchase / Price', value: `${currencySymbol}${totalSales.toFixed(2)}` },
           { label: 'Total MRP Value', value: `${currencySymbol}${totalMRP.toFixed(2)}` },
-          { label: 'Total Profit/Margin', value: `${currencySymbol}${totalMargin.toFixed(2)}` },
+          { label: 'Total Profit/Margin', value: `${currencySymbol}${totalMargin.toFixed(2)} (${totalMarginPct})` },
         ]
       },
       `${selectedCustomer?.name}-${presetLabel}-purchases-${format(new Date(), 'yyyy-MM-dd')}`,
