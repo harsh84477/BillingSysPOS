@@ -16,6 +16,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { BillDetailsDialog } from '@/components/bills/BillDetailsDialog';
 import { printBillReceipt } from '@/components/bills/BillReceiptPrint';
@@ -103,6 +106,7 @@ export default function Customers() {
   const [storeTypeFilter, setStoreTypeFilter] = useState('all');
   const [pincodeFilter, setPincodeFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
 
   /* bills panel state */
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -187,6 +191,21 @@ export default function Customers() {
     Array.from(new Set(customers.map(c => c.location_name).filter(Boolean))) as string[], 
   [customers]);
 
+  // ── bulk selection ──
+  const toggleSelectAll = () => {
+    if (selectedCustomerIds.size === filteredCustomers.length && filteredCustomers.length > 0) {
+      setSelectedCustomerIds(new Set());
+    } else {
+      setSelectedCustomerIds(new Set(filteredCustomers.map(c => c.id)));
+    }
+  };
+
+  const toggleSelectCustomer = (id: string) => {
+    const newSelected = new Set(selectedCustomerIds);
+    if (newSelected.has(id)) newSelected.delete(id); else newSelected.add(id);
+    setSelectedCustomerIds(newSelected);
+  };
+
   // ── mutations ──
   const saveMutation = useMutation({
     mutationFn: async (customer: Partial<Customer>) => {
@@ -218,6 +237,24 @@ export default function Customers() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.from('customers').delete().in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      setSelectedCustomerIds(new Set());
+      toast.success('Customers deleted successfully');
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const handleBulkDelete = () => {
+    if (!confirm(`Are you sure you want to delete ${selectedCustomerIds.size} customers?`)) return;
+    bulkDeleteMutation.mutate(Array.from(selectedCustomerIds));
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -689,90 +726,140 @@ export default function Customers() {
         {isLoading ? 'Loading…' : `${filteredCustomers.length} customer${filteredCustomers.length !== 1 ? 's' : ''}`}
       </p>
 
-      {/* Customer Cards */}
-      {isLoading ? (
-        <div className="space-y-3">
-          {[1,2,3].map(i => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
-        </div>
-      ) : filteredCustomers.length === 0 ? (
-        <EmptyState icon="customers" title="No customers found" description="Add your first customer to start tracking orders." />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-24">
-          {filteredCustomers.map(customer => (
-            <div key={customer.id} className="bg-card border border-border rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                {/* Avatar */}
-                <div
-                  className="h-10 w-10 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
-                  style={{ background: 'var(--spos-accent-lt)', color: 'var(--spos-accent)' }}
-                >
-                  {customer.name.charAt(0).toUpperCase()}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm truncate">{customer.name}</p>
-                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                    {customer.phone && (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Phone className="h-3 w-3" />{customer.phone}
-                      </span>
-                    )}
-                    {customer.email && (
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Mail className="h-3 w-3" />{customer.email}
-                      </span>
-                    )}
-                    {customer.store_type && (
-                      <span className="flex items-center gap-1 text-xs font-medium text-[var(--spos-accent)]">
-                        <ShoppingBag className="h-3 w-3" />{customer.store_type}
-                      </span>
-                    )}
-                  </div>
-                  {(customer.address || customer.location_name || customer.pincode) && (
-                    <p className="text-xs text-muted-foreground mt-1.5 opacity-80 leading-snug line-clamp-2">
-                       {[customer.address, customer.location_name, customer.pincode].filter(Boolean).join(', ')}
-                    </p>
-                  )}
-                  {customer.notes && (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{customer.notes}</p>
-                  )}
-                </div>
-
-                {/* Actions */}
-                {canEdit && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-                      onClick={() => { setEditingCustomer(customer); setIsDialogOpen(true); }}
-                    >
-                      <Pencil className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                    {isAdmin && (
-                      <button
-                        className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
-                        onClick={() => { if (confirm('Delete this customer?')) deleteMutation.mutate(customer.id); }}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* View Bills button */}
-              <button
-                className="mt-3 w-full flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-semibold transition-all active:scale-95"
-                style={{ background: 'var(--spos-accent-lt)', color: 'var(--spos-accent)' }}
-                onClick={() => { setSelectedCustomer(customer); setBillPreset('all'); }}
-              >
-                <ShoppingBag className="h-4 w-4" />
-                View Bills
-              </button>
-            </div>
-          ))}
+      {/* Action Bar (When Items Selected) */}
+      {selectedCustomerIds.size > 0 && (
+        <div className="bg-muted p-2 rounded-lg flex items-center justify-between mb-4 animate-in fade-in slide-in-from-top-2">
+          <span className="text-sm font-medium px-2 text-foreground">
+            {selectedCustomerIds.size} customer{selectedCustomerIds.size !== 1 ? 's' : ''} selected
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Selected
+            </Button>
+          </div>
         </div>
       )}
+
+      {/* Customer List */}
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="space-y-3 p-4">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+            </div>
+          ) : filteredCustomers.length === 0 ? (
+            <div className="p-8">
+              <EmptyState icon="customers" title="No customers found" description="Add your first customer to start tracking orders." />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {isAdmin && (
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={filteredCustomers.length > 0 && selectedCustomerIds.size === filteredCustomers.length}
+                          onCheckedChange={toggleSelectAll}
+                          aria-label="Select all"
+                        />
+                      </TableHead>
+                    )}
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Store Type</TableHead>
+                    <TableHead className="text-right w-40">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCustomers.map(customer => (
+                    <TableRow key={customer.id}>
+                      {isAdmin && (
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedCustomerIds.has(customer.id)}
+                            onCheckedChange={() => toggleSelectCustomer(customer.id)}
+                          />
+                        </TableCell>
+                      )}
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-bold">{customer.name}</span>
+                          {customer.notes && <span className="text-xs text-muted-foreground line-clamp-1 truncate max-w-[200px]">{customer.notes}</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs space-y-0.5">
+                          {customer.phone && <div className="text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> {customer.phone}</div>}
+                          {customer.email && <div className="text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> {customer.email}</div>}
+                          {!customer.phone && !customer.email && <span className="text-muted-foreground">—</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs space-y-0.5">
+                          {(customer.location_name || customer.pincode) ? (
+                            <>
+                              {customer.location_name && <div className="text-muted-foreground">{customer.location_name}</div>}
+                              {customer.pincode && <div className="text-muted-foreground font-medium">{customer.pincode}</div>}
+                            </>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {customer.store_type ? (
+                          <Badge variant="secondary" className="text-[10px] font-medium" style={{ background: 'var(--spos-accent-lt)', color: 'var(--spos-accent)' }}>
+                            {customer.store_type}
+                          </Badge>
+                        ) : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => { setSelectedCustomer(customer); setBillPreset('all'); }}
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            <span className="text-xs">Bills</span>
+                          </Button>
+                          {canEdit && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground"
+                              onClick={() => { setEditingCustomer(customer); setIsDialogOpen(true); }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {isAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive opacity-50 hover:opacity-100"
+                              onClick={() => { if (confirm('Delete this customer?')) deleteMutation.mutate(customer.id); }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
