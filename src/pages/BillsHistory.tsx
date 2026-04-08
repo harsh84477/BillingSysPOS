@@ -300,23 +300,41 @@ export default function BillsHistory() {
     };
   }, [filteredBills]);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (filteredBills.length === 0) {
       toast({ title: 'No data to export', variant: 'destructive' });
       return;
     }
 
-    exportToExcel(
-      filteredBills,
+    const billIds = filteredBills.map(b => b.id);
+    const { data: allItems } = await supabase
+      .from('bill_items')
+      .select('bill_id, mrp_price, quantity')
+      .in('bill_id', billIds);
+
+    const mrpByBill: Record<string, number> = {};
+    ((allItems as any[]) || []).forEach(item => {
+      const mrp = Number(item.mrp_price || 0) * Number(item.quantity || 1);
+      mrpByBill[item.bill_id] = (mrpByBill[item.bill_id] || 0) + mrp;
+    });
+
+    type ExportRow = Bill & { total_mrp: number };
+    const rows: ExportRow[] = filteredBills.map(b => ({
+      ...b,
+      total_mrp: mrpByBill[b.id] || Number(b.total_amount),
+    }));
+
+    exportToExcel<ExportRow>(
+      rows,
       [
         { key: 'bill_number', header: 'Bill #' },
         { key: 'created_at', header: 'Date', format: (v) => format(new Date(v as string), 'dd/MM/yyyy HH:mm') },
         { key: 'customers', header: 'Customer', format: (v) => (v as { name: string } | null)?.name || 'Walk-in' },
         { key: 'status', header: 'Status' },
-        { key: 'subtotal', header: 'Subtotal', format: (v) => Number(v).toFixed(2) },
-        { key: 'discount_amount', header: 'Discount', format: (v) => Number(v).toFixed(2) },
+        { key: 'total_mrp', header: 'Total MRP', format: (v) => Number(v).toFixed(2) },
+        { key: 'discount_amount', header: 'Total Discount', format: (v) => Number(v).toFixed(2) },
         { key: 'tax_amount', header: 'Tax', format: (v) => Number(v).toFixed(2) },
-        { key: 'total_amount', header: 'Total', format: (v) => Number(v).toFixed(2) },
+        { key: 'total_amount', header: 'Total Selling Price', format: (v) => Number(v).toFixed(2) },
       ],
       `bills-history-${format(new Date(), 'yyyy-MM-dd')}`
     );

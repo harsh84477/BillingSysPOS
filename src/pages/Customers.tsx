@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,6 +34,9 @@ interface Customer {
   email: string | null;
   phone: string | null;
   address: string | null;
+  store_type: string | null;
+  location_name: string | null;
+  pincode: string | null;
   notes: string | null;
   created_at: string;
 }
@@ -142,11 +145,18 @@ export default function Customers() {
 
   // ── customer list filter ──
   const filteredCustomers = useMemo(() =>
-    customers.filter(c =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone?.includes(searchQuery)
-    ),
+    customers.filter(c => {
+      const q = searchQuery.toLowerCase();
+      return (
+        c.name.toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.phone || '').includes(searchQuery) ||
+        (c.store_type || '').toLowerCase().includes(q) ||
+        (c.location_name || '').toLowerCase().includes(q) ||
+        (c.pincode || '').includes(searchQuery) ||
+        (c.address || '').toLowerCase().includes(q)
+      );
+    }),
     [customers, searchQuery],
   );
 
@@ -190,6 +200,9 @@ export default function Customers() {
       email: (fd.get('email') as string) || null,
       phone: (fd.get('phone') as string) || null,
       address: (fd.get('address') as string) || null,
+      store_type: (fd.get('store_type') as string) || null,
+      location_name: (fd.get('location_name') as string) || null,
+      pincode: (fd.get('pincode') as string) || null,
       notes: (fd.get('notes') as string) || null,
     });
   };
@@ -207,37 +220,34 @@ export default function Customers() {
   const handleExportBills = async () => {
     if (filteredBills.length === 0) { toast.error('No bills to export'); return; }
 
-    // fetch bill items for all filtered bills in one query
     const billIds = filteredBills.map(b => b.id);
     const { data: allItems } = await supabase
       .from('bill_items')
-      .select('bill_id, name, quantity, unit_price')
+      .select('bill_id, mrp_price, quantity')
       .in('bill_id', billIds);
 
-    const itemsByBill: Record<string, string> = {};
-    (allItems || []).forEach(item => {
-      const line = `${item.name} x${item.quantity}`;
-      itemsByBill[item.bill_id] = itemsByBill[item.bill_id]
-        ? itemsByBill[item.bill_id] + ' | ' + line : line;
+    const mrpByBill: Record<string, number> = {};
+    ((allItems as any[]) || []).forEach(item => {
+      const mrp = Number(item.mrp_price || 0) * Number(item.quantity || 1);
+      mrpByBill[item.bill_id] = (mrpByBill[item.bill_id] || 0) + mrp;
     });
 
-    type BillWithItems = CustomerBill & { items_detail: string };
-    const rows: BillWithItems[] = filteredBills.map(b => ({
+    type ExportRow = CustomerBill & { total_mrp: number };
+    const rows: ExportRow[] = filteredBills.map(b => ({
       ...b,
-      items_detail: itemsByBill[b.id] || '',
+      total_mrp: mrpByBill[b.id] || Number(b.total_amount),
     }));
 
     const presetLabel = PRESET_LABELS.find(p => p.id === billPreset)?.label.replace(' ', '-') || 'all';
-    exportToExcel<BillWithItems>(
+    exportToExcel<ExportRow>(
       rows,
       [
         { key: 'bill_number', header: 'Bill #' },
         { key: 'created_at', header: 'Date', format: v => format(new Date(v as string), 'dd/MM/yyyy HH:mm') },
-        { key: 'items_detail', header: 'Items' },
-        { key: 'subtotal', header: 'Subtotal', format: v => Number(v).toFixed(2) },
-        { key: 'discount_amount', header: 'Discount', format: v => Number(v).toFixed(2) },
+        { key: 'total_mrp', header: 'Total MRP', format: v => Number(v).toFixed(2) },
+        { key: 'discount_amount', header: 'Total Discount', format: v => Number(v).toFixed(2) },
         { key: 'tax_amount', header: 'Tax', format: v => Number(v).toFixed(2) },
-        { key: 'total_amount', header: 'Total', format: v => Number(v).toFixed(2) },
+        { key: 'total_amount', header: 'Total Selling Price', format: v => Number(v).toFixed(2) },
         { key: 'status', header: 'Status' },
       ],
       `${selectedCustomer?.name}-${presetLabel}-purchases-${format(new Date(), 'yyyy-MM-dd')}`,
@@ -398,8 +408,35 @@ export default function Customers() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea id="address" name="address" defaultValue={editingCustomer?.address || ''} rows={2} />
+                  <Label htmlFor="store_type">Store Type</Label>
+                  <Input 
+                    id="store_type" 
+                    name="store_type" 
+                    defaultValue={editingCustomer?.store_type || ''} 
+                    placeholder="e.g. Wholesale, Kirana, Medical" 
+                    list="store-types"
+                  />
+                  <datalist id="store-types">
+                    <option value="Wholesale Store" />
+                    <option value="General Store" />
+                    <option value="Kirana Store" />
+                    <option value="Medical Store" />
+                    <option value="Retail Store" />
+                  </datalist>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="address">Address (General)</Label>
+                  <Textarea id="address" name="address" defaultValue={editingCustomer?.address || ''} rows={1} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="location_name">Location Name</Label>
+                    <Input id="location_name" name="location_name" placeholder="e.g. Saket" defaultValue={editingCustomer?.location_name || ''} />
+                  </div>
+                   <div className="space-y-1.5">
+                    <Label htmlFor="pincode">Pincode</Label>
+                    <Input id="pincode" name="pincode" placeholder="e.g. 110017" defaultValue={editingCustomer?.pincode || ''} />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="notes">Notes</Label>
@@ -421,7 +458,7 @@ export default function Customers() {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search name, email or phone…"
+          placeholder="Search name, phone, location, pincode, store type…"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           className="pl-10"
@@ -446,7 +483,7 @@ export default function Customers() {
       ) : filteredCustomers.length === 0 ? (
         <EmptyState icon="customers" title="No customers found" description="Add your first customer to start tracking orders." />
       ) : (
-        <div className="space-y-3 pb-24">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-24">
           {filteredCustomers.map(customer => (
             <div key={customer.id} className="bg-card border border-border rounded-xl p-4">
               <div className="flex items-start gap-3">
@@ -472,7 +509,17 @@ export default function Customers() {
                         <Mail className="h-3 w-3" />{customer.email}
                       </span>
                     )}
+                    {customer.store_type && (
+                      <span className="flex items-center gap-1 text-xs font-medium text-[var(--spos-accent)]">
+                        <ShoppingBag className="h-3 w-3" />{customer.store_type}
+                      </span>
+                    )}
                   </div>
+                  {(customer.address || customer.location_name || customer.pincode) && (
+                    <p className="text-xs text-muted-foreground mt-1.5 opacity-80 leading-snug line-clamp-2">
+                       {[customer.address, customer.location_name, customer.pincode].filter(Boolean).join(', ')}
+                    </p>
+                  )}
                   {customer.notes && (
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{customer.notes}</p>
                   )}
