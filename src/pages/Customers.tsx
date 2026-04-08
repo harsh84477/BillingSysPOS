@@ -23,8 +23,9 @@ import { toast } from 'sonner';
 import {
   Plus, Pencil, Trash2, Users, Search, Phone, Mail,
   Download, ShoppingBag, Calendar, Eye, Printer,
-  ArrowLeft, TrendingUp, FileText, X,
+  ArrowLeft, TrendingUp, FileText, X, ChevronDown, ChevronRight
 } from 'lucide-react';
+import { CustomerImporter } from '@/components/CustomerImporter';
 import {
   format, parseISO, startOfDay, endOfDay, isWithinInterval,
   startOfWeek, endOfWeek, startOfMonth, endOfMonth,
@@ -99,6 +100,7 @@ export default function Customers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [storeTypeFilter, setStoreTypeFilter] = useState('all');
   const [pincodeFilter, setPincodeFilter] = useState('all');
+  const [locationFilter, setLocationFilter] = useState('all');
 
   /* bills panel state */
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -164,10 +166,11 @@ export default function Customers() {
       
       const matchStoreType = storeTypeFilter === 'all' || c.store_type === storeTypeFilter;
       const matchPincode = pincodeFilter === 'all' || c.pincode === pincodeFilter;
+      const matchLocation = locationFilter === 'all' || c.location_name === locationFilter;
 
-      return matchSearch && matchStoreType && matchPincode;
+      return matchSearch && matchStoreType && matchPincode && matchLocation;
     }),
-    [customers, searchQuery, storeTypeFilter, pincodeFilter],
+    [customers, searchQuery, storeTypeFilter, pincodeFilter, locationFilter],
   );
 
   const uniqueStoreTypes = useMemo(() => 
@@ -176,6 +179,10 @@ export default function Customers() {
   
   const uniquePincodes = useMemo(() => 
     Array.from(new Set(customers.map(c => c.pincode).filter(Boolean))) as string[], 
+  [customers]);
+
+  const uniqueLocations = useMemo(() => 
+    Array.from(new Set(customers.map(c => c.location_name).filter(Boolean))) as string[], 
   [customers]);
 
   // ── mutations ──
@@ -297,6 +304,88 @@ export default function Customers() {
       `${selectedCustomer?.name}-${presetLabel}-purchases-${format(new Date(), 'yyyy-MM-dd')}`,
     );
     toast.success('Exported successfully');
+  };
+
+  // ── export overall customers ──
+  const handleExportCustomers = () => {
+    if (filteredCustomers.length === 0) { toast.error('No customers to export'); return; }
+
+    // Summary tables calculations
+    const typeCount: Record<string, number> = {};
+    const locationCount: Record<string, number> = {};
+    const pincodeCount: Record<string, number> = {};
+
+    filteredCustomers.forEach(c => {
+      const type = c.store_type || 'Unspecified';
+      typeCount[type] = (typeCount[type] || 0) + 1;
+
+      const loc = c.location_name || 'Unspecified';
+      locationCount[loc] = (locationCount[loc] || 0) + 1;
+
+      const pin = c.pincode || 'Unspecified';
+      pincodeCount[pin] = (pincodeCount[pin] || 0) + 1;
+    });
+
+    const typeRows = Object.entries(typeCount).map(([type, count]) => ({ type, count })).sort((a,b) => b.count - a.count);
+    const locationRows = Object.entries(locationCount).map(([location, count]) => ({ location, count })).sort((a,b) => b.count - a.count);
+    const pincodeRows = Object.entries(pincodeCount).map(([pincode, count]) => ({ pincode, count })).sort((a,b) => b.count - a.count);
+
+    exportStyledExcel(
+      [
+        {
+          title: 'Store Type Breakdown',
+          titleColor: 'F59E0B',
+          data: typeRows,
+          columns: [
+            { key: 'type', header: 'Store Type' },
+            { key: 'count', header: 'Number of Shops', format: v => Number(v) },
+          ]
+        },
+        {
+          title: 'Location Breakdown',
+          titleColor: '10B981',
+          data: locationRows,
+          columns: [
+            { key: 'location', header: 'Location Area' },
+            { key: 'count', header: 'Number of Shops', format: v => Number(v) },
+          ]
+        },
+        {
+          title: 'Pincode Breakdown',
+          titleColor: '8B5CF6',
+          data: pincodeRows,
+          columns: [
+            { key: 'pincode', header: 'Pincode' },
+            { key: 'count', header: 'Number of Shops', format: v => Number(v) },
+          ]
+        },
+        {
+          title: 'Customer Database',
+          titleColor: '2E86AB',
+          data: filteredCustomers.map((c, i) => ({ ...c, _sr: i + 1 })),
+          columns: [
+            { key: '_sr', header: 'Sr.No', format: v => Number(v) },
+            { key: 'name', header: 'Customer Name' },
+            { key: 'phone', header: 'Phone', format: v => v || '' },
+            { key: 'store_type', header: 'Store Type', format: v => v || '' },
+            { key: 'location_name', header: 'Location', format: v => v || '' },
+            { key: 'pincode', header: 'Pincode', format: v => v || '' },
+            { key: 'address', header: 'Address', format: v => v || '' },
+            { key: 'email', header: 'Email', format: v => v || '' },
+          ]
+        }
+      ],
+      {
+        title: `Customer Insights - ${format(new Date(), 'dd MMM yyyy')}`,
+        items: [
+          { label: 'Total Customers / Shops', value: filteredCustomers.length },
+          { label: 'Wholesale Stores', value: typeCount['Wholesale Store'] || 0 },
+          { label: 'Retail Stores', value: typeCount['Retail Store'] || 0 },
+        ]
+      },
+      `customer-database-${format(new Date(), 'yyyy-MM-dd')}`,
+    );
+    toast.success('Customer Insights Exported!');
   };
 
   // ═══════════════════════════════════════════
@@ -424,14 +513,27 @@ export default function Customers() {
           <h1 className="spos-page-heading">Customers</h1>
           <p className="spos-page-subhead" style={{ marginBottom: 0 }}>Manage your customer database</p>
         </div>
-        {canEdit && (
-          <Dialog open={isDialogOpen} onOpenChange={open => { setIsDialogOpen(open); if (!open) setEditingCustomer(null); }}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-1.5" />
-                Add
-              </Button>
-            </DialogTrigger>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Button onClick={() => toast.info('Manage All feature coming soon')} variant="outline" size="sm">
+            <Pencil className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Manage All</span>
+            <span className="sm:hidden">Edit All</span>
+          </Button>
+          {isAdmin && <CustomerImporter />}
+          <Button onClick={handleExportCustomers} variant="outline" size="sm">
+            <Download className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Export Excel</span>
+            <span className="sm:hidden">Export</span>
+          </Button>
+          {canEdit && (
+            <Dialog open={isDialogOpen} onOpenChange={open => { setIsDialogOpen(open); if (!open) setEditingCustomer(null); }}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-1.5" />
+                  <span className="hidden sm:inline">Add Customer</span>
+                  <span className="sm:hidden">Add</span>
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md mx-4">
               <DialogHeader>
                 <DialogTitle>{editingCustomer ? 'Edit Customer' : 'Add Customer'}</DialogTitle>
@@ -522,6 +624,7 @@ export default function Customers() {
             </DialogContent>
           </Dialog>
         )}
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -550,6 +653,18 @@ export default function Customers() {
                <SelectItem value="all">All Types</SelectItem>
                {uniqueStoreTypes.map(type => (
                  <SelectItem key={type} value={type}>{type}</SelectItem>
+               ))}
+             </SelectContent>
+           </Select>
+
+           <Select value={locationFilter} onValueChange={setLocationFilter}>
+             <SelectTrigger className="w-[140px] h-10 shrink-0">
+               <SelectValue placeholder="Location" />
+             </SelectTrigger>
+             <SelectContent>
+               <SelectItem value="all">All Locations</SelectItem>
+               {uniqueLocations.map(loc => (
+                 <SelectItem key={loc} value={loc}>{loc}</SelectItem>
                ))}
              </SelectContent>
            </Select>
