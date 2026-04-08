@@ -11,7 +11,7 @@ export default function POSTab() {
   const { isAdmin } = useAuth();
   const { data: settings } = useBusinessSettings();
   const updateSettings = useUpdateBusinessSettings();
-  const { desktopLayout, setDesktopLayout, mobileLayout, setMobileLayout } = usePosLayout();
+  const { desktopLayout, setDesktopLayout, mobileLayout, setMobileLayout, listDensity, setListDensity } = usePosLayout();
 
   const u = (v: any) => isAdmin && updateSettings.mutate(v);
 
@@ -103,6 +103,17 @@ export default function POSTab() {
             options={[
               { value: 'grid', label: 'Grid View' },
               { value: 'list', label: 'List View' }
+            ]}
+          />}
+        />
+        <SettingRow label="List View Density" desc="Size of components in List View"
+          right={<SelectInput
+            value={listDensity}
+            onChange={(v) => setListDensity(v as any)}
+            options={[
+              { value: 'compact', label: 'Compact' },
+              { value: 'comfortable', label: 'Comfortable' },
+              { value: 'spacious', label: 'Spacious' }
             ]}
           />}
         />

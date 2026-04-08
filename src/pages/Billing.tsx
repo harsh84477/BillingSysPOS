@@ -128,7 +128,7 @@ export default function Billing() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
-  const { desktopLayout, mobileLayout } = usePosLayout();
+  const { desktopLayout, mobileLayout, listDensity } = usePosLayout();
   const { isTrial, isActive, isExpired, canCreateBill, planName, loading: subscriptionLoading } = useSubscription();
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -1027,14 +1027,24 @@ export default function Billing() {
     // Add case button and add 1 button
     const caseSize = Number((product as any).items_per_case || 0);
 
+    const ds = listDensity || 'comfortable';
+    
+    // Dynamic styles based on density
+    const padding = ds === 'compact' ? 'p-1.5 sm:p-2' : ds === 'spacious' ? 'p-4 sm:p-5' : 'p-2 sm:p-3';
+    const imgSize = ds === 'compact' ? 'w-12 h-12 sm:w-16 sm:h-16' : ds === 'spacious' ? 'w-24 h-24 sm:w-28 sm:h-28' : 'w-16 h-16 sm:w-20 sm:h-20';
+    const titleSize = ds === 'compact' ? 'text-sm sm:text-base' : ds === 'spacious' ? 'text-lg sm:text-xl' : 'text-base sm:text-lg';
+    const priceSize = ds === 'compact' ? 'text-base sm:text-lg' : ds === 'spacious' ? 'text-xl sm:text-2xl' : 'text-lg sm:text-xl';
+    const btnHeight = ds === 'compact' ? 'h-8 text-[10px] sm:text-xs' : ds === 'spacious' ? 'h-12 text-sm sm:text-base' : 'h-10 text-xs sm:text-sm';
+    const gapSize = ds === 'compact' ? 'gap-2' : ds === 'spacious' ? 'gap-4 sm:gap-6' : 'gap-3 sm:gap-4';
+
     return (
-      <div onClick={() => addToCart(product)} className="cursor-pointer flex items-center gap-4 rounded-xl border border-border bg-card p-3 shadow-sm hover:shadow-md transition-shadow group w-full mb-2">
+      <div onClick={() => addToCart(product)} className={cn("cursor-pointer flex items-center rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-shadow group w-full mb-2", gapSize, padding)}>
         {/* Left: Image / Icon */}
-        <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-lg overflow-hidden bg-muted flex items-center justify-center relative">
+        <div className={cn("shrink-0 rounded-lg overflow-hidden bg-muted flex items-center justify-center relative", imgSize)}>
          {(product as any).image_url ? (
            <img src={(product as any).image_url} alt={product.name} className="w-full h-full object-cover" />
          ) : (
-           <IconComponent className="h-10 w-10 text-muted-foreground opacity-50" />
+           <IconComponent className={cn("text-muted-foreground opacity-50", ds === 'compact' ? 'h-6 w-6' : 'h-10 w-10')} />
          )}
          {isOutOfStock && (
            <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
@@ -1045,8 +1055,8 @@ export default function Billing() {
 
         {/* Center: Details */}
         <div className="flex-1 min-w-0 flex flex-col justify-center text-left">
-          <h3 className="font-bold text-sm sm:text-lg text-foreground truncate">{product.name}</h3>
-          <div className="font-bold text-base sm:text-xl text-foreground mt-0.5">
+          <h3 className={cn("font-bold text-foreground truncate", titleSize)}>{product.name}</h3>
+          <div className={cn("font-bold text-foreground mt-0.5", priceSize)}>
             {currencySymbol}{Number(product.selling_price).toFixed(2)}
           </div>
           {showProductCode && product.sku && (
@@ -1055,24 +1065,24 @@ export default function Billing() {
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center flex-wrap sm:flex-nowrap justify-end gap-1.5 sm:gap-2 shrink-0">
           {caseSize > 0 && (
              <Button 
                variant="outline" 
-               className="h-10 px-3 sm:px-4 text-[11px] sm:text-sm font-bold gap-1 sm:gap-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 border-emerald-200"
+               className={cn("px-2 sm:px-4 font-bold gap-1 sm:gap-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 border-emerald-200", btnHeight)}
                onClick={(e) => { e.stopPropagation(); handleAddCase(product, caseSize); }}
                disabled={isOutOfStock}
              >
-               <Package className="h-4 w-4" /> 
-               ADD CASE
+               <Package className={cn(ds === 'compact' ? 'h-3 w-3' : 'h-4 w-4')} /> 
+               ADD {caseSize}
              </Button>
           )}
           <Button 
-            className="h-10 px-3 sm:px-4 text-[11px] sm:text-sm font-bold gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200 shadow-none border"
+            className={cn("px-2 sm:px-4 font-bold gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200 shadow-none border", btnHeight)}
             onClick={(e) => { e.stopPropagation(); addToCart(product); }}
             disabled={isOutOfStock}
           >
-            <Plus className="h-4 w-4" /> ADD 1
+            <Plus className={cn(ds === 'compact' ? 'h-3 w-3' : 'h-4 w-4')} /> ADD 1
           </Button>
         </div>
       </div>

@@ -9,6 +9,10 @@ export function usePosLayout() {
     return (localStorage.getItem('pos_mobile_layout') as 'grid' | 'list') || 'grid';
   });
 
+  const [listDensity, setListDensity] = useState<'compact' | 'comfortable' | 'spacious'>(() => {
+    return (localStorage.getItem('pos_list_density') as 'compact' | 'comfortable' | 'spacious') || 'comfortable';
+  });
+
   useEffect(() => {
     localStorage.setItem('pos_desktop_layout', desktopLayout);
   }, [desktopLayout]);
@@ -17,5 +21,9 @@ export function usePosLayout() {
     localStorage.setItem('pos_mobile_layout', mobileLayout);
   }, [mobileLayout]);
 
-  return { desktopLayout, setDesktopLayout, mobileLayout, setMobileLayout };
+  useEffect(() => {
+    localStorage.setItem('pos_list_density', listDensity);
+  }, [listDensity]);
+
+  return { desktopLayout, setDesktopLayout, mobileLayout, setMobileLayout, listDensity, setListDensity };
 }
