@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -90,6 +91,7 @@ const STATUS_STYLE: Record<string, string> = {
 export default function Customers() {
   const { isAdmin, isStaff, businessId } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data: settings } = useBusinessSettings();
   const currencySymbol = settings?.currency_symbol || 'Rs.';
   const canEdit = isAdmin || isStaff;
@@ -514,7 +516,7 @@ export default function Customers() {
           <p className="spos-page-subhead" style={{ marginBottom: 0 }}>Manage your customer database</p>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <Button onClick={() => toast.info('Manage All feature coming soon')} variant="outline" size="sm">
+          <Button onClick={() => navigate('/manage-customers')} variant="outline" size="sm">
             <Pencil className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Manage All</span>
             <span className="sm:hidden">Edit All</span>
