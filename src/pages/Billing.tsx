@@ -1627,19 +1627,6 @@ export default function Billing() {
 
       {/* Center Panel - Products */}
       <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
-        
-        {/* Floating View Bill Button for Mobile */}
-        {useMobileLayout && totalItems > 0 && (
-          <div className="absolute bottom-6 left-4 right-4 z-10 shadow-2xl animate-in slide-in-from-bottom-2">
-            <Button 
-              className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-black text-lg gap-2 shadow-xl hover:shadow-2xl transition-all"
-              onClick={() => setMobileBillOpen(true)}
-            >
-              VIEW BILL ({totalItems}) - {currencySymbol}{cartCalculations.total.toFixed(2)}
-              <ArrowRight className="h-5 w-5 ml-1" />
-            </Button>
-          </div>
-        )}
 
         {/* Mobile horizontal category scroll */}
         {!canCreateBill && (
