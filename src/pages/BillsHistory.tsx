@@ -341,21 +341,21 @@ export default function BillsHistory() {
             { key: 'created_at', header: 'Date', format: (v) => format(new Date(v as string), 'dd/MM/yyyy HH:mm') },
             { key: 'customers', header: 'Customer', format: (v) => (v as { name: string } | null)?.name || 'Walk-in' },
             { key: 'status', header: 'Status' },
-            { key: 'total_mrp', header: 'Total MRP', format: (v) => Number(v) },
+            { key: 'total_amount', header: 'Price', format: (v) => Number(v) },
             { key: 'discount_amount', header: 'Total Discount', format: (v) => Number(v) },
             { key: 'tax_amount', header: 'Tax', format: (v) => Number(v) },
-            { key: 'total_amount', header: 'Total Selling Price', format: (v) => Number(v) },
+            { key: 'total_mrp', header: 'Total MRP', format: (v) => Number(v) },
           ],
         }
       ],
       {
         title: `Bills Summary - ${format(new Date(), 'dd MMM yyyy')}`,
         items: [
-          { label: 'Total Bills', value: rows.length },
-          { label: 'Total MRP', value: `${currencySymbol}${totalMRP.toFixed(2)}` },
-          { label: 'Total Selling Price', value: `${currencySymbol}${totalSales.toFixed(2)}` },
+          { label: 'Total Number of Bills', value: rows.length },
+          { label: 'Total Purchase / Price', value: `${currencySymbol}${totalSales.toFixed(2)}` },
           { label: 'Total Discount', value: `${currencySymbol}${totalDiscount.toFixed(2)}` },
           { label: 'Total Tax', value: `${currencySymbol}${totalTax.toFixed(2)}` },
+          { label: 'Total MRP Value', value: `${currencySymbol}${totalMRP.toFixed(2)}` },
         ]
       },
       `bills-history-${format(new Date(), 'yyyy-MM-dd')}`

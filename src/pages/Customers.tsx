@@ -272,18 +272,18 @@ export default function Customers() {
           columns: [
             { key: 'bill_number', header: 'Bill #' },
             { key: 'created_at', header: 'Date', format: v => format(new Date(v as string), 'dd/MM/yyyy HH:mm') },
-            { key: 'total_mrp', header: 'Total MRP', format: v => Number(v) },
-            { key: 'total_amount', header: 'Total Purchase Price', format: v => Number(v) },
+            { key: 'total_amount', header: 'Price', format: v => Number(v) },
             { key: 'margin', header: 'Customer Margin', format: (_, __, item: any) => Number((item.total_mrp || 0) - Number(item.total_amount || 0)) },
             { key: 'status', header: 'Status' },
+            { key: 'total_mrp', header: 'Total MRP', format: v => Number(v) },
           ]
         }
       ],
       {
         title: `Purchase Summary - ${format(new Date(), 'dd MMM yyyy')}`,
         items: [
-          { label: 'Total Bills', value: rows.length },
-          { label: 'Total Purchase (Selling Price)', value: `${currencySymbol}${totalSales.toFixed(2)}` },
+          { label: 'Total Number of Bills', value: rows.length },
+          { label: 'Total Purchase / Price', value: `${currencySymbol}${totalSales.toFixed(2)}` },
           { label: 'Total MRP Value', value: `${currencySymbol}${totalMRP.toFixed(2)}` },
           { label: 'Total Profit/Margin', value: `${currencySymbol}${totalMargin.toFixed(2)}` },
         ]
