@@ -1023,6 +1023,14 @@ export default function Billing() {
     const IconComponent = ICON_MAP[iconName] || Package;
     const availableStock = product.stock_quantity - (product.reserved_quantity || 0);
     const isOutOfStock = availableStock <= 0;
+    const isLowStock = !isOutOfStock && availableStock <= product.low_stock_threshold;
+    const stockBadgeClass = isOutOfStock
+      ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+      : isLowStock
+        ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
+        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+
+    const cartQty = cart.find(i => i.productId === product.id)?.quantity || 0;
     
     // Add case button and add 1 button
     const caseSize = Number((product as any).items_per_case || 0);
@@ -1030,17 +1038,36 @@ export default function Billing() {
     const ds = listDensity || 'comfortable';
     
     // Dynamic styles based on density
-    const padding = ds === 'compact' ? 'p-1.5 sm:p-2' : ds === 'spacious' ? 'p-4 sm:p-5' : 'p-2 sm:p-3';
-    const imgSize = ds === 'compact' ? 'w-12 h-12 sm:w-16 sm:h-16' : ds === 'spacious' ? 'w-24 h-24 sm:w-28 sm:h-28' : 'w-16 h-16 sm:w-20 sm:h-20';
-    const titleSize = ds === 'compact' ? 'text-sm sm:text-base' : ds === 'spacious' ? 'text-lg sm:text-xl' : 'text-base sm:text-lg';
-    const priceSize = ds === 'compact' ? 'text-base sm:text-lg' : ds === 'spacious' ? 'text-xl sm:text-2xl' : 'text-lg sm:text-xl';
-    const btnHeight = ds === 'compact' ? 'h-8 text-[10px] sm:text-xs' : ds === 'spacious' ? 'h-12 text-sm sm:text-base' : 'h-10 text-xs sm:text-sm';
-    const gapSize = ds === 'compact' ? 'gap-2' : ds === 'spacious' ? 'gap-4 sm:gap-6' : 'gap-3 sm:gap-4';
+    const padding = ds === 'compact' ? 'p-1 sm:p-1.5' : ds === 'spacious' ? 'p-3 sm:p-4' : 'p-1.5 sm:p-2';
+    const imgSize = ds === 'compact' ? 'w-10 h-10 sm:w-12 sm:h-12' : ds === 'spacious' ? 'w-16 h-16 sm:w-20 sm:h-20' : 'w-12 h-12 sm:w-16 sm:h-16';
+    const titleSize = ds === 'compact' ? 'text-xs sm:text-sm' : ds === 'spacious' ? 'text-base sm:text-lg' : 'text-sm sm:text-base';
+    const priceSize = ds === 'compact' ? 'text-sm sm:text-base' : ds === 'spacious' ? 'text-lg sm:text-xl' : 'text-base sm:text-lg';
+    const btnHeight = ds === 'compact' ? 'h-7 px-2 text-[9px] sm:text-[10px]' : ds === 'spacious' ? 'h-10 px-3 sm:px-4 text-xs sm:text-sm' : 'h-8 px-2 sm:px-3 text-[10px] sm:text-xs';
+    const gapSize = ds === 'compact' ? 'gap-1.5 sm:gap-2' : ds === 'spacious' ? 'gap-3 sm:gap-4' : 'gap-2 sm:gap-3';
 
     return (
-      <div onClick={() => addToCart(product)} className={cn("cursor-pointer flex items-center rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-shadow group w-full mb-2", gapSize, padding)}>
+      <div onClick={() => addToCart(product)} className={cn("relative cursor-pointer flex items-center rounded-xl border border-border bg-card shadow-sm hover:shadow-md transition-shadow group w-full mb-2", gapSize, padding)}>
+        {/* Bill Quantity Badge — top-right corner of card */}
+        {cartQty > 0 && (
+          <Badge
+            variant="secondary"
+            className="absolute top-0 right-0 -mt-1.5 -mr-1.5 text-[9px] px-1.5 py-0 z-10 font-bold bg-primary text-white shadow-sm"
+          >
+            {cartQty} in cart
+          </Badge>
+        )}
         {/* Left: Image / Icon */}
         <div className={cn("shrink-0 rounded-lg overflow-hidden bg-muted flex items-center justify-center relative", imgSize)}>
+         {/* Stock Quantity Badge */}
+         <Badge
+           variant="secondary"
+           className={cn(
+             'absolute top-0 left-0 text-[8px] px-1 py-0 z-10 font-bold rounded-tl-lg rounded-br-lg rounded-tr-none rounded-bl-none',
+             stockBadgeClass
+           )}
+         >
+           {availableStock}
+         </Badge>
          {(product as any).image_url ? (
            <img src={(product as any).image_url} alt={product.name} className="w-full h-full object-cover" />
          ) : (
@@ -1048,7 +1075,7 @@ export default function Billing() {
          )}
          {isOutOfStock && (
            <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-             <span className="text-[10px] font-bold text-red-600 bg-red-100 px-1 py-0.5 rounded">OUT</span>
+             <span className="text-[9px] font-bold text-red-600 bg-red-100 px-1 py-0.5 rounded">OUT</span>
            </div>
          )}
         </div>
@@ -1056,12 +1083,26 @@ export default function Billing() {
         {/* Center: Details */}
         <div className="flex-1 min-w-0 flex flex-col justify-center text-left">
           <h3 className={cn("font-bold text-foreground truncate", titleSize)}>{product.name}</h3>
-          <div className={cn("font-bold text-foreground mt-0.5", priceSize)}>
-            {currencySymbol}{Number(product.selling_price).toFixed(2)}
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className={cn("font-bold text-foreground", priceSize)}>
+              {currencySymbol}{Number(product.selling_price).toFixed(2)}
+            </span>
+            {showCostPrice && (
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground whitespace-nowrap hidden sm:inline-block">
+                (Cost: {currencySymbol}{Number(product.cost_price).toFixed(2)})
+              </span>
+            )}
           </div>
-          {showProductCode && product.sku && (
-            <div className="text-[10px] text-muted-foreground font-mono mt-1">{product.sku}</div>
-          )}
+          <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
+            {showProductCode && product.sku && (
+              <span className="text-[9px] sm:text-[10px] text-muted-foreground font-mono">{product.sku}</span>
+            )}
+            {showCostPrice && (
+              <span className="text-[9px] text-muted-foreground whitespace-nowrap sm:hidden">
+                C: {currencySymbol}{Number(product.cost_price).toFixed(2)}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Right: Actions */}
@@ -1069,20 +1110,20 @@ export default function Billing() {
           {caseSize > 0 && (
              <Button 
                variant="outline" 
-               className={cn("px-2 sm:px-4 font-bold gap-1 sm:gap-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 border-emerald-200", btnHeight)}
+               className={cn("font-bold gap-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 border-emerald-200", btnHeight)}
                onClick={(e) => { e.stopPropagation(); handleAddCase(product, caseSize); }}
                disabled={isOutOfStock}
              >
-               <Package className={cn(ds === 'compact' ? 'h-3 w-3' : 'h-4 w-4')} /> 
+               <Package className={cn(ds === 'compact' ? 'h-3 w-3' : 'h-3.5 w-3.5')} /> 
                ADD {caseSize}
              </Button>
           )}
           <Button 
-            className={cn("px-2 sm:px-4 font-bold gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200 shadow-none border", btnHeight)}
+            className={cn("font-bold gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200 shadow-none border", btnHeight)}
             onClick={(e) => { e.stopPropagation(); addToCart(product); }}
             disabled={isOutOfStock}
           >
-            <Plus className={cn(ds === 'compact' ? 'h-3 w-3' : 'h-4 w-4')} /> ADD 1
+            <Plus className={cn(ds === 'compact' ? 'h-3 w-3' : 'h-3.5 w-3.5')} /> ADD 1
           </Button>
         </div>
       </div>
