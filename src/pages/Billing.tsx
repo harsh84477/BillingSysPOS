@@ -1430,26 +1430,10 @@ export default function Billing() {
   );
 
   // ── Mobile-first layout (Android native or small screen) ──
-  if (useMobileLayout) {
+  if (useMobileLayout && mobileBillOpen) {
     return (
       <>
-        {!mobileBillOpen ? (
-          <div className="fixed inset-0 z-10" style={{ top: 0, bottom: 0 }}>
-            <MobileCatalog
-              products={filteredProducts}
-              categories={categories}
-              cart={cart}
-              currencySymbol={currencySymbol}
-              businessName={settings?.business_name || 'Invoice Adda'}
-              onAddPiece={addToCart}
-              onAddCase={handleAddCase}
-              onUpdateQty={updateQuantity}
-              onViewBill={() => setMobileBillOpen(true)}
-              onNavigate={(path) => navigate(path)}
-            />
-          </div>
-        ) : (
-          <div className="fixed inset-0 z-20 bg-background flex flex-col">
+        <div className="fixed inset-0 z-20 bg-background flex flex-col mt-safe mb-safe">
             {/* Mobile Bill Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
               <button
@@ -1584,7 +1568,6 @@ export default function Billing() {
               </Button>
             </div>
           </div>
-        )}
 
         {/* Keep all the existing dialogs so they still work */}
         {renderDialogs()}
@@ -1643,6 +1626,20 @@ export default function Billing() {
 
       {/* Center Panel - Products */}
       <div className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden relative">
+        
+        {/* Floating View Bill Button for Mobile */}
+        {useMobileLayout && totalItems > 0 && (
+          <div className="absolute bottom-6 left-4 right-4 z-10 shadow-2xl animate-in slide-in-from-bottom-2">
+            <Button 
+              className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-black text-lg gap-2 shadow-xl hover:shadow-2xl transition-all"
+              onClick={() => setMobileBillOpen(true)}
+            >
+              VIEW BILL ({totalItems}) - {currencySymbol}{cartCalculations.total.toFixed(2)}
+              <ArrowRight className="h-5 w-5 ml-1" />
+            </Button>
+          </div>
+        )}
+
         {/* Mobile horizontal category scroll */}
         {!canCreateBill && (
           <div className="px-4 pt-4">
