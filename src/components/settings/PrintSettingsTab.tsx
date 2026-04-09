@@ -187,7 +187,7 @@ export default function PrintSettingsTab() {
     <div className="flex bg-gray-50 relative" style={{ minHeight: 'calc(100vh - 140px)' }}>
 
       {/* LEFT: Settings column */}
-      <div className="flex-1 min-w-0 overflow-y-auto p-4 pb-24" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+      <div className="min-w-0 overflow-y-auto p-4 pb-24" style={{ width: '60%', maxHeight: 'calc(100vh - 140px)' }}>
 
         {/* Printer mode toggle */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm mb-4 p-3">
@@ -390,7 +390,7 @@ export default function PrintSettingsTab() {
       </div>
 
       {/* RIGHT: Live Preview */}
-      <div className="w-56 flex-shrink-0 sticky top-0 flex flex-col bg-white border-l border-gray-100 overflow-hidden" style={{ height: 'calc(100vh - 140px)' }}>
+      <div className="flex-shrink-0 sticky top-0 flex flex-col bg-white border-l border-gray-100 overflow-hidden" style={{ width: '40%', height: 'calc(100vh - 140px)' }}>
         <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 bg-gray-50/60 flex-shrink-0">
           <span className="text-[11px] font-semibold text-gray-600 flex-1 truncate">
             {tab === 'regular' ? 'Regular Invoice' : 'Thermal Receipt'}
