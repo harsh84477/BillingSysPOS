@@ -180,57 +180,139 @@ function Sub({ children }: { children: React.ReactNode }) {
 /* ═══ Live Preview — Thermal ═══ */
 function ThermalPreview({ s }: { s: any }) {
   const companyName = s?.print_thermal_company_name_text || s?.business_name || 'My Company';
-  const phone      = s?.phone || '9876543210';
-  const pageSize   = s?.print_thermal_page_size || '4inch';
-  const isBold     = s?.print_thermal_bold ?? true;
-  const maxW       = pageSize === '2inch' ? 200 : pageSize === '3inch' ? 250 : 300;
+  const phone       = s?.phone || '9876543210';
+  const pageSize    = s?.print_thermal_page_size || '4inch';
+  const isBold      = s?.print_thermal_bold ?? true;
+
+  // Map paper size to accurate pixel width (mm × 3.78 at 96 dpi)
+  const PAPER: Record<string, { px: number; label: string }> = {
+    '2inch':  { px: 219, label: '2" · 58 mm' },
+    '3inch':  { px: 287, label: '3" · 76 mm' },
+    '4inch':  { px: 302, label: '4" · 80 mm' },
+    'custom': { px: 302, label: 'Custom width' },
+  };
+  const paper = PAPER[pageSize] ?? PAPER['4inch'];
+
   const sampleItems = [
     { name: 'Britannia Good Day', qty: 2, rate: 45,  amt: 90  },
     { name: 'Cadbury Dairy Milk', qty: 3, rate: 50,  amt: 150 },
     { name: 'Colgate MaxFresh',   qty: 1, rate: 85,  amt: 85  },
   ];
+
+  // Dots for perforation
+  const DotRow = () => (
+    <div style={{ height: 8, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {Array.from({ length: Math.floor(paper.px / 10) }).map((_, i) => (
+        <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: '#c8c8c8', margin: '0 1.5px' }} />
+      ))}
+    </div>
+  );
+
   return (
-    <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: '#111', background: '#fff', padding: '14px 12px', maxWidth: maxW, margin: '0 auto', fontWeight: isBold ? 700 : 400, lineHeight: 1.5 }}>
-      {/* Header */}
-      <div style={{ textAlign: 'center', borderBottom: '2px dashed #999', paddingBottom: 8, marginBottom: 8 }}>
-        {(s?.print_thermal_company_name ?? true) && <div style={{ fontSize: 14, fontWeight: 800 }}>{companyName}</div>}
-        {(s?.print_thermal_show_address ?? true) && <div style={{ fontSize: 9 }}>Koramangala, Bangalore — 560034</div>}
-        {(s?.print_thermal_show_phone ?? true) && <div style={{ fontSize: 9 }}>Ph: {phone}</div>}
-        {(s?.print_thermal_show_email ?? false) && <div style={{ fontSize: 9 }}>{s?.email || 'info@example.com'}</div>}
-        {(s?.print_thermal_show_gstin ?? true) && s?.gst_number && <div style={{ fontSize: 9 }}>GSTIN: {s.gst_number}</div>}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+      {/* Paper size badge */}
+      <div style={{
+        fontSize: 10, fontWeight: 700, color: '#475569', letterSpacing: '0.06em',
+        textTransform: 'uppercase', background: '#e2e8f0', padding: '3px 12px',
+        borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: 6,
+      }}>
+        <span>📏</span>{paper.label}
       </div>
-      {/* Bill info */}
-      <div style={{ fontSize: 9, marginBottom: 6 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Bill No: INV-0101</span><span>06/04/2026</span></div>
-        <div>Cust: <strong>Walk-in Customer</strong></div>
-      </div>
-      {/* Items */}
-      <div style={{ borderTop: '1px dashed #bbb', borderBottom: '1px dashed #bbb', padding: '4px 0', margin: '4px 0' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '14px 1fr 22px 40px 44px', gap: 2, fontSize: 9, fontWeight: 800, borderBottom: '1px dashed #ccc', paddingBottom: 2, marginBottom: 2 }}>
-          <span>#</span><span>Item</span><span>Q</span><span>Rate</span><span style={{ textAlign: 'right' }}>Amt</span>
-        </div>
-        {sampleItems.map((it, i) => (
-          <div key={i} style={{ display: 'grid', gridTemplateColumns: '14px 1fr 22px 40px 44px', gap: 2, fontSize: 9, padding: '1px 0' }}>
-            <span>{i + 1}</span>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name}</span>
-            <span>{it.qty}</span><span>{it.rate}</span><span style={{ textAlign: 'right' }}>{it.amt.toFixed(2)}</span>
+
+      {/* Paper simulation */}
+      <div style={{
+        width: paper.px,
+        borderRadius: 3,
+        boxShadow: '0 6px 28px rgba(0,0,0,0.22), 0 1px 6px rgba(0,0,0,0.12)',
+        overflow: 'hidden',
+      }}>
+        {/* Top perforation */}
+        <DotRow />
+
+        {/* Receipt content */}
+        <div style={{
+          fontFamily: "'Courier New', monospace", fontSize: 11,
+          color: '#111', background: '#fff',
+          padding: '14px 12px',
+          fontWeight: isBold ? 700 : 400, lineHeight: 1.55,
+        }}>
+          {/* Header */}
+          <div style={{ textAlign: 'center', borderBottom: '2px dashed #aaa', paddingBottom: 8, marginBottom: 8 }}>
+            {(s?.print_thermal_company_name ?? true) &&
+              <div style={{ fontSize: 15, fontWeight: 900, letterSpacing: '0.02em' }}>{companyName}</div>}
+            {(s?.print_thermal_show_address ?? true) &&
+              <div style={{ fontSize: 9 }}>Koramangala, Bangalore — 560034</div>}
+            {(s?.print_thermal_show_phone ?? true) &&
+              <div style={{ fontSize: 9 }}>Ph: {phone}</div>}
+            {(s?.print_thermal_show_email ?? false) &&
+              <div style={{ fontSize: 9 }}>{s?.email || 'info@example.com'}</div>}
+            {(s?.print_thermal_show_gstin ?? true) && s?.gst_number &&
+              <div style={{ fontSize: 9 }}>GSTIN: {s.gst_number}</div>}
           </div>
-        ))}
-      </div>
-      {/* Totals */}
-      <div style={{ fontSize: 9, padding: '4px 0', borderBottom: '1px dashed #bbb' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal</span><span>325.00</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Discount</span><span>-15.00</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>GST 5%</span><span>16.25</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 12, borderTop: '1px dashed #ccc', marginTop: 3, paddingTop: 3 }}>
-          <span>TOTAL</span><span>₹326.25</span>
+
+          {/* Bill meta */}
+          <div style={{ fontSize: 9, marginBottom: 7 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>Bill No: INV-0101</span><span>09/04/2026</span>
+            </div>
+            <div><span style={{ opacity: 0.65 }}>Cust: </span><strong>Walk-in Customer</strong></div>
+          </div>
+
+          {/* Item table header */}
+          <div style={{ borderTop: '1px dashed #bbb', borderBottom: '1px dashed #bbb', padding: '4px 0', margin: '4px 0' }}>
+            <div style={{ display: 'flex', fontSize: 9, fontWeight: 900, borderBottom: '1px dashed #ccc', paddingBottom: 3, marginBottom: 3 }}>
+              <span style={{ width: 14 }}>#</span>
+              <span style={{ flex: 1 }}>Item</span>
+              <span style={{ width: 20, textAlign: 'center' }}>Q</span>
+              <span style={{ width: 36, textAlign: 'right' }}>Rate</span>
+              <span style={{ width: 44, textAlign: 'right' }}>Amt</span>
+            </div>
+            {sampleItems.map((it, i) => (
+              <div key={i} style={{ display: 'flex', fontSize: 9, padding: '1.5px 0', alignItems: 'baseline' }}>
+                <span style={{ width: 14 }}>{i + 1}</span>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 2 }}>{it.name}</span>
+                <span style={{ width: 20, textAlign: 'center' }}>{it.qty}</span>
+                <span style={{ width: 36, textAlign: 'right' }}>{it.rate}</span>
+                <span style={{ width: 44, textAlign: 'right' }}>{it.amt.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Totals */}
+          <div style={{ fontSize: 9, paddingTop: 4 }}>
+            {[['Subtotal','325.00'],['Discount (5%)','−15.00'],['GST 5%','16.25']].map(([l, v]) => (
+              <div key={l} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 1 }}>
+                <span>{l}</span><span>{v}</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: 13, borderTop: '2px dashed #aaa', marginTop: 4, paddingTop: 4 }}>
+              <span>TOTAL</span><span>₹326.25</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 2 }}><span>Received</span><span>326.25</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Balance</span><span style={{ fontWeight: 900 }}>0.00</span></div>
+          </div>
+
+          {/* Footer */}
+          <div style={{ textAlign: 'center', paddingTop: 10, paddingBottom: 2, fontSize: 9, color: '#666', borderTop: '1px dashed #ccc', marginTop: 8 }}>
+            {s?.print_terms_conditions || 'Thank you for your purchase!'}
+          </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Received</span><span>326.25</span></div>
-        <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Balance</span><span>0.00</span></div>
+
+        {/* Bottom tear edge */}
+        <div style={{ height: 10, background: '#f0f0f0', borderTop: '2px dashed #bbb' }}>
+          <DotRow />
+        </div>
       </div>
-      {/* Footer */}
-      <div style={{ textAlign: 'center', padding: '7px 0 2px', fontSize: 9, color: '#666' }}>
-        {s?.print_terms_conditions || 'Thank you for your purchase!'}
+
+      {/* Width ruler */}
+      <div style={{
+        width: paper.px, height: 4, position: 'relative',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{ position: 'absolute', left: 0, right: 0, height: 1, background: '#cbd5e1' }} />
+        <div style={{ position: 'absolute', left: 0, width: 1, height: 8, background: '#94a3b8' }} />
+        <div style={{ position: 'absolute', right: 0, width: 1, height: 8, background: '#94a3b8' }} />
+        <span style={{ fontSize: 9, color: '#94a3b8', background: '#eef0f3', padding: '0 6px', fontWeight: 700 }}>{paper.label}</span>
       </div>
     </div>
   );
@@ -238,7 +320,26 @@ function ThermalPreview({ s }: { s: any }) {
 
 /* ═══ Live Preview — Regular ═══ */
 function RegularPreview({ s }: { s: any }) {
-  return <InvoiceTemplate settings={s} isPreview bill={null} items={[]} />;
+  const paperSize = s?.print_paper_size || 'A4';
+  const PAPER_LABELS: Record<string, string> = {
+    'A4':     'A4 · 210 × 297 mm',
+    'A5':     'A5 · 148 × 210 mm',
+    'Letter': 'Letter · 216 × 279 mm',
+    'Legal':  'Legal  · 216 × 356 mm',
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+      {/* Paper size badge */}
+      <div style={{
+        fontSize: 10, fontWeight: 700, color: '#475569', letterSpacing: '0.06em',
+        textTransform: 'uppercase', background: '#e2e8f0', padding: '3px 12px',
+        borderRadius: 999, display: 'inline-flex', alignItems: 'center', gap: 6,
+      }}>
+        <span>📃</span>{PAPER_LABELS[paperSize] || paperSize}
+      </div>
+      <InvoiceTemplate settings={s} isPreview bill={null} items={[]} />
+    </div>
+  );
 }
 
 /* ═══════════════════════════════════════════════════
@@ -616,7 +717,27 @@ export default function PrintSettingsTab() {
           <div className="pst-preview-aside-inner">
             <div className="pst-preview-header">
               <span>🖨️</span>
-              <span>Live Preview — {printerTab === 'regular' ? 'Regular Invoice' : 'Thermal Receipt'}</span>
+              <span style={{ flex: 1 }}>
+                Live Preview — {printerTab === 'regular' ? 'Regular Invoice' : 'Thermal Receipt'}
+              </span>
+              {printerTab === 'thermal' && (
+                <span style={{
+                  fontSize: 10, fontWeight: 700, color: '#3b82f6', background: '#eff6ff',
+                  border: '1px solid #bfdbfe', borderRadius: 999, padding: '2px 8px',
+                }}>
+                  {settings?.print_thermal_page_size === '2inch' ? '2"·58mm'
+                    : settings?.print_thermal_page_size === '3inch' ? '3"·76mm'
+                    : '4"·80mm'}
+                </span>
+              )}
+              {printerTab === 'regular' && (
+                <span style={{
+                  fontSize: 10, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff',
+                  border: '1px solid #ddd6fe', borderRadius: 999, padding: '2px 8px',
+                }}>
+                  {settings?.print_paper_size || 'A4'}
+                </span>
+              )}
             </div>
             <div className="pst-preview-scroll custom-scrollbar">
               <div className="pst-preview-content">
