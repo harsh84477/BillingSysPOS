@@ -21,9 +21,10 @@ import {
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, DollarSign, Package, Users, ShoppingCart,
-  Download, Calendar, BarChart2, PieChart as PieChartIcon, Activity, ArrowUpRight, ArrowDownRight,
+  Download, Calendar, CalendarRange, BarChart2, PieChart as PieChartIcon, Activity, ArrowUpRight, ArrowDownRight, X,
 } from 'lucide-react';
-import { format, subDays, startOfMonth, endOfMonth, startOfDay, endOfDay, parseISO, isWithinInterval } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format, subDays, startOfMonth, endOfMonth, startOfDay, endOfDay, parseISO, isWithinInterval, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
 import { exportToExcel } from '@/lib/exportToExcel';
 import { toast } from 'sonner';
 
@@ -48,27 +49,24 @@ const REPORT_TABS: { id: ReportTab; label: string; icon: React.ElementType }[] =
 // ════════════════════════════════════════════════════
 // Date Presets
 // ════════════════════════════════════════════════════
-type DatePreset = 'today' | '7d' | '30d' | 'this-month' | '90d' | 'all';
+type DatePreset = 'today' | 'this-week' | 'this-month' | 'this-year' | 'custom';
 
 const DATE_PRESETS: { id: DatePreset; label: string }[] = [
   { id: 'today', label: 'Today' },
-  { id: '7d', label: '7 Days' },
-  { id: '30d', label: '30 Days' },
+  { id: 'this-week', label: 'This Week' },
   { id: 'this-month', label: 'This Month' },
-  { id: '90d', label: '90 Days' },
-  { id: 'all', label: 'All Time' },
+  { id: 'this-year', label: 'This Year' },
 ];
 
-function getDateRange(preset: DatePreset): { from: Date | null; to: Date } {
+function getDateRange(preset: DatePreset, customFrom?: Date | null, customTo?: Date | null): { from: Date | null; to: Date } {
   const now = new Date();
   switch (preset) {
     case 'today': return { from: startOfDay(now), to: endOfDay(now) };
-    case '7d': return { from: subDays(now, 7), to: now };
-    case '30d': return { from: subDays(now, 30), to: now };
+    case 'this-week': return { from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) };
     case 'this-month': return { from: startOfMonth(now), to: endOfMonth(now) };
-    case '90d': return { from: subDays(now, 90), to: now };
-    case 'all': return { from: null, to: now };
-    default: return { from: subDays(now, 30), to: now };
+    case 'this-year': return { from: startOfYear(now), to: endOfYear(now) };
+    case 'custom': return { from: customFrom ?? startOfMonth(now), to: customTo ?? endOfDay(now) };
+    default: return { from: startOfMonth(now), to: endOfMonth(now) };
   }
 }
 
@@ -80,9 +78,19 @@ export default function Reports() {
   const { data: settings } = useBusinessSettings();
   const currencySymbol = settings?.currency_symbol || '₹';
   const [activeTab, setActiveTab] = useState<ReportTab>('sales');
-  const [datePreset, setDatePreset] = useState<DatePreset>('30d');
+  const [datePreset, setDatePreset] = useState<DatePreset>('this-month');
+  const [customFrom, setCustomFrom] = useState<string>('');
+  const [customTo, setCustomTo] = useState<string>('');
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const dateRange = useMemo(() => getDateRange(datePreset), [datePreset]);
+  const dateRange = useMemo(() => {
+    if (datePreset === 'custom') {
+      const from = customFrom ? startOfDay(new Date(customFrom)) : null;
+      const to = customTo ? endOfDay(new Date(customTo)) : new Date();
+      return { from, to };
+    }
+    return getDateRange(datePreset);
+  }, [datePreset, customFrom, customTo]);
 
   // ── Fetch Bills (completed only) ──
   const { data: bills = [], isLoading: billsLoading } = useQuery({
@@ -256,30 +264,224 @@ export default function Reports() {
 
   // ── Export handler ──
   const handleExport = () => {
-    if (activeTab === 'items' && itemReportData.length > 0) {
-      exportToExcel(itemReportData, [
-        { key: 'name', header: 'Item Name' },
-        { key: 'qtySold', header: 'Qty Sold' },
-        { key: 'revenue', header: 'Revenue', format: (v) => Number(v).toFixed(2) },
-        { key: 'profit', header: 'Profit', format: (v) => Number(v).toFixed(2) },
-      ], `item-report-${format(new Date(), 'yyyy-MM-dd')}`);
+    const dateLabel = datePreset === 'custom' && customFrom && customTo
+      ? `${customFrom}_to_${customTo}`
+      : datePreset;
+    const periodLabel = datePreset === 'custom' && customFrom && customTo
+      ? `${format(new Date(customFrom), 'dd MMM yyyy')} – ${format(new Date(customTo), 'dd MMM yyyy')}`
+      : DATE_PRESETS.find(p => p.id === datePreset)?.label ?? datePreset;
+
+    if (activeTab === 'sales') {
+      const { exportStyledExcel } = require('@/lib/exportToExcel');
+      exportStyledExcel(
+        [
+          {
+            title: '📊 Daily Sales Trend',
+            titleColor: '4472C4',
+            data: salesData.dailyTrend,
+            columns: [
+              { key: 'date', header: 'Date' },
+              { key: 'bills', header: 'No. of Bills' },
+              { key: 'sales', header: `Sales (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'tax', header: `Tax (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+            ],
+          },
+          {
+            title: '🧾 Bills Detail',
+            titleColor: '375623',
+            data: filteredBills.map(b => ({
+              date: format(new Date(b.created_at), 'dd MMM yyyy HH:mm'),
+              billNo: b.bill_number || b.id?.slice(0, 8),
+              customer: b.customers?.name || 'Walk-in',
+              items: (b.bill_items || []).length,
+              subtotal: b.subtotal || b.total_amount,
+              discount: b.discount_amount || 0,
+              tax: b.tax_amount || 0,
+              total: b.total_amount || 0,
+              payment: b.payment_method || '—',
+            })),
+            columns: [
+              { key: 'date', header: 'Date & Time' },
+              { key: 'billNo', header: 'Bill No.' },
+              { key: 'customer', header: 'Customer' },
+              { key: 'items', header: 'Items' },
+              { key: 'subtotal', header: `Subtotal (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'discount', header: `Discount (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'tax', header: `Tax (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'total', header: `Total (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'payment', header: 'Payment Mode' },
+            ],
+          },
+        ],
+        {
+          title: `Sales Report — ${periodLabel}`,
+          items: [
+            { label: 'Total Sales', value: `${currencySymbol}${salesData.totalSales.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+            { label: 'No. of Bills', value: salesData.billCount },
+            { label: 'Avg Bill Value', value: `${currencySymbol}${salesData.avgBillValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+            { label: 'Tax Collected', value: `${currencySymbol}${salesData.totalTax.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+            { label: 'Discounts Given', value: `${currencySymbol}${salesData.totalDiscount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+            { label: 'Period', value: periodLabel },
+          ],
+        },
+        `sales-report-${dateLabel}`
+      );
+    } else if (activeTab === 'profit-loss') {
+      const { exportStyledExcel } = require('@/lib/exportToExcel');
+      exportStyledExcel(
+        [
+          {
+            title: '📈 Monthly Profit & Loss',
+            titleColor: '375623',
+            data: profitLossData.monthlyTrend,
+            columns: [
+              { key: 'month', header: 'Month' },
+              { key: 'revenue', header: `Revenue (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'cost', header: `Cost (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'profit', header: `Gross Profit (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+            ],
+          },
+        ],
+        {
+          title: `Profit & Loss Report — ${periodLabel}`,
+          items: [
+            { label: 'Total Revenue', value: `${currencySymbol}${profitLossData.totalRevenue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+            { label: 'Cost of Goods', value: `${currencySymbol}${profitLossData.totalCost.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+            { label: 'Gross Profit', value: `${currencySymbol}${profitLossData.grossProfit.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+            { label: 'Profit Margin', value: `${profitLossData.profitMargin.toFixed(2)}%` },
+            { label: 'Period', value: periodLabel },
+          ],
+        },
+        `profit-loss-${dateLabel}`
+      );
+    } else if (activeTab === 'items' && itemReportData.length > 0) {
+      const { exportStyledExcel } = require('@/lib/exportToExcel');
+      exportStyledExcel(
+        [
+          {
+            title: '📦 Item-wise Sales Report',
+            titleColor: '7030A0',
+            data: itemReportData.map((item, i) => ({ rank: i + 1, ...item })),
+            columns: [
+              { key: 'rank', header: '#' },
+              { key: 'name', header: 'Item Name' },
+              { key: 'qtySold', header: 'Qty Sold' },
+              { key: 'revenue', header: `Revenue (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'profit', header: `Profit (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'profit', header: 'Margin %', format: (v, _k, row) => row?.revenue > 0 ? ((Number(row.profit) / Number(row.revenue)) * 100).toFixed(1) + '%' : '0%' },
+            ],
+          },
+        ],
+        {
+          title: `Item-wise Report — ${periodLabel}`,
+          items: [
+            { label: 'Total SKUs', value: itemReportData.length },
+            { label: 'Total Revenue', value: `${currencySymbol}${itemReportData.reduce((s, i) => s + i.revenue, 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+            { label: 'Total Profit', value: `${currencySymbol}${itemReportData.reduce((s, i) => s + i.profit, 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+            { label: 'Top Item', value: itemReportData[0]?.name || '—' },
+            { label: 'Period', value: periodLabel },
+          ],
+        },
+        `item-report-${dateLabel}`
+      );
     } else if (activeTab === 'party' && partyReportData.length > 0) {
-      exportToExcel(partyReportData, [
-        { key: 'name', header: 'Customer' },
-        { key: 'bills', header: 'Bills' },
-        { key: 'totalSpent', header: 'Total Spent', format: (v) => Number(v).toFixed(2) },
-        { key: 'lastVisit', header: 'Last Visit', format: (v) => v ? format(new Date(v as string), 'dd MMM yyyy') : '—' },
-      ], `party-report-${format(new Date(), 'yyyy-MM-dd')}`);
+      const { exportStyledExcel } = require('@/lib/exportToExcel');
+      exportStyledExcel(
+        [
+          {
+            title: '👥 Customer / Party Report',
+            titleColor: 'C55A11',
+            data: partyReportData.map((p, i) => ({ rank: i + 1, ...p })),
+            columns: [
+              { key: 'rank', header: '#' },
+              { key: 'name', header: 'Customer Name' },
+              { key: 'bills', header: 'Total Bills' },
+              { key: 'totalSpent', header: `Total Spent (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'totalSpent', header: `Avg Per Bill (${currencySymbol})`, format: (v, _k, row) => row?.bills > 0 ? (Number(row.totalSpent) / Number(row.bills)).toFixed(2) : '0' },
+              { key: 'lastVisit', header: 'Last Visit', format: (v) => v ? format(new Date(v as string), 'dd MMM yyyy') : '—' },
+            ],
+          },
+        ],
+        {
+          title: `Party Report — ${periodLabel}`,
+          items: [
+            { label: 'Total Customers', value: customers.length },
+            { label: 'Active Buyers', value: partyReportData.length },
+            { label: 'Top Customer', value: partyReportData[0]?.name || '—' },
+            { label: 'Top Customer Spend', value: `${currencySymbol}${(partyReportData[0]?.totalSpent || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+            { label: 'Period', value: periodLabel },
+          ],
+        },
+        `party-report-${dateLabel}`
+      );
     } else if (activeTab === 'stock' && products.length > 0) {
-      exportToExcel(products, [
-        { key: 'name', header: 'Product' },
-        { key: 'stock_quantity', header: 'Stock' },
-        { key: 'selling_price', header: 'Sell Price', format: (v) => Number(v).toFixed(2) },
-        { key: 'cost_price', header: 'Cost Price', format: (v) => Number(v).toFixed(2) },
-        { key: 'low_stock_threshold', header: 'Low Threshold' },
-      ], `stock-report-${format(new Date(), 'yyyy-MM-dd')}`);
+      const { exportStyledExcel } = require('@/lib/exportToExcel');
+      exportStyledExcel(
+        [
+          {
+            title: '📋 Complete Stock Report',
+            titleColor: '1F4E79',
+            data: products.map((p, i) => ({
+              rank: i + 1,
+              name: p.name,
+              category: p.categories?.name || 'Uncategorized',
+              stock: p.stock_quantity,
+              threshold: p.low_stock_threshold,
+              status: p.stock_quantity === 0 ? 'Out of Stock' : p.stock_quantity <= p.low_stock_threshold ? 'Low Stock' : 'In Stock',
+              costPrice: p.cost_price || 0,
+              sellPrice: p.selling_price || 0,
+              stockValue: ((p.cost_price || 0) * (p.stock_quantity || 0)),
+              retailValue: ((p.selling_price || 0) * (p.stock_quantity || 0)),
+            })),
+            columns: [
+              { key: 'rank', header: '#' },
+              { key: 'name', header: 'Product Name' },
+              { key: 'category', header: 'Category' },
+              { key: 'stock', header: 'Current Stock' },
+              { key: 'threshold', header: 'Low Threshold' },
+              { key: 'status', header: 'Status' },
+              { key: 'costPrice', header: `Cost Price (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'sellPrice', header: `Sell Price (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'stockValue', header: `Stock Value (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+              { key: 'retailValue', header: `Retail Value (${currencySymbol})`, format: (v) => Number(v).toFixed(2) },
+            ],
+          },
+          {
+            title: '⚠️ Low Stock / Out of Stock Items',
+            titleColor: 'C00000',
+            data: stockReportData.lowStockItems.map(p => ({
+              name: p.name,
+              category: p.categories?.name || 'Uncategorized',
+              stock: p.stock_quantity,
+              threshold: p.low_stock_threshold,
+              status: p.stock_quantity === 0 ? 'Out of Stock' : 'Low Stock',
+            })),
+            columns: [
+              { key: 'name', header: 'Product Name' },
+              { key: 'category', header: 'Category' },
+              { key: 'stock', header: 'Current Stock' },
+              { key: 'threshold', header: 'Low Threshold' },
+              { key: 'status', header: 'Status' },
+            ],
+          },
+        ],
+        {
+          title: 'Stock Report',
+          items: [
+            { label: 'Total Products', value: stockReportData.totalItems },
+            { label: 'Low Stock Items', value: stockReportData.lowStockCount },
+            { label: 'Out of Stock', value: stockReportData.outOfStockCount },
+            { label: 'Total Stock Value', value: `${currencySymbol}${stockReportData.totalStockValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+            { label: 'Total Retail Value', value: `${currencySymbol}${stockReportData.totalRetailValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          ],
+        },
+        `stock-report-${format(new Date(), 'yyyy-MM-dd')}`
+      );
+    } else {
+      toast.error('No data to export for the selected report.');
+      return;
     }
-    toast.success('Report exported!');
+    toast.success('Excel report downloaded!');
   };
 
   // ════════════════════════════════════════════════════
@@ -354,11 +556,89 @@ export default function Reports() {
             variant={datePreset === preset.id ? 'default' : 'outline'}
             size="sm"
             onClick={() => setDatePreset(preset.id)}
-            className="text-xs"
+            className={`text-xs font-medium transition-all ${
+              datePreset === preset.id
+                ? 'bg-primary text-primary-foreground shadow-md scale-105'
+                : 'hover:bg-accent'
+            }`}
           >
             {preset.label}
           </Button>
         ))}
+
+        {/* Calendar Range Picker */}
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant={datePreset === 'custom' ? 'default' : 'outline'}
+              size="sm"
+              className={`text-xs font-medium gap-1.5 transition-all ${
+                datePreset === 'custom'
+                  ? 'bg-violet-600 hover:bg-violet-700 text-white shadow-md scale-105'
+                  : 'border-violet-400 text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/30'
+              }`}
+            >
+              <CalendarRange className="h-3.5 w-3.5" />
+              {datePreset === 'custom' && customFrom && customTo
+                ? `${format(new Date(customFrom), 'dd MMM')} – ${format(new Date(customTo), 'dd MMM')}`
+                : 'Custom Range'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-4 space-y-3" align="start">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-violet-500" />
+                Select Date Range
+              </p>
+              {datePreset === 'custom' && (
+                <button
+                  onClick={() => { setDatePreset('this-month'); setCustomFrom(''); setCustomTo(''); setCalendarOpen(false); }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Start Date</Label>
+                <Input
+                  type="date"
+                  value={customFrom}
+                  max={customTo || format(new Date(), 'yyyy-MM-dd')}
+                  onChange={e => setCustomFrom(e.target.value)}
+                  className="text-xs h-8"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">End Date</Label>
+                <Input
+                  type="date"
+                  value={customTo}
+                  min={customFrom}
+                  max={format(new Date(), 'yyyy-MM-dd')}
+                  onChange={e => setCustomTo(e.target.value)}
+                  className="text-xs h-8"
+                />
+              </div>
+            </div>
+            <Button
+              size="sm"
+              className="w-full bg-violet-600 hover:bg-violet-700 text-white text-xs"
+              disabled={!customFrom || !customTo}
+              onClick={() => { setDatePreset('custom'); setCalendarOpen(false); }}
+            >
+              Apply Range
+            </Button>
+          </PopoverContent>
+        </Popover>
+
+        {/* Show active range label */}
+        {dateRange.from && (
+          <span className="text-xs text-muted-foreground ml-1">
+            {format(dateRange.from, 'dd MMM yyyy')} – {format(dateRange.to, 'dd MMM yyyy')}
+          </span>
+        )}
       </div>
 
       {/* ═══════════════════════════════════════════
