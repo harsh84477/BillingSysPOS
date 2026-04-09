@@ -30,7 +30,7 @@ export function InvoiceTemplate({ bill, items, settings: s, isPreview = false }:
   const custAddr = isMock ? 'Plot No. 1, Shop No. 8, Koramangala, Banglore, 560034' : (bill?.customers?.address || '');
   const custPhone = isMock ? '8888888888' : (bill?.customers?.phone || '');
 
-  const dataItems = isMock ? Array.from({ length: 12 }, (_, i) => ({
+  const dataItems = isMock ? Array.from({ length: 6 }, (_, i) => ({
     name: `ITEM ${i + 1} - Sample Product Description`, 
     hsn: '1234', 
     qty: 2, 

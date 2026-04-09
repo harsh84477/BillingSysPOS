@@ -166,11 +166,41 @@ const ThermalPreview = ({ s }: { s: any }) => {
 };
 
 // ---- Regular live preview ----
-const RegularPreview = ({ s }: { s: any }) => (
-  <div style={{ transform: 'scale(0.72)', transformOrigin: 'top center', marginBottom: '-90px' }}>
-    <InvoiceTemplate settings={s} isPreview bill={null} items={[]} />
-  </div>
-);
+const RegularPreview = ({ s }: { s: any }) => {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [scale, setScale] = React.useState(0.5);
+  React.useEffect(() => {
+    if (!ref.current) return;
+    const obs = new ResizeObserver(entries => {
+      const w = entries[0].contentRect.width;
+      setScale(Math.min(1, (w - 8) / 794));
+    });
+    obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, []);
+  const A4_H = 1123;
+  return (
+    <div ref={ref} style={{ width: '100%' }}>
+      {/* Page label */}
+      <div style={{ textAlign: 'center', fontSize: 10, color: '#94a3b8', marginBottom: 6, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+        Page 1
+      </div>
+      {/* A4 paper container */}
+      <div style={{ position: 'relative', width: '100%', height: A4_H * scale }}>
+        <div style={{
+          position: 'absolute', top: 0, left: 0,
+          width: 794, minHeight: A4_H,
+          background: '#fff',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.18), 0 1px 6px rgba(0,0,0,0.1)',
+          transformOrigin: 'top left',
+          transform: `scale(${scale})`,
+        }}>
+          <InvoiceTemplate settings={s} isPreview bill={null} items={[]} />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ---- Main Component ----
 export default function PrintSettingsTab() {
