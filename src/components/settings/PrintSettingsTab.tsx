@@ -39,10 +39,16 @@ function Chips<T extends string>({ options, value, onChange, disabled }: {
 }
 
 // ---- Section card ----
-const Sec = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="bg-white rounded-xl border border-gray-100 mb-3 overflow-hidden shadow-sm">
-    <div className="px-4 py-2.5 border-b border-gray-100 bg-gray-50/60">
-      <h3 className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase">{title}</h3>
+const Sec = ({ icon, title, sub, children }: { icon?: string; title: string; sub?: string; children: React.ReactNode }) => (
+  <div className="bg-white rounded-xl border border-gray-100 mb-4 overflow-hidden shadow-sm">
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+      {icon && (
+        <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-xl flex-shrink-0">{icon}</div>
+      )}
+      <div>
+        <h3 className="text-sm font-bold text-gray-800">{title}</h3>
+        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      </div>
     </div>
     {children}
   </div>
@@ -182,6 +188,7 @@ export default function PrintSettingsTab() {
   };
 
   const [tab, setTab] = useState<'regular' | 'thermal'>('regular');
+  const [appearanceTab, setAppearanceTab] = useState<'layout' | 'colors'>('layout');
 
   return (
     <div className="flex bg-gray-50 relative" style={{ minHeight: 'calc(100vh - 140px)' }}>
@@ -190,38 +197,63 @@ export default function PrintSettingsTab() {
       <div className="min-w-0 overflow-y-auto p-4 pb-24" style={{ width: '60%', maxHeight: 'calc(100vh - 140px)' }}>
 
         {/* Printer mode toggle */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm mb-4 p-3">
-          <div className="flex gap-2">
-            {(['regular', 'thermal'] as const).map(p => (
-              <button key={p} onClick={() => setTab(p)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border text-xs font-semibold transition-all ${tab === p ? 'border-emerald-500 bg-emerald-50 text-emerald-600 shadow-sm' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'}`}>
-                {p === 'regular' ? '🖨️' : '🧾'}
-                {p === 'regular' ? 'Regular Printer' : 'Thermal Printer'}
-              </button>
-            ))}
-          </div>
+        <div className="flex mb-4 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          {(['regular', 'thermal'] as const).map((p, i) => (
+            <button key={p} onClick={() => setTab(p)}
+              className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold uppercase tracking-wide transition-all ${i === 0 ? '' : 'border-l border-gray-100'} ${tab === p ? 'bg-emerald-500 text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>
+              <span className="text-base">{p === 'regular' ? '🖨️' : '🧾'}</span>
+              {p === 'regular' ? 'Regular Printer' : 'Thermal Printer'}
+            </button>
+          ))}
         </div>
 
         {/* REGULAR SETTINGS */}
         {tab === 'regular' && (<>
 
-          <Sec title="Appearance">
-            <div className="grid grid-cols-2 gap-2 p-3">
-              {REGULAR_LAYOUTS.map(l => {
-                const active = (settings?.print_regular_layout || 'urban_bill_style') === l.id;
-                return (
-                  <button key={l.id} onClick={() => isAdmin && u({ print_regular_layout: l.id })} disabled={!isAdmin}
-                    className={`relative border-2 rounded-xl p-3 text-center text-xs font-semibold transition-all ${active ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-100 bg-white text-gray-500 hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
-                    {active && <span className="absolute top-1.5 right-1.5 bg-emerald-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-black">checkmark</span>}
-                    <div className="text-xl mb-1.5">{l.icon}</div>
-                    {l.name}
-                  </button>
-                );
-              })}
+          <Sec icon="🎨" title="Appearance" sub="Customize layout and colors for regular printing">
+            {/* Sub-tabs */}
+            <div className="flex gap-6 px-5 border-b border-gray-100">
+              <button onClick={() => setAppearanceTab('layout')}
+                className={`py-3 text-xs font-bold tracking-widest uppercase transition-all -mb-px ${
+                  appearanceTab === 'layout' ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-gray-600'
+                }`}>Change Layout</button>
+              <button onClick={() => setAppearanceTab('colors')}
+                className={`py-3 text-xs font-bold tracking-widest uppercase transition-all -mb-px ${
+                  appearanceTab === 'colors' ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-gray-600'
+                }`}>Change Colors</button>
             </div>
+            {/* Horizontal scroll layout cards */}
+            {appearanceTab === 'layout' && (
+              <div className="flex gap-3 p-4 overflow-x-auto">
+                {REGULAR_LAYOUTS.map(l => {
+                  const active = (settings?.print_regular_layout || 'urban_bill_style') === l.id;
+                  return (
+                    <button key={l.id} onClick={() => isAdmin && u({ print_regular_layout: l.id })} disabled={!isAdmin}
+                      className={`flex-shrink-0 flex flex-col items-center border-2 rounded-xl p-4 w-28 transition-all ${
+                        active ? 'border-emerald-500 bg-white shadow-sm' : 'border-gray-100 bg-white hover:border-emerald-200 hover:bg-gray-50'
+                      }`}>
+                      <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-3xl mb-2.5 ${active ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                        {l.icon}
+                      </div>
+                      <span className={`text-[11px] font-semibold text-center leading-tight ${active ? 'text-emerald-600' : 'text-gray-600'}`}>{l.name}</span>
+                      {active && (
+                        <div className="mt-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-white text-[10px] font-black">✓</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {appearanceTab === 'colors' && (
+              <div className="p-5">
+                <p className="text-xs text-gray-400 text-center py-4">Color themes coming soon</p>
+              </div>
+            )}
           </Sec>
 
-          <Sec title="Company Info / Header">
+          <Sec icon="🏢" title="Company Info / Header" sub="Business name, logo and contact details on the invoice">
             <Field label="Document Title">
               <Inp value={settings?.invoice_title || ''} onChange={v => u({ invoice_title: v })} placeholder="INVOICE" disabled={!isAdmin} />
             </Field>
@@ -234,7 +266,7 @@ export default function PrintSettingsTab() {
             <Row label="Repeat Header on All Pages" last><Tog on={settings?.print_repeat_header ?? false} onChange={v => u({ print_repeat_header: v })} /></Row>
           </Sec>
 
-          <Sec title="Page Setup">
+          <Sec icon="📐" title="Page Setup" sub="Paper size, orientation and spacing">
             <Field label="Paper Size">
               <Chips options={[{value:'A4',label:'A4'},{value:'A5',label:'A5'},{value:'Letter',label:'Letter'},{value:'Legal',label:'Legal'}]} value={settings?.print_paper_size || 'A4'} onChange={v => u({ print_paper_size: v })} disabled={!isAdmin} />
             </Field>
@@ -256,7 +288,7 @@ export default function PrintSettingsTab() {
             <Row label="Content Margin (px)" last><Stepper value={settings?.print_content_padding ?? 20} onChange={v => u({ print_content_padding: v })} /></Row>
           </Sec>
 
-          <Sec title="Print Copies">
+          <Sec icon="📑" title="Print Copies" sub="Number of copies and Original / Duplicate labels">
             <Row label="Print Original / Duplicate"><Tog on={settings?.print_original_duplicate ?? true} onChange={v => u({ print_original_duplicate: v })} /></Row>
             {(settings?.print_original_duplicate ?? true) && (
               <div className="px-4 py-2 border-b border-gray-50 space-y-2">
@@ -273,7 +305,7 @@ export default function PrintSettingsTab() {
             </Field>
           </Sec>
 
-          <Sec title="Item Table Customization">
+          <Sec icon="📋" title="Item Table Customization" sub="Columns to show in the item summary table">
             <div className="grid grid-cols-2">
               {([['print_show_item_number','Sr. No. (#)'],['print_show_hsn_sac','HSN/SAC Code'],['print_show_quantity','Quantity'],['print_show_price_unit','Unit Price'],['print_show_discount','Discount %'],['print_show_gst','GST Column'],['print_show_mrp','MRP Column']] as [string,string][]).map(([k,l]) => (
                 <ChkRow key={k} label={l} checked={settings?.[k] ?? (k==='print_show_mrp'?false:true)} onChange={v => u({ [k]: v })} />
@@ -284,7 +316,7 @@ export default function PrintSettingsTab() {
             </Row>
           </Sec>
 
-          <Sec title="Totals & Taxes">
+          <Sec icon="🧮" title="Totals & Taxes" sub="Amount display, tax breakdown and rounding options">
             {([['print_tax_details','Show GST / Tax Summary'],['print_total_item_quantity','Total Item Quantity'],['print_received_amount','Received Amount'],['print_balance_amount','Balance Amount'],['print_current_balance','Current Party Balance'],['print_amount_decimal','Amount with Decimal'],['print_amount_grouping','Group Large Numbers'],['print_you_saved','You Saved (discount)']] as [string,string][]).map(([k,l]) => (
               <Row key={k} label={l}><Tog on={settings?.[k] ?? true} onChange={v => u({ [k]: v })} /></Row>
             ))}
@@ -298,7 +330,7 @@ export default function PrintSettingsTab() {
             </Row>
           </Sec>
 
-          <Sec title="Bank Details">
+          <Sec icon="🏦" title="Bank Details" sub="Bank account and UPI payment information">
             <Row label="Show Bank Details on Invoice"><Tog on={settings?.print_bank_details ?? true} onChange={v => u({ print_bank_details: v })} /></Row>
             {(settings?.print_bank_details ?? true) && (<>
               <Field label="Bank Name"><Inp value={settings?.print_bank_name || ''} onChange={v => u({ print_bank_name: v })} placeholder="e.g. HDFC Bank" disabled={!isAdmin} /></Field>
@@ -312,7 +344,7 @@ export default function PrintSettingsTab() {
             <Row label="Print PAY NOW Button" last><Tog on={settings?.print_pay_now_btn ?? true} onChange={v => u({ print_pay_now_btn: v })} /></Row>
           </Sec>
 
-          <Sec title="Footer">
+          <Sec icon="📝" title="Footer" sub="Terms, conditions and signature at the bottom">
             <Field label="Terms and Conditions / Footer Text">
               <Txa value={settings?.print_terms_conditions || ''} onChange={v => u({ print_terms_conditions: v })} placeholder="Thank you for your business!" disabled={!isAdmin} />
             </Field>
@@ -331,23 +363,31 @@ export default function PrintSettingsTab() {
         {/* THERMAL SETTINGS */}
         {tab === 'thermal' && (<>
 
-          <Sec title="Appearance">
-            <div className="grid grid-cols-2 gap-2 p-3">
+          <Sec icon="🎨" title="Appearance" sub="Choose a receipt print style">
+            <div className="flex gap-3 p-4 overflow-x-auto">
               {THERMAL_LAYOUTS.map(l => {
                 const active = (settings?.print_thermal_layout || 'theme_1') === l.id;
                 return (
                   <button key={l.id} onClick={() => isAdmin && u({ print_thermal_layout: l.id })} disabled={!isAdmin}
-                    className={`relative border-2 rounded-xl p-3 text-center text-xs font-semibold transition-all ${active ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-100 bg-white text-gray-500 hover:border-emerald-300 hover:bg-emerald-50/50'}`}>
-                    {active && <span className="absolute top-1.5 right-1.5 bg-emerald-500 text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-black">ok</span>}
-                    <div className="text-xl mb-1.5">{l.icon}</div>
-                    {l.name}
+                    className={`flex-shrink-0 flex flex-col items-center border-2 rounded-xl p-4 w-24 transition-all ${
+                      active ? 'border-emerald-500 bg-white shadow-sm' : 'border-gray-100 bg-white hover:border-emerald-200 hover:bg-gray-50'
+                    }`}>
+                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-2 ${active ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                      {l.icon}
+                    </div>
+                    <span className={`text-[11px] font-semibold ${active ? 'text-emerald-600' : 'text-gray-600'}`}>{l.name}</span>
+                    {active && (
+                      <div className="mt-1.5 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-[9px] font-black">✓</span>
+                      </div>
+                    )}
                   </button>
                 );
               })}
             </div>
           </Sec>
 
-          <Sec title="Paper and Hardware Config">
+          <Sec icon="⚙️" title="Paper & Hardware Config" sub="Roll width, cut, cash drawer and copy settings">
             <Field label="Paper / Roll Width">
               <Chips options={[{value:'2inch',label:'2in 58mm'},{value:'3inch',label:'3in 80mm'},{value:'4inch',label:'4in 80mm'},{value:'custom',label:'Custom'}]} value={settings?.print_thermal_page_size || '4inch'} onChange={v => u({ print_thermal_page_size: v })} disabled={!isAdmin} />
             </Field>
@@ -366,7 +406,7 @@ export default function PrintSettingsTab() {
             <Row label="Number of Copies" last><Stepper value={settings?.print_thermal_copies ?? 1} onChange={v => u({ print_thermal_copies: v })} min={1} /></Row>
           </Sec>
 
-          <Sec title="Company Info / Header">
+          <Sec icon="🏢" title="Company Info / Header" sub="Business name and contact details on the receipt">
             <ChkRow label="Company Name" checked={settings?.print_thermal_company_name ?? true} onChange={v => u({ print_thermal_company_name: v })} />
             {(settings?.print_thermal_company_name ?? true) && (
               <div className="px-4 py-2 border-b border-gray-50">
@@ -380,7 +420,7 @@ export default function PrintSettingsTab() {
             <ChkRow label="GSTIN on Receipt" checked={settings?.print_thermal_show_gstin ?? true} onChange={v => u({ print_thermal_show_gstin: v })} />
           </Sec>
 
-          <Sec title="Footer">
+          <Sec icon="📝" title="Footer" sub="Thank-you message at the bottom of the receipt">
             <Field label="Footer / Thank-You Text">
               <Txa value={settings?.print_terms_conditions || ''} onChange={v => u({ print_terms_conditions: v })} placeholder="Thank you for your purchase!" disabled={!isAdmin} />
             </Field>
