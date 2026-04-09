@@ -328,7 +328,7 @@ function RegularPreview({ s }: { s: any }) {
     'Legal':  'Legal  · 216 × 356 mm',
   };
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, width: '100%' }}>
       {/* Paper size badge */}
       <div style={{
         fontSize: 10, fontWeight: 700, color: '#475569', letterSpacing: '0.06em',
@@ -337,7 +337,10 @@ function RegularPreview({ s }: { s: any }) {
       }}>
         <span>📃</span>{PAPER_LABELS[paperSize] || paperSize}
       </div>
-      <InvoiceTemplate settings={s} isPreview bill={null} items={[]} />
+      {/* Scale down to fit 30% column */}
+      <div style={{ width: '100%', transform: 'scale(0.72)', transformOrigin: 'top center', marginBottom: '-80px' }}>
+        <InvoiceTemplate settings={s} isPreview bill={null} items={[]} />
+      </div>
     </div>
   );
 }
@@ -780,36 +783,38 @@ export default function PrintSettingsTab() {
           width: 100%;
         }
 
-        /* Layout grid */
+        /* Layout grid — 70 / 30 split */
         .pst-layout {
           display: grid;
-          grid-template-columns: 1fr 380px;
-          gap: 24px;
+          grid-template-columns: 70% 30%;
+          gap: 20px;
           align-items: start;
-          margin-top: 20px;
+          margin-top: 16px;
         }
 
-        /* Tab switcher */
+        /* Tab switcher — compact pill row */
         .pst-tabs {
-          display: flex;
+          display: inline-flex;
           background: var(--spos-bg, #f4f5f7);
-          border-radius: 12px;
-          padding: 4px;
-          gap: 4px;
+          border-radius: 999px;
+          padding: 3px;
+          gap: 3px;
           border: 1px solid var(--spos-border);
+          width: auto;
+          align-self: flex-start;
+          margin-bottom: 16px;
         }
         .pst-tab {
-          flex: 1;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 7px;
-          padding: 10px 14px;
-          border-radius: 9px;
+          gap: 5px;
+          padding: 6px 16px;
+          border-radius: 999px;
           border: none;
           cursor: pointer;
           font-family: inherit;
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 500;
           color: var(--spos-text-sub);
           background: transparent;
@@ -820,8 +825,9 @@ export default function PrintSettingsTab() {
           background: hsl(var(--primary));
           color: #fff;
           font-weight: 700;
-          box-shadow: 0 2px 10px hsl(var(--primary) / 0.3);
+          box-shadow: 0 2px 8px hsl(var(--primary) / 0.3);
         }
+        .pst-tab-icon { font-size: 13px; }
         .pst-tab-short { display: none; }
 
         /* Section headings */
@@ -1032,6 +1038,7 @@ export default function PrintSettingsTab() {
           position: sticky;
           top: 20px;
           align-self: start;
+          min-width: 0;
         }
         .pst-preview-aside-inner {
           background: var(--card, #fff);
@@ -1041,25 +1048,30 @@ export default function PrintSettingsTab() {
           overflow: hidden;
         }
         .pst-preview-header {
-          padding: 12px 16px;
+          padding: 10px 14px;
           background: hsl(var(--primary) / 0.06);
           border-bottom: 1px solid var(--spos-border);
           display: flex;
           align-items: center;
-          gap: 9px;
-          font-size: 12.5px;
+          gap: 7px;
+          font-size: 11.5px;
           font-weight: 700;
           color: var(--spos-text);
           cursor: default;
+          flex-wrap: wrap;
         }
         .pst-preview-scroll {
-          max-height: calc(100vh - 200px);
+          max-height: calc(100vh - 180px);
           overflow-y: auto;
+          overflow-x: hidden;
         }
         .pst-preview-content {
           background: #eef0f3;
-          padding: 14px;
+          padding: 14px 10px;
           min-height: 200px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
         }
 
         /* Drawer (mobile) */
@@ -1101,8 +1113,8 @@ export default function PrintSettingsTab() {
         @keyframes pstFade  { from { opacity: 0 } to { opacity: 1 } }
         @keyframes pstSlide { from { transform: translateY(100%) } to { transform: translateY(0) } }
 
-        /* ─── Tablet (≤1100px): collapse preview aside ─── */
-        @media (max-width: 1100px) {
+        /* ─── Tablet (≤900px): stack, hide aside, show preview btn ─── */
+        @media (max-width: 900px) {
           .pst-layout {
             grid-template-columns: 1fr;
           }
@@ -1110,7 +1122,7 @@ export default function PrintSettingsTab() {
           .pst-preview-btn {
             display: flex; flex-direction: column; align-items: center;
             gap: 5px; width: 100%; margin-top: 20px;
-            padding: 26px 20px; border-radius: 15px; border: none;
+            padding: 22px 20px; border-radius: 15px; border: none;
             background: linear-gradient(135deg, #1a2d5a, #1e3d8e);
             color: #fff; cursor: pointer; font-family: inherit;
             box-shadow: 0 4px 18px rgba(26,45,90,0.28);
@@ -1121,8 +1133,8 @@ export default function PrintSettingsTab() {
 
         /* ─── Mobile (≤640px) ─── */
         @media (max-width: 640px) {
-          .pst-tabs { padding: 3px; }
-          .pst-tab { padding: 9px 8px; font-size: 12px; gap: 5px; }
+          .pst-tabs { padding: 2px; }
+          .pst-tab { padding: 5px 12px; font-size: 11px; gap: 4px; }
           .pst-tab-full { display: none; }
           .pst-tab-short { display: inline; }
           .pst-check-grid { grid-template-columns: 1fr; }
