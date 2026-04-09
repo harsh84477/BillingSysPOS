@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, subDays, startOfMonth, endOfMonth, startOfDay, endOfDay, parseISO, isWithinInterval, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
-import { exportToExcel } from '@/lib/exportToExcel';
+import { exportToExcel, exportStyledExcel } from '@/lib/exportToExcel';
 import { toast } from 'sonner';
 
 // ════════════════════════════════════════════════════
@@ -272,7 +272,6 @@ export default function Reports() {
       : DATE_PRESETS.find(p => p.id === datePreset)?.label ?? datePreset;
 
     if (activeTab === 'sales') {
-      const { exportStyledExcel } = require('@/lib/exportToExcel');
       exportStyledExcel(
         [
           {
@@ -327,7 +326,6 @@ export default function Reports() {
         `sales-report-${dateLabel}`
       );
     } else if (activeTab === 'profit-loss') {
-      const { exportStyledExcel } = require('@/lib/exportToExcel');
       exportStyledExcel(
         [
           {
@@ -355,7 +353,6 @@ export default function Reports() {
         `profit-loss-${dateLabel}`
       );
     } else if (activeTab === 'items' && itemReportData.length > 0) {
-      const { exportStyledExcel } = require('@/lib/exportToExcel');
       exportStyledExcel(
         [
           {
@@ -385,7 +382,6 @@ export default function Reports() {
         `item-report-${dateLabel}`
       );
     } else if (activeTab === 'party' && partyReportData.length > 0) {
-      const { exportStyledExcel } = require('@/lib/exportToExcel');
       exportStyledExcel(
         [
           {
@@ -415,7 +411,6 @@ export default function Reports() {
         `party-report-${dateLabel}`
       );
     } else if (activeTab === 'stock' && products.length > 0) {
-      const { exportStyledExcel } = require('@/lib/exportToExcel');
       exportStyledExcel(
         [
           {
