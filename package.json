@@ -1,5 +1,5 @@
 {
-  "name": "vite_react_shadcn_ts",
+  "name": "invoice-adda",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -90,6 +90,8 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.4.21",
+    "electron": "^41.2.0",
+    "electron-builder": "^26.8.1",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
@@ -104,8 +106,8 @@
     "vitest": "^3.2.4"
   },
   "build": {
-    "appId": "com.example.viteelectronapp",
-    "productName": "ViteElectronApp",
+    "appId": "com.invoiceadda.app",
+    "productName": "Invoice Adda",
     "directories": {
       "output": "release"
     },
