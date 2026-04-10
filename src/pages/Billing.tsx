@@ -1222,9 +1222,8 @@ export default function Billing() {
                   className="h-7 pl-4 text-xs font-bold bg-blue-50/30 border-blue-100/50"
                 />
               </div>
-
-
             </div>
+          </div>
         </div>
       )}
 
@@ -2069,6 +2068,276 @@ export default function Billing() {
                           disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill || !hasPhone}
                           onClick={() => createBillMutation.mutate('whatsapp')}
                           title={hasPhone ? 'Send bill via WhatsApp' : 'Select a customer with phone number first'}
+                        >
+                          <MessageCircle className="mr-1 h-3 w-3" />
+                          WhatsApp
+                        </Button>
+                      );
+                    })()}
+                  </div>
+                  {(settings?.checkout_draft_enabled ?? true) && (
+                    <Button
+                      variant="outline"
+                      className="w-full h-8 text-[11px] border-amber-300 text-amber-700 hover:bg-amber-50"
+                      disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                      onClick={() => createBillMutation.mutate('draft')}
+                    >
+                      <FileText className="mr-1 h-3 w-3" />
+                      Save as Draft
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          </>
+        ) : (
+          /* Collapsed state - just show cart icon */
+          <div className="flex flex-col items-center py-4">
+            <ShoppingCart className="h-6 w-6 text-muted-foreground" />
+            {cart.length > 0 && (
+              <Badge className="mt-2">{cart.length}</Badge>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Cart Button - FAB */}
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button
+            className="md:hidden fixed bottom-[76px] right-4 z-50 h-14 w-14 rounded-full shadow-2xl shadow-primary/30 bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all duration-200"
+            size="icon"
+          >
+            <ShoppingCart className="h-6 w-6" />
+            {cart.length > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white border-2 border-background animate-in zoom-in">
+                {cart.length}
+              </span>
+            )}
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="right" className="w-full sm:max-w-md p-0">
+          <SheetHeader className="p-4 border-b">
+            <SheetTitle className="flex items-center gap-2">
+              Bill #{previewBillNumber} ({totalItems} items)
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-col h-[calc(100%-4rem)] p-4 gap-3">
+            {/* Mobile Customer Section */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Walk-in Customer"
+                  value={customerName || (selectedCustomerId ? customers.find(c => c.id === selectedCustomerId)?.name : '') || ''}
+                  onChange={(e) => {
+                    setCustomerName(e.target.value);
+                    if (selectedCustomerId) setSelectedCustomerId(null);
+                  }}
+                  className="pl-8 h-10 text-sm"
+                />
+              </div>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-10 w-10 shrink-0 border border-border"
+                onClick={() => { setCustomerSearchQuery(''); setIsCustomerDialogOpen(true); }}
+                title="Select Customer"
+              >
+                <Users className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-10 w-10 shrink-0 border border-border text-emerald-600"
+                onClick={() => { setQuickAddName(''); setQuickAddPhone(''); setQuickAddOpen(true); }}
+                title="Quick Add Customer"
+              >
+                <UserPlus className="h-4 w-4" />
+              </Button>
+            </div>
+            {selectedCustomerId && (() => {
+              const sc = customers.find(c => c.id === selectedCustomerId);
+              return sc ? (
+                <div className="flex items-center justify-between px-1">
+                  <div className="flex items-center gap-2 text-xs">
+                    <Badge variant="secondary" className="py-0.5 px-2 text-[11px] font-semibold">{sc.name}</Badge>
+                    {sc.phone && <span className="text-muted-foreground">{sc.phone}</span>}
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-muted-foreground hover:text-destructive" onClick={() => { setSelectedCustomerId(null); setCustomerName(''); }}>
+                    Clear
+                  </Button>
+                </div>
+              ) : null;
+            })()}
+
+            <ScrollArea className="flex-1 -mx-4 px-4 pb-4">
+              {cart.length === 0 ? (
+                <div className="flex h-40 items-center justify-center text-muted-foreground">
+                  Cart is empty
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {cart.map((item) => (
+                    <div
+                      key={item.productId}
+                      className="flex items-center gap-2 rounded-lg border border-border p-2"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{item.name}</p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          {editingCartPriceItemId === item.productId ? (
+                            <Input
+                              type="number"
+                              value={editingCartPrice}
+                              onChange={(e) => setEditingCartPrice(e.target.value)}
+                              onBlur={() => handleCartPriceBlur(item.productId)}
+                              onKeyDown={(e) => handleCartPriceKeyDown(e, item.productId)}
+                              className="w-16 h-6 text-[10px] p-1"
+                              autoFocus
+                              step="0.01"
+                            />
+                          ) : (
+                            <span
+                              className={cn(
+                                "text-xs cursor-pointer",
+                                item.unitPrice <= item.costPrice ? "text-destructive font-bold" : "text-muted-foreground"
+                              )}
+                              onClick={() => handleCartPriceClick(item.productId, item.unitPrice)}
+                            >
+                              {currencySymbol}{item.unitPrice.toFixed(2)}
+                            </span>
+                          )}
+                          <span className="text-xs text-muted-foreground"> x {item.quantity}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, -1)}>
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        {editingCartItemId === item.productId ? (
+                          <Input
+                            type="number"
+                            value={editingCartQuantity}
+                            onChange={(e) => setEditingCartQuantity(e.target.value)}
+                            onBlur={() => handleCartQuantityBlur(item.productId)}
+                            onKeyDown={(e) => handleCartQuantityKeyDown(e, item.productId)}
+                            className="w-14 h-8 text-center font-medium p-1"
+                            autoFocus
+                            min={0}
+                          />
+                        ) : (
+                          <span
+                            className="w-10 text-center font-medium cursor-pointer hover:bg-accent rounded px-1 py-1"
+                            onClick={() => handleCartQuantityClick(item.productId, item.quantity)}
+                            title="Tap to edit quantity"
+                          >
+                            {item.quantity}
+                          </span>
+                        )}
+                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, 1)}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.productId)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+
+            <div className="space-y-1 py-1">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span className="font-medium">Subtotal</span>
+                <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
+              </div>
+              {(settings?.show_gst_in_billing ?? true) && taxRate > 0 && (
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground/70">
+                  <span>GST ({taxRate}%)</span>
+                  <span>{currencySymbol}{cartCalculations.calculatedTax.toFixed(2)}</span>
+                </div>
+              )}
+              {(settings?.show_discount_in_billing ?? true) && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-medium text-muted-foreground">Discount</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground">{currencySymbol}</span>
+                    <Input
+                      type="number"
+                      value={discountValue || ''}
+                      onChange={(e) => setDiscountValue(Number(e.target.value))}
+                      className="w-16 h-6 text-[10px] text-right p-1"
+                      min={0}
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-between items-end pt-1 border-t border-dashed">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Payable</span>
+                <span className="text-xl font-black text-primary leading-none">
+                  {currencySymbol}{cartCalculations.total.toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 relative z-10">
+              {!isSalesman && renderPaymentSelector()}
+              {isSalesman ? (
+                <Button
+                  className="w-full bg-teal-600 hover:bg-teal-700 text-white"
+                  disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                  onClick={() => createBillMutation.mutate(false)}
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {createBillMutation.isPending ? 'Saving...' : 'Save Draft Order'}
+                </Button>
+              ) : (
+                <>
+                  <div className="flex gap-1.5">
+                    {(settings?.checkout_save_enabled ?? true) && (
+                      <Button
+                        variant="outline"
+                        className="flex-1 h-8 text-[11px]"
+                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                        onClick={() => createBillMutation.mutate(false)}
+                      >
+                        <Save className="mr-1 h-3 w-3" />
+                        Save
+                      </Button>
+                    )}
+                    {(settings?.checkout_print_enabled ?? true) && (
+                      <Button
+                        className="flex-1 h-8 text-[11px]"
+                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                        onClick={() => createBillMutation.mutate(true)}
+                      >
+                        <Printer className="mr-1 h-3 w-3" />
+                        Print
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex gap-1.5">
+                    {(settings?.checkout_save_print_enabled ?? true) && (
+                      <Button
+                        className="flex-1 h-8 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white"
+                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                        onClick={() => createBillMutation.mutate('save-print')}
+                      >
+                        <Printer className="mr-1 h-3 w-3" />
+                        Save & Print
+                      </Button>
+                    )}
+                    {(settings?.checkout_whatsapp_enabled ?? true) && (() => {
+                      const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
+                      const hasPhone = !!(customer?.phone?.trim());
+                      return (
+                        <Button
+                          className="flex-1 h-8 text-[11px] bg-[#25D366] hover:bg-[#128C7E] text-white"
+                          disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill || !hasPhone}
+                          onClick={() => createBillMutation.mutate('whatsapp')}
+                          title={hasPhone ? 'Send via WhatsApp' : 'Select customer with phone'}
                         >
                           <MessageCircle className="mr-1 h-3 w-3" />
                           WhatsApp
