@@ -307,6 +307,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const setupUserState = useCallback(async (currentSession: Session | null) => {
+    setLoading(true); // Keep loading=true while resolving auth state
     setSession(currentSession);
     setUser(currentSession?.user ?? null);
 
@@ -395,16 +396,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = async () => {
     const isNative = Capacitor.isNativePlatform();
-    const redirectTo = isNative
-      ? 'com.smartpos.app://login-callback'
-      : `${window.location.origin}/dashboard`;
+
+    // Detect Electron renderer (nodeIntegration is on so window.process exists)
+    const isElectron = typeof window !== 'undefined' &&
+      typeof (window as any).process === 'object' &&
+      (window as any).process.type === 'renderer';
 
     if (isNative) {
-      // Get the OAuth URL without opening a browser (skipBrowserRedirect)
+      // Android/iOS — open in Chrome Custom Tabs, deep-link callback handled in App.tsx
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo,
+          redirectTo: 'com.smartpos.app://login-callback',
           skipBrowserRedirect: true,
         },
       });
@@ -413,10 +416,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (data?.url) {
-        // Open in Chrome Custom Tabs — Android will intercept the custom scheme on redirect
         await Browser.open({ url: data.url });
       }
+    } else if (isElectron) {
+      // Electron desktop — get OAuth URL without redirecting, open in default browser
+      // Callback comes back via invoiceadda:// custom protocol (handled in App.tsx)
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: 'invoiceadda://oauth-callback',
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error) {
+        console.error('Google sign-in error:', error.message);
+        return;
+      }
+      if (data?.url) {
+        // Open Google OAuth in the user's default browser (e.g. Chrome)
+        const { shell } = require('electron');
+        shell.openExternal(data.url);
+      }
     } else {
+      // Web — redirect to app root so query params (?code=) don't clash with HashRouter hash
+      const redirectTo = window.location.origin + '/';
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo },

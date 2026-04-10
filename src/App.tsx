@@ -129,6 +129,54 @@ function OAuthCallbackHandler() {
   return null;
 }
 
+// Handles the OAuth callback in Electron via the invoiceadda:// custom protocol.
+// The main process sends 'oauth-callback' via ipcRenderer after the system browser
+// redirects to invoiceadda://oauth-callback?code=XXXX
+function ElectronOAuthCallbackHandler() {
+  useEffect(() => {
+    const isElectron =
+      typeof window !== 'undefined' &&
+      typeof (window as any).process === 'object' &&
+      (window as any).process.type === 'renderer';
+
+    if (!isElectron) return;
+
+    const { ipcRenderer } = require('electron');
+
+    const handleOAuthCallback = async (_event: any, url: string) => {
+      if (!url.startsWith('invoiceadda://')) return;
+
+      // PKCE flow: ?code=XXXX
+      if (url.includes('code=')) {
+        const { error } = await supabase.auth.exchangeCodeForSession(url);
+        if (error) console.error('Electron OAuth code exchange error:', error.message);
+        return;
+      }
+
+      // Implicit flow fallback: tokens in hash or query
+      if (url.includes('access_token=')) {
+        const fragment = url.includes('#') ? url.split('#')[1] : url.split('?')[1] || '';
+        const params = new URLSearchParams(fragment);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        if (accessToken && refreshToken) {
+          await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+        }
+      }
+    };
+
+    ipcRenderer.on('oauth-callback', handleOAuthCallback);
+    return () => {
+      ipcRenderer.removeListener('oauth-callback', handleOAuthCallback);
+    };
+  }, []);
+
+  return null;
+}
+
 
 const App = () => (
   <PersistQueryClientProvider
@@ -145,6 +193,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <OAuthCallbackHandler />
+          <ElectronOAuthCallbackHandler />
           <HashRouter>
             <Routes>
               <Route path="/auth" element={<Auth />} />
