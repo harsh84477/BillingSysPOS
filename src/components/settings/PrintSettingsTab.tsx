@@ -8,17 +8,17 @@ import { toast } from 'sonner';
 // ---- Toggle switch ----
 const Tog = ({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) => (
   <button role="switch" aria-checked={on} onClick={() => onChange(!on)}
-    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${on ? 'bg-emerald-500' : 'bg-gray-200'}`}>
+    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ${on ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
     <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
   </button>
 );
 
 // ---- Stepper ----
 const Stepper = ({ value, onChange, min = 0, max = 999 }: { value: number; onChange: (v: number) => void; min?: number; max?: number }) => (
-  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-    <button onClick={() => onChange(Math.max(min, value - 1))} className="w-7 h-7 bg-gray-50 hover:bg-gray-100 text-gray-500 flex items-center justify-center text-sm font-bold">-</button>
-    <span className="w-8 text-center text-sm font-medium text-gray-800">{value}</span>
-    <button onClick={() => onChange(Math.min(max, value + 1))} className="w-7 h-7 bg-gray-50 hover:bg-gray-100 text-gray-500 flex items-center justify-center text-sm font-bold">+</button>
+  <div className="flex items-center border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+    <button onClick={() => onChange(Math.max(min, value - 1))} className="w-7 h-7 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 flex items-center justify-center text-sm font-bold">-</button>
+    <span className="w-8 text-center text-sm font-medium text-gray-800 dark:text-white">{value}</span>
+    <button onClick={() => onChange(Math.min(max, value + 1))} className="w-7 h-7 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-500 dark:text-gray-300 flex items-center justify-center text-sm font-bold">+</button>
   </div>
 );
 
@@ -30,7 +30,7 @@ function Chips<T extends string>({ options, value, onChange, disabled }: {
     <div className="flex flex-wrap gap-1.5">
       {options.map(o => (
         <button key={o.value} onClick={() => !disabled && onChange(o.value)} disabled={disabled}
-          className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${value === o.value ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+          className={`px-3 py-1 rounded-full text-xs font-medium border transition-all ${value === o.value ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'}`}>
           {o.label}
         </button>
       ))}
@@ -40,14 +40,14 @@ function Chips<T extends string>({ options, value, onChange, disabled }: {
 
 // ---- Section card ----
 const Sec = ({ icon, title, sub, children }: { icon?: string; title: string; sub?: string; children: React.ReactNode }) => (
-  <div className="bg-white rounded-xl border border-gray-100 mb-4 overflow-hidden shadow-sm">
-    <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+  <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 mb-4 overflow-hidden shadow-sm">
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700">
       {icon && (
-        <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-xl flex-shrink-0">{icon}</div>
+        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-xl flex-shrink-0">{icon}</div>
       )}
       <div>
-        <h3 className="text-sm font-bold text-gray-800">{title}</h3>
-        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+        <h3 className="text-sm font-bold text-gray-800 dark:text-white">{title}</h3>
+        {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{sub}</p>}
       </div>
     </div>
     {children}
@@ -56,10 +56,10 @@ const Sec = ({ icon, title, sub, children }: { icon?: string; title: string; sub
 
 // ---- Row ----
 const Row = ({ label, sub, children, last }: { label: string; sub?: string; children: React.ReactNode; last?: boolean }) => (
-  <div className={`flex items-center justify-between px-4 py-2.5 ${last ? '' : 'border-b border-gray-50'}`}>
+  <div className={`flex items-center justify-between px-4 py-2.5 ${last ? '' : 'border-b border-gray-50 dark:border-gray-700/50'}`}>
     <div className="flex-1 min-w-0 pr-3">
-      <p className="text-[13px] text-gray-800 leading-snug">{label}</p>
-      {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
+      <p className="text-[13px] text-gray-800 dark:text-gray-100 leading-snug">{label}</p>
+      {sub && <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{sub}</p>}
     </div>
     <div className="flex-shrink-0">{children}</div>
   </div>
@@ -67,19 +67,19 @@ const Row = ({ label, sub, children, last }: { label: string; sub?: string; chil
 
 // ---- CheckRow ----
 const ChkRow = ({ label, sub, checked, onChange }: { label: string; sub?: string; checked: boolean; onChange: (v: boolean) => void }) => (
-  <label className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-50 last:border-b-0 cursor-pointer hover:bg-gray-50/50 transition-colors">
+  <label className="flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-50 dark:border-gray-700/50 last:border-b-0 cursor-pointer hover:bg-gray-50/50 dark:hover:bg-gray-700/40 transition-colors">
     <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="w-3.5 h-3.5 accent-emerald-500 flex-shrink-0" />
     <div>
-      <span className="text-[13px] text-gray-800">{label}</span>
-      {sub && <p className="text-[10px] text-gray-400 mt-0.5">{sub}</p>}
+      <span className="text-[13px] text-gray-800 dark:text-gray-100">{label}</span>
+      {sub && <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{sub}</p>}
     </div>
   </label>
 );
 
 // ---- Field block ----
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="p-4 border-b border-gray-50 last:border-b-0">
-    <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase mb-2">{label}</p>
+  <div className="p-4 border-b border-gray-50 dark:border-gray-700/50 last:border-b-0">
+    <p className="text-[10px] font-semibold tracking-widest text-gray-400 dark:text-gray-500 uppercase mb-2">{label}</p>
     {children}
   </div>
 );
@@ -87,13 +87,13 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 // ---- Input ----
 const Inp = ({ value, onChange, placeholder, disabled }: { value: string; onChange: (v: string) => void; placeholder?: string; disabled?: boolean }) => (
   <input type="text" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled}
-    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 disabled:opacity-50 transition-all" />
+    className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 disabled:opacity-50 transition-all" />
 );
 
 // ---- Textarea ----
 const Txa = ({ value, onChange, placeholder, disabled }: { value: string; onChange: (v: string) => void; placeholder?: string; disabled?: boolean }) => (
   <textarea value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} disabled={disabled} rows={3}
-    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 disabled:opacity-50 resize-y min-h-[64px] transition-all" />
+    className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20 disabled:opacity-50 resize-y min-h-[64px] transition-all" />
 );
 
 // ---- Layout data ----
@@ -196,6 +196,15 @@ const RegularPreview = ({ s }: { s: any }) => {
           transform: `scale(${scale})`,
         }}>
           <InvoiceTemplate settings={s} isPreview bill={null} items={[]} />
+          {(s?.print_original_duplicate ?? true) && (s?.print_copy_original ?? true) && (
+            <div style={{
+              position: 'absolute', top: 14, right: 14,
+              background: 'rgba(0,0,0,0.055)', border: '1px solid rgba(0,0,0,0.1)',
+              borderRadius: 3, padding: '2px 7px',
+              fontSize: 7.5, fontWeight: 800, color: '#555',
+              letterSpacing: '0.09em', textTransform: 'uppercase', fontFamily: 'inherit'
+            }}>ORIGINAL FOR RECIPIENT</div>
+          )}
         </div>
       </div>
     </div>
@@ -221,16 +230,16 @@ export default function PrintSettingsTab() {
   const [appearanceTab, setAppearanceTab] = useState<'layout' | 'colors'>('layout');
 
   return (
-    <div className="flex bg-gray-50 relative" style={{ minHeight: 'calc(100vh - 140px)' }}>
+    <div className="flex flex-col lg:flex-row bg-gray-50 dark:bg-gray-900 relative" style={{ minHeight: 'calc(100vh - 140px)' }}>
 
       {/* LEFT: Settings column */}
-      <div className="min-w-0 overflow-y-auto p-4 pb-24" style={{ width: '60%', maxHeight: 'calc(100vh - 140px)' }}>
+      <div className="min-w-0 overflow-y-auto p-4 pb-28 w-full lg:w-[60%] lg:max-h-[calc(100vh-140px)]">
 
         {/* Printer mode toggle */}
-        <div className="flex mb-4 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex mb-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
           {(['regular', 'thermal'] as const).map((p, i) => (
             <button key={p} onClick={() => setTab(p)}
-              className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold uppercase tracking-wide transition-all ${i === 0 ? '' : 'border-l border-gray-100'} ${tab === p ? 'bg-emerald-500 text-white' : 'bg-white text-gray-400 hover:bg-gray-50'}`}>
+              className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-bold uppercase tracking-wide transition-all ${i === 0 ? '' : 'border-l border-gray-100 dark:border-gray-700'} ${tab === p ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}>
               <span className="text-base">{p === 'regular' ? '🖨️' : '🧾'}</span>
               {p === 'regular' ? 'Regular Printer' : 'Thermal Printer'}
             </button>
@@ -242,14 +251,14 @@ export default function PrintSettingsTab() {
 
           <Sec icon="🎨" title="Appearance" sub="Customize layout and colors for regular printing">
             {/* Sub-tabs */}
-            <div className="flex gap-6 px-5 border-b border-gray-100">
+            <div className="flex gap-6 px-5 border-b border-gray-100 dark:border-gray-700">
               <button onClick={() => setAppearanceTab('layout')}
                 className={`py-3 text-xs font-bold tracking-widest uppercase transition-all -mb-px ${
-                  appearanceTab === 'layout' ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-gray-600'
+                  appearanceTab === 'layout' ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
                 }`}>Change Layout</button>
               <button onClick={() => setAppearanceTab('colors')}
                 className={`py-3 text-xs font-bold tracking-widest uppercase transition-all -mb-px ${
-                  appearanceTab === 'colors' ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-gray-400 hover:text-gray-600'
+                  appearanceTab === 'colors' ? 'text-emerald-500 border-b-2 border-emerald-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
                 }`}>Change Colors</button>
             </div>
             {/* Horizontal scroll layout cards */}
@@ -260,12 +269,12 @@ export default function PrintSettingsTab() {
                   return (
                     <button key={l.id} onClick={() => isAdmin && u({ print_regular_layout: l.id })} disabled={!isAdmin}
                       className={`flex-shrink-0 flex flex-col items-center border-2 rounded-xl p-4 w-28 transition-all ${
-                        active ? 'border-emerald-500 bg-white shadow-sm' : 'border-gray-100 bg-white hover:border-emerald-200 hover:bg-gray-50'
+                        active ? 'border-emerald-500 bg-white dark:bg-gray-700 shadow-sm' : 'border-gray-100 dark:border-gray-600 bg-white dark:bg-gray-700/50 hover:border-emerald-200 hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}>
-                      <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-3xl mb-2.5 ${active ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                      <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-3xl mb-2.5 ${active ? 'bg-emerald-50 dark:bg-emerald-900/40' : 'bg-gray-50 dark:bg-gray-600/50'}`}>
                         {l.icon}
                       </div>
-                      <span className={`text-[11px] font-semibold text-center leading-tight ${active ? 'text-emerald-600' : 'text-gray-600'}`}>{l.name}</span>
+                      <span className={`text-[11px] font-semibold text-center leading-tight ${active ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400'}`}>{l.name}</span>
                       {active && (
                         <div className="mt-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
                           <span className="text-white text-[10px] font-black">✓</span>
@@ -278,7 +287,7 @@ export default function PrintSettingsTab() {
             )}
             {appearanceTab === 'colors' && (
               <div className="p-5">
-                <p className="text-xs text-gray-400 text-center py-4">Color themes coming soon</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">Color themes coming soon</p>
               </div>
             )}
           </Sec>
@@ -304,12 +313,12 @@ export default function PrintSettingsTab() {
               <Chips options={[{value:'portrait',label:'Portrait'},{value:'landscape',label:'Landscape'}]} value={settings?.print_orientation || 'portrait'} onChange={v => u({ print_orientation: v })} disabled={!isAdmin} />
             </Field>
             <Row label="Company Name Size">
-              <select value={settings?.print_company_name_size || 'large'} onChange={e => u({ print_company_name_size: e.target.value })} disabled={!isAdmin} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-emerald-400 disabled:opacity-50">
+              <select value={settings?.print_company_name_size || 'large'} onChange={e => u({ print_company_name_size: e.target.value })} disabled={!isAdmin} className="text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 outline-none focus:border-emerald-400 disabled:opacity-50">
                 <option value="v.small">XS</option><option value="small">S</option><option value="medium">M</option><option value="large">L</option><option value="v.large">XL</option><option value="e.large">XXL</option>
               </select>
             </Row>
             <Row label="Invoice Text Size">
-              <select value={settings?.print_invoice_text_size || 'medium'} onChange={e => u({ print_invoice_text_size: e.target.value })} disabled={!isAdmin} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-emerald-400 disabled:opacity-50">
+              <select value={settings?.print_invoice_text_size || 'medium'} onChange={e => u({ print_invoice_text_size: e.target.value })} disabled={!isAdmin} className="text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 outline-none focus:border-emerald-400 disabled:opacity-50">
                 <option value="v.small">XS</option><option value="small">S</option><option value="medium">M</option><option value="large">L</option><option value="v.large">XL</option>
               </select>
             </Row>
@@ -321,18 +330,15 @@ export default function PrintSettingsTab() {
           <Sec icon="📑" title="Print Copies" sub="Number of copies and Original / Duplicate labels">
             <Row label="Print Original / Duplicate"><Tog on={settings?.print_original_duplicate ?? true} onChange={v => u({ print_original_duplicate: v })} /></Row>
             {(settings?.print_original_duplicate ?? true) && (
-              <div className="px-4 py-2 border-b border-gray-50 space-y-2">
+              <div className="px-4 py-2 border-b border-gray-50 dark:border-gray-700/50 space-y-2">
                 {([['print_copy_original','Original','Original for Recipient'],['print_copy_duplicate','Duplicate','Duplicate for Transporter'],['print_copy_triplicate','Triplicate','Triplicate for Supplier']] as [string,string,string][]).map(([k,l,s]) => (
                   <label key={k} className="flex items-start gap-2 cursor-pointer py-1">
                     <input type="checkbox" checked={settings?.[k] ?? (k==='print_copy_triplicate'?false:true)} onChange={e => u({ [k]: e.target.checked })} className="mt-0.5 w-3.5 h-3.5 accent-emerald-500" />
-                    <div><p className="text-[13px] text-gray-800">{l}</p><p className="text-[10px] text-gray-400">{s}</p></div>
+                    <div><p className="text-[13px] text-gray-800 dark:text-gray-100">{l}</p><p className="text-[10px] text-gray-400 dark:text-gray-500">{s}</p></div>
                   </label>
                 ))}
               </div>
             )}
-            <Field label="Default No. of Copies">
-              <Chips options={[{value:'1',label:'1 Copy'},{value:'2',label:'2 Copies'},{value:'3',label:'3 Copies'}]} value={String(settings?.print_default_copies ?? 1)} onChange={v => u({ print_default_copies: Number(v) })} disabled={!isAdmin} />
-            </Field>
           </Sec>
 
           <Sec icon="📋" title="Item Table Customization" sub="Columns to show in the item summary table">
@@ -353,7 +359,7 @@ export default function PrintSettingsTab() {
             <Row label="Amount in Words" last>
               <div className="flex items-center gap-2">
                 <Tog on={settings?.print_amount_words ?? false} onChange={v => u({ print_amount_words: v })} />
-                <select value={settings?.print_amount_words_format || 'indian'} onChange={e => u({ print_amount_words_format: e.target.value })} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-emerald-400">
+                <select value={settings?.print_amount_words_format || 'indian'} onChange={e => u({ print_amount_words_format: e.target.value })} className="text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 outline-none focus:border-emerald-400">
                   <option value="indian">Indian</option><option value="international">International</option>
                 </select>
               </div>
@@ -400,12 +406,12 @@ export default function PrintSettingsTab() {
                 return (
                   <button key={l.id} onClick={() => isAdmin && u({ print_thermal_layout: l.id })} disabled={!isAdmin}
                     className={`flex-shrink-0 flex flex-col items-center border-2 rounded-xl p-4 w-24 transition-all ${
-                      active ? 'border-emerald-500 bg-white shadow-sm' : 'border-gray-100 bg-white hover:border-emerald-200 hover:bg-gray-50'
+                      active ? 'border-emerald-500 bg-white dark:bg-gray-700 shadow-sm' : 'border-gray-100 dark:border-gray-600 bg-white dark:bg-gray-700/50 hover:border-emerald-200 hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}>
-                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-2 ${active ? 'bg-emerald-50' : 'bg-gray-50'}`}>
+                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-2 ${active ? 'bg-emerald-50 dark:bg-emerald-900/40' : 'bg-gray-50 dark:bg-gray-600/50'}`}>
                       {l.icon}
                     </div>
-                    <span className={`text-[11px] font-semibold ${active ? 'text-emerald-600' : 'text-gray-600'}`}>{l.name}</span>
+                    <span className={`text-[11px] font-semibold ${active ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-600 dark:text-gray-400'}`}>{l.name}</span>
                     {active && (
                       <div className="mt-1.5 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
                         <span className="text-white text-[9px] font-black">✓</span>
@@ -422,7 +428,7 @@ export default function PrintSettingsTab() {
               <Chips options={[{value:'2inch',label:'2in 58mm'},{value:'3inch',label:'3in 80mm'},{value:'4inch',label:'4in 80mm'},{value:'custom',label:'Custom'}]} value={settings?.print_thermal_page_size || '4inch'} onChange={v => u({ print_thermal_page_size: v })} disabled={!isAdmin} />
             </Field>
             <Row label="Printing Type">
-              <select value={settings?.print_thermal_printing_type || 'text'} onChange={e => u({ print_thermal_printing_type: e.target.value })} disabled={!isAdmin} className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 outline-none focus:border-emerald-400 disabled:opacity-50">
+              <select value={settings?.print_thermal_printing_type || 'text'} onChange={e => u({ print_thermal_printing_type: e.target.value })} disabled={!isAdmin} className="text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 outline-none focus:border-emerald-400 disabled:opacity-50">
                 <option value="text">Text (Fast)</option>
                 <option value="graphic">Graphic (Rich)</option>
                 <option value="escpos">ESC/POS</option>
@@ -460,26 +466,26 @@ export default function PrintSettingsTab() {
       </div>
 
       {/* RIGHT: Live Preview */}
-      <div className="flex-shrink-0 sticky top-0 flex flex-col bg-white border-l border-gray-100 overflow-hidden" style={{ width: '40%', height: 'calc(100vh - 140px)' }}>
-        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 bg-gray-50/60 flex-shrink-0">
-          <span className="text-[11px] font-semibold text-gray-600 flex-1 truncate">
+      <div className="flex-shrink-0 lg:sticky top-0 flex flex-col bg-white dark:bg-gray-800 border-t lg:border-t-0 lg:border-l border-gray-100 dark:border-gray-700 overflow-hidden w-full lg:w-[40%] h-[380px] sm:h-[460px] lg:h-[calc(100vh-140px)]">
+        <div className="flex items-center gap-2 px-3 py-2.5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-700/40 flex-shrink-0">
+          <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 flex-1 truncate">
             {tab === 'regular' ? 'Regular Invoice' : 'Thermal Receipt'}
           </span>
-          <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold flex-shrink-0">
+          <span className="text-[9px] bg-emerald-50 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full font-bold flex-shrink-0">
             {tab === 'regular'
               ? (settings?.print_paper_size || 'A4')
               : (settings?.print_thermal_page_size === '2inch' ? '2in-58mm' : settings?.print_thermal_page_size === '3inch' ? '3in-76mm' : '4in-80mm')}
           </span>
         </div>
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 bg-gray-100">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 bg-gray-100 dark:bg-gray-900">
           {tab === 'regular' ? <RegularPreview s={settings} /> : <ThermalPreview s={settings} />}
         </div>
       </div>
 
       {/* Fixed Save Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-100 px-5 py-3 flex justify-end gap-2 z-30" style={{ boxShadow: '0 -2px 12px rgba(0,0,0,0.06)' }}>
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-t border-gray-100 dark:border-gray-700 px-5 py-3 flex justify-end gap-2 z-30" style={{ boxShadow: '0 -2px 12px rgba(0,0,0,0.08)' }}>
         <button onClick={() => { setLocal({}); toast('Changes reset'); }} disabled={!hasChanges}
-          className="px-4 py-2 text-sm text-gray-500 border border-gray-200 rounded-lg bg-gray-50 hover:bg-gray-100 disabled:opacity-40 transition-all">
+          className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 transition-all">
           Reset
         </button>
         <button onClick={saveAll} disabled={!hasChanges || isSaving || !isAdmin}
