@@ -1,3 +1,24 @@
+/**
+ * components/settings/tabs/AppThemeTab.tsx — App Theme Selector
+ *
+ * Lets the admin choose the visual theme for the entire Invoice Adda app.
+ * Two sections:
+ *  ☀️ Light Themes — 7 options: Mint Pro, Sunset Orange, Royal Purple, Ocean Blue, Rose Gold, Slate Modern, Forest Deep
+ *  🌙 Dark Themes  — 3 options: Dark Pro, Cyber Neon, Midnight Blue
+ *
+ * Each theme card shows:
+ *  - A color gradient bar at the top
+ *  - Color dot + theme name
+ *  - Short description
+ *  - Active checkmark badge if currently selected
+ *
+ * Clicking a card calls setTheme() from ThemeContext which:
+ *  1. Saves to Supabase business_settings.app_theme
+ *  2. Applies CSS variables immediately to document root
+ *
+ * Dark theme cards always render with dark backgrounds regardless of current app theme
+ * so they look correct even when a light theme is active.
+ */
 import React from 'react';
 import { useTheme, ThemeName } from '@/contexts/ThemeContext';
 import { 

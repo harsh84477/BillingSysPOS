@@ -1,4 +1,44 @@
 // @ts-nocheck
+/**
+ * components/settings/PrintSettingsTab.tsx — Print Configuration Settings
+ *
+ * Full-screen settings tab for configuring how invoices and thermal receipts look when printed.
+ * Layout: 60% settings panel (left) | 40% live preview panel (right, sticky)
+ * On mobile: stacks vertically, preview panel is 380px tall.
+ *
+ * LEFT PANEL — Two modes toggled at the top:
+ *  [Regular Printer] — A4/A5/Letter/Legal invoice settings:
+ *    - Appearance: layout theme (6 options), color schemes
+ *    - Company Info: name, logo, address, phone, email, GSTIN
+ *    - Page Setup: paper size, orientation, font sizes, margins
+ *    - Print Copies: Original / Duplicate / Triplicate labels
+ *    - Item Table: which columns to show (HSN, Qty, MRP, Discount, GST...)
+ *    - Totals & Taxes: GST summary, amount words, rounding
+ *    - Bank Details: bank name, account, IFSC, UPI QR, PAY NOW button
+ *    - Footer: terms & conditions, signature, received/delivered by
+ *
+ *  [Thermal Printer] — 58mm/76mm/80mm receipt settings:
+ *    - Appearance: receipt theme (5 options)
+ *    - Paper & Hardware: roll width, print type, auto-cut, cash drawer, copies
+ *    - Company Info: name, logo, address, phone, email on receipt
+ *    - Footer: thank-you text
+ *
+ * BUILT-IN PRIMITIVES (used only inside this file):
+ *  Tog — emerald toggle switch
+ *  Stepper — - / value / + counter
+ *  Chips — pill group selector
+ *  Sec — card section with icon + title + subtitle
+ *  Row — label + control row with optional divider
+ *  ChkRow — checkbox row
+ *  Field — labeled field container
+ *  Inp — text input
+ *  Txa — textarea
+ *  ThermalPreview — live thermal receipt preview
+ *  RegularPreview — live A4 invoice preview (ResizeObserver-scaled InvoiceTemplate)
+ *
+ * All settings are saved to business_settings table via useUpdateBusinessSettings().
+ * Changes are held locally in `local` state until "Save Changes" is clicked.
+ */
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessSettings, useUpdateBusinessSettings } from '@/hooks/useBusinessSettings';

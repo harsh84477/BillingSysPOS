@@ -1,4 +1,17 @@
 // @ts-nocheck
+/**
+ * pages/BillsHistory.tsx — Completed Bills List
+ *
+ * Shows all finalized bills for the business.
+ * Features:
+ *  - Search by bill number, customer name, amount
+ *  - Filter by date range, payment status
+ *  - Sortable columns (date, amount, customer)
+ *  - Click bill to view full details + items
+ *  - Reprint invoice / download PDF
+ *  - Delete bill (admin only)
+ *  - Mark bill as paid/unpaid
+ */
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';

@@ -1,3 +1,20 @@
+/**
+ * pages/Settings.tsx — Settings Page Shell
+ *
+ * The main Settings page that renders all configuration tabs.
+ * Uses URL search param ?tab=xxx to keep the active tab in sync with the browser URL.
+ * Tab list:
+ *  - business   → Business name, address, logo, bank, UPI
+ *  - billing    → Tax rules, bill numbering, discount config
+ *  - categories → Product category manager
+ *  - staff      → Team members and role assignment (admin only)
+ *  - print      → Invoice / receipt design & printer settings (PrintSettingsTab)
+ *  - pos        → POS screen layout and behaviour
+ *  - appearance → App theme selection (light/dark)
+ *
+ * The "print" tab renders PrintSettingsTab in full-screen mode (no inner scroll wrapper)
+ * because it has its own 60/40 split layout with a live invoice preview panel.
+ */
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';

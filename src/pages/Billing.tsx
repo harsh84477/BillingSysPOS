@@ -1,4 +1,25 @@
 // @ts-nocheck
+/**
+ * pages/Billing.tsx — POS Billing Screen (Core Feature)
+ *
+ * The main point-of-sale screen — the most complex page in the app.
+ * Layout: Three panels:
+ *   LEFT  — Category chips + product search + filters
+ *   CENTER — Product grid (cards with image, price, stock badge)
+ *   RIGHT  — Shopping cart: items, quantities, discounts, totals, payment
+ *
+ * Key features:
+ *  - Click product → add to cart; tap again → increase quantity
+ *  - Per-item discount and bill-level discount
+ *  - Auto GST calculation (CGST+SGST or IGST)
+ *  - Customer selection (existing or walk-in)
+ *  - Save as Draft (incomplete) or Finalize bill
+ *  - Auto bill number generation (INV-YYYY-XXXX)
+ *  - Print invoice after completing bill
+ *  - Compact/Regular/Spacious display density toggle
+ *  - Right cart panel is collapsible
+ * Uses useBillingSystem hook for cart state management.
+ */
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';

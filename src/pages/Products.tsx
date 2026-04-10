@@ -1,4 +1,17 @@
 // @ts-nocheck
+/**
+ * pages/Products.tsx — Product Catalog Management
+ *
+ * Manages the business's product/inventory catalog.
+ * Features:
+ *  - Add / edit / delete products
+ *  - Fields: name, SKU, HSN/SAC, category, selling price, MRP, cost price, GST%, unit, stock qty
+ *  - Product image upload
+ *  - Low stock alerts (configurable threshold)
+ *  - Filter by category, search by name/SKU
+ *  - CSV bulk import
+ *  - Random test data seeder (dev mode)
+ */
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

@@ -1,4 +1,17 @@
 // @ts-nocheck
+/**
+ * pages/Reports.tsx — Business Reports & Analytics
+ *
+ * Provides reporting and analytics for the business owner/admin.
+ * Report types:
+ *  - Sales Report: daily/weekly/monthly totals with charts
+ *  - Product Report: top-selling products, revenue by category
+ *  - Customer Report: top customers, purchase frequency
+ *  - Expense Report: breakdown by category
+ *  - Profit & Loss: revenue minus expenses summary
+ * All reports are filterable by custom date ranges.
+ * Charts use recharts library.
+ */
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';

@@ -1,4 +1,15 @@
 // @ts-nocheck
+/**
+ * pages/DueBills.tsx — Outstanding / Due Bills
+ *
+ * Shows bills where the customer has an outstanding balance (not fully paid).
+ * Features:
+ *  - List of all partially paid or unpaid bills
+ *  - Shows due amount, original amount, customer name
+ *  - Record a payment against a due bill
+ *  - Supports partial payments (multiple payments per bill)
+ *  - Shows total outstanding amount across all bills
+ */
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';

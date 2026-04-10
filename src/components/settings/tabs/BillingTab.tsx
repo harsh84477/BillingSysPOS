@@ -1,3 +1,19 @@
+/**
+ * components/settings/tabs/BillingTab.tsx — Billing & Invoice Configuration
+ *
+ * Controls how bills are created and calculated in Invoice Adda.
+ * Settings include:
+ *  - Tax mode: GST (CGST+SGST / IGST) or No Tax
+ *  - Default GST rate for new products
+ *  - Bill numbering: prefix, starting number, auto-increment
+ *  - Discount rules: enable/disable discounts, max discount %
+ *  - Round off: round grand total to nearest rupee
+ *  - Show MRP in billing screen
+ *  - Product code display toggle
+ *
+ * All settings saved to business_settings table.
+ * Changes affect the Billing screen and invoice calculations immediately.
+ */
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessSettings, useUpdateBusinessSettings } from '@/hooks/useBusinessSettings';

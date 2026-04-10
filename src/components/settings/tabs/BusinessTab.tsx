@@ -1,3 +1,17 @@
+/**
+ * components/settings/tabs/BusinessTab.tsx — Business Information Settings
+ *
+ * Allows the admin to configure all core business details that appear on invoices.
+ * Sections:
+ *  - Business Information: name, email, phone, GST number
+ *  - Address: full address, city, state, pincode
+ *  - Logo: upload / remove business logo (stored in Supabase Storage)
+ *  - Bank Details: bank name, account number, IFSC code
+ *  - UPI: UPI ID for payment QR code on invoices
+ *
+ * All changes saved to business_settings table via useUpdateBusinessSettings().
+ * Each section has its own Save button (saves only that section's fields).
+ */
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';

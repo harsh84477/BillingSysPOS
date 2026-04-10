@@ -1,3 +1,21 @@
+/**
+ * contexts/AuthContext.tsx — Authentication & Session Context
+ *
+ * Central auth state for the entire Invoice Adda app.
+ * Provides to all components via useAuth() hook:
+ *  - user: current Supabase Auth user object
+ *  - session: JWT session
+ *  - userRole: 'admin' | 'staff' | 'viewer'
+ *  - businessId: UUID of the business this user belongs to
+ *  - isAdmin: boolean shortcut
+ *  - isSuperAdmin: boolean (platform-level admin)
+ *  - signIn(email, password): login
+ *  - signUp(email, password): register
+ *  - signOut(): logout and redirect to /auth
+ *
+ * On mobile (Capacitor), uses @capacitor/browser for OAuth flows.
+ * Auto-detects Super Admin login from a special flag in localStorage.
+ */
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';

@@ -1,3 +1,20 @@
+/**
+ * components/layout/AppLayout.tsx — Main App Shell / Layout Wrapper
+ *
+ * The persistent layout that wraps every authenticated page.
+ * Structure:
+ *  - <aside> Sidebar: logo, nav links, collapse toggle, user dropdown + signout
+ *  - <main> Content area: renders the current route via <Outlet />
+ *
+ * Sidebar features:
+ *  - Collapsible (click Collapse button or use icon-only mode at 56px width)
+ *  - Collapse state persisted in localStorage ('sidebar-collapsed')
+ *  - On mobile (<768px): sidebar is hidden; a Sheet (drawer) opens from a hamburger button
+ *  - Navigation links filtered by user role (staff can't see Settings staff tab)
+ *  - User block at bottom: shows display name, role badge, opens signout dropdown
+ *
+ * Also renders the mobile top header bar with hamburger + business name.
+ */
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';

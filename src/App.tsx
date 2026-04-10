@@ -1,3 +1,28 @@
+/**
+ * App.tsx — Invoice Adda Root Component
+ *
+ * Sets up the entire application shell:
+ * - PersistQueryClientProvider: React Query with IndexedDB persistence (offline caching)
+ * - ThemeProvider: wraps the whole app so any component can read/change the theme
+ * - AuthProvider: provides user session, role, businessId to all components
+ * - BrowserRouter + route definitions: maps URLs to page components
+ * - Toaster/Sonner: global toast notification system
+ *
+ * Route structure:
+ *   /auth          → Login/signup page
+ *   /              → AppLayout (sidebar + topbar wrapper)
+ *     /dashboard   → Dashboard with KPI cards and recent activity
+ *     /billing     → Main POS billing screen
+ *     /bills       → Bills history list
+ *     /drafts      → Draft (incomplete) bills
+ *     /due-bills   → Bills with outstanding payments
+ *     /products    → Product catalog management
+ *     /categories  → Product category management
+ *     /customers   → Customer directory
+ *     /expenses    → Expense tracker
+ *     /reports     → Sales and financial reports
+ *     /settings    → All settings tabs
+ */
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";

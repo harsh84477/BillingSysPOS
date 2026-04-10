@@ -1,3 +1,18 @@
+/**
+ * components/settings/tabs/POSTab.tsx — POS Screen Configuration
+ *
+ * Settings that control the behaviour and layout of the billing/POS screen.
+ * Options include:
+ *  - Default display density (compact / regular / spacious)
+ *  - Number of product columns in the grid
+ *  - Show/hide product images on cards
+ *  - Show/hide stock quantity badges
+ *  - Default sort order for products (name / price / stock)
+ *  - Auto-focus search bar on load
+ *  - Quick quantity mode (tap to add vs tap to open qty dialog)
+ *
+ * Settings saved to business_settings table.
+ */
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessSettings, useUpdateBusinessSettings } from '@/hooks/useBusinessSettings';

@@ -1,3 +1,21 @@
+/**
+ * contexts/ThemeContext.tsx — App Theme Engine
+ *
+ * Manages the visual theme of Invoice Adda across the whole app.
+ * Available themes:
+ *  Light: mint-pro, sunset-orange, royal-purple, ocean-blue, rose-gold, slate-modern, forest-deep
+ *  Dark:  dark-pro, cyber-neon, midnight-blue
+ *
+ * How it works:
+ *  - Reads saved theme from Supabase business_settings.app_theme column
+ *  - Applies theme by setting CSS custom properties (--background, --foreground, --primary, etc.)
+ *    on the document root element using HSL values
+ *  - Also maps sidebar-specific tokens to --spos-navy, --spos-sidebar-text, etc.
+ *    so the custom sidebar CSS in index.css responds to theme changes
+ *  - useTheme() hook gives any component access to { theme, setTheme }
+ *
+ * All components using hsl(var(--...)) classes automatically adapt when theme changes.
+ */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 

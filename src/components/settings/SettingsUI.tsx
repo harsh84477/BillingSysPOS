@@ -1,3 +1,26 @@
+/**
+ * components/settings/SettingsUI.tsx — Shared Settings UI Primitives
+ *
+ * A library of reusable UI components used by all settings tabs (except PrintSettingsTab
+ * which has its own primitives). Built with inline styles using design tokens from T.
+ *
+ * Exported primitives:
+ *  T              — design token object (colors, fonts, radius, shadows)
+ *  SettingsCard   — card container with colored left border, title, subtitle, optional footer
+ *  Toggle         — on/off switch styled with accent color
+ *  SettingRow     — label + description row with a right-side control slot
+ *  ButtonGroup    — segmented button selector (like radio but styled as pills)
+ *  TextInput      — styled text input with focus ring
+ *  SelectInput    — styled select dropdown
+ *  InfoBox        — colored info/stat box with icon, title, value
+ *  TabBar         — horizontal tab navigation bar (used in Settings page header)
+ *  TwoColGrid     — responsive 2-column grid layout helper
+ *  ColStack       — vertical stack layout helper
+ *  FieldLabel     — small uppercase label above an input
+ *  ComingSoon     — placeholder card for unimplemented sections
+ *
+ * All styles use CSS variables (hsl(var(--...))) so they adapt to any theme.
+ */
 import React, { useState } from 'react';
 
 /* ═══════════════════════════════════════════════════

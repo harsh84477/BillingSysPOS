@@ -1,3 +1,17 @@
+/**
+ * components/settings/tabs/StaffTab.tsx — Staff / Team Management (Admin only)
+ *
+ * Allows the business admin to manage who can access the Invoice Adda account.
+ * Features:
+ *  - List all staff members with their role and last active time
+ *  - Invite new staff via email (sends Supabase auth invite)
+ *  - Assign role: staff (billing + products) or viewer (read-only)
+ *  - Remove a staff member
+ *  - Change a staff member's role
+ *
+ * Only visible to admin users (hidden from staff/viewer in tab list).
+ * Staff invites use Supabase's invite-by-email flow.
+ */
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';

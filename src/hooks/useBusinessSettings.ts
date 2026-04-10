@@ -1,3 +1,19 @@
+/**
+ * hooks/useBusinessSettings.ts — Business Settings Read/Write Hooks
+ *
+ * Two React Query hooks used throughout the app:
+ *
+ * useBusinessSettings()
+ *  - Fetches the single row from business_settings for the current businessId
+ *  - Returns all config: company info, print settings, theme, billing rules, etc.
+ *  - Cached by React Query — shared across all components (no duplicate DB calls)
+ *
+ * useUpdateBusinessSettings()
+ *  - Returns a mutation function to PATCH business_settings
+ *  - Accepts a partial object of only the changed columns
+ *  - Automatically invalidates the settings cache after save
+ *  - Used by all Settings tabs (Business, Billing, Print Config, etc.)
+ */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';

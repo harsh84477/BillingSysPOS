@@ -1,3 +1,14 @@
+/**
+ * pages/DraftBills.tsx — Draft (Incomplete) Bills
+ *
+ * Lists all bills that were saved as drafts (not yet finalized).
+ * A draft bill is created when a cashier starts a bill but doesn't complete it.
+ * Features:
+ *  - Shows customer name, items count, total amount, created date
+ *  - Click "Resume" to go back to the billing screen with the draft loaded
+ *  - Delete draft bill
+ *  - Convert draft to a completed bill
+ */
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';

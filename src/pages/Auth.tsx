@@ -1,3 +1,14 @@
+/**
+ * pages/Auth.tsx — Login & Signup Page
+ *
+ * Displays the authentication screen for Invoice Adda.
+ * Handles:
+ *  - Email + password login (calls Supabase Auth)
+ *  - New user signup with email verification
+ *  - Error messages for wrong credentials, unverified email, etc.
+ *  - Redirects to /dashboard after successful login
+ * Uses the useAuth() hook from AuthContext for all auth operations.
+ */
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';

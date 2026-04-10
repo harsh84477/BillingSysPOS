@@ -1,3 +1,15 @@
+/**
+ * pages/Customers.tsx — Customer Directory
+ *
+ * Manages the business's customer list.
+ * Features:
+ *  - Add new customer (name, phone, email, address, GSTIN)
+ *  - Edit / delete existing customers
+ *  - Search customers by name or phone
+ *  - View customer's purchase history and outstanding balance
+ *  - CSV import for bulk customer upload
+ *  - Quick customer selection during billing
+ */
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

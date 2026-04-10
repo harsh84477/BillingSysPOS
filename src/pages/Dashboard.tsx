@@ -1,3 +1,14 @@
+/**
+ * pages/Dashboard.tsx — Main Dashboard Page
+ *
+ * The home screen of Invoice Adda after login.
+ * Displays:
+ *  - KPI summary cards: Today's Sales, Total Bills, Revenue, Outstanding Dues
+ *  - Recent bills list with quick-view details
+ *  - Low stock product alerts
+ *  - Quick action buttons (New Bill, Add Product, Add Customer)
+ * All data is fetched from Supabase filtered by the active businessId.
+ */
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';

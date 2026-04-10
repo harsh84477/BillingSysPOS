@@ -1,3 +1,18 @@
+/**
+ * hooks/useExpenseManagement.ts — Expense CRUD Hook
+ *
+ * Custom hook that manages all expense-related state and Supabase operations.
+ * Returns:
+ *  - expenses: list of all expense records for the business
+ *  - isLoading: loading state
+ *  - addExpense(data): create a new expense entry
+ *  - updateExpense(id, data): edit an existing expense
+ *  - deleteExpense(id): remove an expense
+ *  - summary: total by category, total this month, etc.
+ *
+ * Expenses table columns: id, business_id, category, amount, description,
+ * date, payment_method, created_at.
+ */
 import { useState, useEffect, useCallback } from 'react';
 import { supabase as supabaseClient } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
