@@ -1208,6 +1208,8 @@ export default function Billing() {
                 />
               </div>
             </div>
+
+
             <div className="space-y-0.5 text-left">
               <Label className="text-[9px] uppercase text-muted-foreground ml-1">Online</Label>
               <div className="relative">
@@ -1220,6 +1222,7 @@ export default function Billing() {
                   className="h-7 pl-4 text-xs font-bold bg-blue-50/30 border-blue-100/50"
                 />
               </div>
+
             </div>
         </div>
       )}
@@ -1494,7 +1497,7 @@ export default function Billing() {
                       placeholder="Customer Name..."
                       value={customerName || (selectedCustomerId ? customers.find(c => c.id === selectedCustomerId)?.name : '') || ''}
                       onChange={(e) => { setCustomerName(e.target.value); if (selectedCustomerId) setSelectedCustomerId(null); }}
-                      className="pl-8 h-10 text-sm"
+                      className="bg-background pl-8 h-9 text-sm"
                     />
                   </div>
                   <Button variant="secondary" size="icon" className="h-10 w-10 shrink-0"
