@@ -487,13 +487,14 @@
   justify-content: center;
   width: 100%;
   padding: 9px 0;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--spos-sidebar-text, rgba(255, 255, 255, 0.6));
+  opacity: 0.7;
   cursor: pointer;
   background: none;
   border: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  transition: color 0.15s, background 0.15s;
+  border-bottom: 1px solid var(--spos-sidebar-border, rgba(255, 255, 255, 0.10));
+  border-top: 1px solid var(--spos-sidebar-border, rgba(255, 255, 255, 0.05));
+  transition: color 0.15s, background 0.15s, opacity 0.15s;
   position: relative;
   gap: 6px;
   font-size: 12px;
@@ -502,8 +503,9 @@
 }
 
 .spos-sidebar-toggle:hover {
-  color: rgba(255, 255, 255, 0.95);
-  background: rgba(255, 255, 255, 0.09);
+  color: var(--spos-sidebar-text, rgba(255, 255, 255, 0.95));
+  background: var(--spos-sidebar-hover-bg, rgba(255, 255, 255, 0.09));
+  opacity: 1;
 }
 
 /* ─── Collapsed sidebar state (desktop toggle) ─── */

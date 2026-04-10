@@ -42,11 +42,12 @@ export default function Settings() {
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ fontFamily: 'var(--spos-sans)' }}>
       {/* Header (Fixed) */}
-      <div className="px-6 py-4 border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+      <div className="px-6 py-4 sticky top-0 z-10 backdrop-blur-md"
+        style={{ background: 'hsl(var(--background) / 0.92)', borderBottom: '1px solid hsl(var(--border))' }}>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="spos-page-heading text-xl font-bold">Settings</h1>
-            <p className="spos-page-subhead text-sm text-slate-500">Manage your business configuration</p>
+            <p className="text-sm" style={{ color: 'hsl(var(--muted-foreground))' }}>Manage your business configuration</p>
           </div>
         </div>
         <div className="mt-4">
