@@ -9,14 +9,14 @@
 
 | # | Feature | Phase | Effort | Status |
 |---|---|---|---|---|
-| 1 | PDF / Excel Export | Phase 1 | ~2 days | ⏳ Pending |
-| 2 | Supplier / Vendor Management | Phase 2 | ~2 days | ⏳ Pending |
-| 3 | Purchase / Stock-In Module | Phase 2 | ~4 days | ⏳ Pending |
-| 4 | Reorder Alerts → Purchase Order | Phase 2 | ~2 days | ⏳ Pending |
-| 5 | Sales Returns / Credit Notes | Phase 3 | ~3 days | ⏳ Pending |
-| 6 | GSTR-1 / GSTR-3B Export | Phase 3 | ~3 days | ⏳ Pending |
-| 7 | Customer Payment Reminders | Phase 4 | ~2 days | ⏳ Pending |
-| 8 | Customer Loyalty Points | Phase 4 | ~3 days | ⏳ Pending |
+| 1 | PDF / Excel Export | Phase 1 | ~2 days | ✅ Done |
+| 2 | Supplier / Vendor Management | Phase 2 | ~2 days | ✅ Done |
+| 3 | Purchase / Stock-In Module | Phase 2 | ~4 days | ✅ Done |
+| 4 | Reorder Alerts → Purchase Order | Phase 2 | ~2 days | ✅ Done |
+| 5 | Sales Returns / Credit Notes | Phase 3 | ~3 days | ✅ Done |
+| 6 | GSTR-1 / GSTR-3B Export | Phase 3 | ~3 days | ✅ Done |
+| 7 | Customer Payment Reminders | Phase 4 | ~2 days | ✅ Done |
+| 8 | Customer Loyalty Points | Phase 4 | ~3 days | ✅ Done |
 
 ---
 

@@ -53,6 +53,7 @@ import { Search, FileText, Calendar, Eye, Trash2, Download, Filter, X, TrendingU
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { exportStyledExcel } from '@/lib/exportToExcel';
+import { exportPdf } from '@/lib/exportPdf';
 import { BillDetailsDialog } from '@/components/bills/BillDetailsDialog';
 import { printBillReceipt } from '@/components/bills/BillReceiptPrint';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -61,6 +62,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import DraftBillModal from '@/components/bills/DraftBillModal';
+import { ReturnItemsDialog } from '@/components/bills/ReturnItemsDialog';
+import { RotateCcw } from 'lucide-react';
 
 type DatePreset = 'today' | 'yesterday' | 'last7days' | 'last30days' | 'thisMonth' | 'lastMonth' | 'custom';
 
@@ -109,6 +112,7 @@ export default function BillsHistory() {
   const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedDraftBillId, setSelectedDraftBillId] = useState<string | null>(null);
+  const [returnBill, setReturnBill] = useState<Bill | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -376,6 +380,42 @@ export default function BillsHistory() {
     toast({ title: 'Exported successfully' });
   };
 
+  const handleExportPdf = () => {
+    if (filteredBills.length === 0) {
+      toast({ title: 'No data to export', variant: 'destructive' });
+      return;
+    }
+    const { totalRevenue, totalDiscount, totalTax } = summaryStats;
+    exportPdf(
+      `Bills History — ${format(new Date(), 'dd MMM yyyy')}`,
+      [
+        {
+          title: 'Bills List',
+          columns: [
+            { header: 'Bill #', dataKey: 'bill_number' },
+            { header: 'Date', dataKey: 'created_at', format: (v) => format(new Date(v as string), 'dd/MM/yyyy HH:mm') },
+            { header: 'Customer', dataKey: 'customer' },
+            { header: 'Status', dataKey: 'status' },
+            { header: `Total (${currencySymbol})`, dataKey: 'total_amount', format: (v) => Number(v).toFixed(2) },
+            { header: `Discount (${currencySymbol})`, dataKey: 'discount_amount', format: (v) => Number(v).toFixed(2) },
+            { header: `Tax (${currencySymbol})`, dataKey: 'tax_amount', format: (v) => Number(v).toFixed(2) },
+          ],
+          data: filteredBills.map(b => ({ ...b, customer: b.customers?.name || 'Walk-in' })) as any,
+        },
+      ],
+      [
+        { label: 'Total Bills', value: String(filteredBills.length) },
+        { label: 'Total Revenue', value: `${currencySymbol}${totalRevenue.toFixed(2)}` },
+        { label: 'Total Discount', value: `${currencySymbol}${totalDiscount.toFixed(2)}` },
+        { label: 'Total Tax', value: `${currencySymbol}${totalTax.toFixed(2)}` },
+        { label: 'Generated On', value: format(new Date(), 'dd MMM yyyy HH:mm') },
+      ],
+      `bills-history-${format(new Date(), 'yyyy-MM-dd')}`,
+      settings?.business_name ?? ''
+    );
+    toast({ title: 'PDF downloaded successfully' });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -411,17 +451,30 @@ export default function BillsHistory() {
           <h1 className="spos-page-heading">Bills History</h1>
           <p className="spos-page-subhead" style={{ marginBottom: 0 }}>View all your past bills and invoices</p>
         </div>
-        <Button
-          onClick={handleExportExcel}
-          variant="outline"
-          size="sm"
-          className="shrink-0"
-          disabled={!canExport}
-        >
-          <Download className="mr-1.5 h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Export Excel</span>
-          <span className="sm:hidden">Export</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleExportExcel}
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            disabled={!canExport}
+          >
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Excel</span>
+            <span className="sm:hidden">XLS</span>
+          </Button>
+          <Button
+            onClick={handleExportPdf}
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            disabled={!canExport || filteredBills.length === 0}
+          >
+            <Download className="mr-1.5 h-3.5 w-3.5" />
+            <span className="hidden sm:inline">PDF</span>
+            <span className="sm:hidden">PDF</span>
+          </Button>
+        </div>
       </div>
 
       {/* Summary Stats */}
@@ -587,6 +640,14 @@ export default function BillsHistory() {
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelectedBill(bill)}>
                         <Eye className="h-3.5 w-3.5" />
                       </Button>
+                      {bill.status === 'completed' && (
+                        <Button
+                          variant="ghost" size="icon" className="h-7 w-7 text-amber-500" title="Return Items"
+                          onClick={() => setReturnBill(bill)}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       {bill.status === 'draft' && (
                         <Button
                           variant="ghost" size="icon" className="h-7 w-7 text-green-600"
@@ -645,6 +706,16 @@ export default function BillsHistory() {
                             <Button variant="ghost" size="icon" onClick={() => setSelectedBill(bill)} title="View Bill">
                               <Eye className="h-4 w-4" />
                             </Button>
+                            {bill.status === 'completed' && (
+                              <Button
+                                variant="ghost" size="icon"
+                                onClick={() => setReturnBill(bill)}
+                                className="text-amber-500 hover:text-amber-600"
+                                title="Return Items"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                            )}
                             {bill.status === 'draft' && (
                               <Button
                                 variant="ghost" size="icon"
@@ -713,6 +784,13 @@ export default function BillsHistory() {
         billId={selectedDraftBillId}
         open={!!selectedDraftBillId}
         onClose={() => setSelectedDraftBillId(null)}
+      />
+
+      {/* Return Items Dialog */}
+      <ReturnItemsDialog
+        bill={returnBill}
+        open={!!returnBill}
+        onOpenChange={(open) => { if (!open) setReturnBill(null); }}
       />
     </div >
   );

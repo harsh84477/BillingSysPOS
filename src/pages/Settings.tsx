@@ -28,6 +28,7 @@ import StaffTab from '@/components/settings/tabs/StaffTab';
 import PrintSettingsTab from '@/components/settings/PrintSettingsTab';
 import POSTab from '@/components/settings/tabs/POSTab';
 import AppThemeTab from '@/components/settings/tabs/AppThemeTab';
+import LoyaltyTab from '@/components/settings/tabs/LoyaltyTab';
 
 const TABS = [
   { id: 'business', label: 'Business', icon: '🏢' },
@@ -37,6 +38,7 @@ const TABS = [
   { id: 'print', label: 'Print Config', icon: '🖨️' },
   { id: 'pos', label: 'POS', icon: '🖥️' },
   { id: 'appearance', label: 'App Theme', icon: '🎨' },
+  { id: 'loyalty', label: 'Loyalty', icon: '⭐' },
 ];
 
 export default function Settings() {
@@ -85,6 +87,7 @@ export default function Settings() {
               {activeTab === 'staff' && isAdmin && <StaffTab />}
               {activeTab === 'pos' && <POSTab />}
               {activeTab === 'appearance' && <AppThemeTab />}
+              {activeTab === 'loyalty' && <LoyaltyTab />}
             </div>
           </div>
         )}

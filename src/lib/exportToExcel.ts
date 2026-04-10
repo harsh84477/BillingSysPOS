@@ -1,5 +1,10 @@
 import XLSX from 'xlsx-js-style';
 
+// Export to Excel/CSV utilities.
+// - exportToExcel: Exports array data to Excel-compatible CSV with headers, formatting, and BOM for UTF-8.
+// - exportMultiTableCsv: Exports multiple tables as sections in a single CSV.
+// - exportStyledExcel: Exports styled multi-sheet .xlsx files with summary/dashboard and formatted tables.
+
 /**
  * Export data to Excel-compatible CSV file
  */

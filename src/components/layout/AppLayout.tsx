@@ -58,6 +58,9 @@ import {
   PieChart,
   PanelLeftClose,
   PanelLeftOpen,
+  Truck,
+  ShoppingBag,
+  RotateCcw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -97,6 +100,7 @@ const navSections: NavSection[] = [
       { name: 'Draft Bills', href: '/draft-bills', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'], badgeKey: 'drafts' },
       { name: 'Bills History', href: '/bills-history', icon: Receipt, roles: ['owner', 'manager', 'cashier', 'salesman'] },
       { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'], badgeKey: 'due' },
+      { name: 'Sales Returns', href: '/sales-returns', icon: RotateCcw, roles: ['owner', 'manager'] },
     ],
   },
   {
@@ -104,6 +108,8 @@ const navSections: NavSection[] = [
     items: [
       { name: 'Products', href: '/products', icon: Package, roles: ['owner', 'manager'] },
       { name: 'Categories', href: '/categories', icon: FolderOpen, roles: ['owner', 'manager'] },
+      { name: 'Suppliers', href: '/suppliers', icon: Truck, roles: ['owner', 'manager'] },
+      { name: 'Purchases', href: '/purchases', icon: ShoppingBag, roles: ['owner', 'manager'] },
     ],
   },
   {
@@ -145,6 +151,10 @@ const pageTitleMap: Record<string, string> = {
   '/due-bills': 'Due Bills',
   '/products': 'Products',
   '/categories': 'Categories',
+  '/suppliers': 'Suppliers',
+  '/purchases': 'Purchases',
+  '/purchase-order': 'Purchase Order',
+  '/sales-returns': 'Sales Returns',
   '/expenses': 'Expenses',
   '/reports': 'Reports',
   '/activity-logs': 'Activity Log',

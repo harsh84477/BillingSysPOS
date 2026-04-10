@@ -124,6 +124,7 @@ import { cn } from '@/lib/utils';
 import { printBillReceipt } from '@/components/bills/BillReceiptPrint';
 import MobileCatalog from '@/components/billing/MobileCatalog';
 import { Capacitor } from '@capacitor/core';
+import LoyaltyRedeemDialog from '@/components/billing/LoyaltyRedeemDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 // Safe icon map — avoids the broken `icons` bulk export from lucide-react
@@ -179,6 +180,10 @@ export default function Billing() {
   const [paidAmount, setPaidAmount] = useState<number | ''>('');
   const [dueDate, setDueDate] = useState<string>('');
   const { finalizeBill, isFinalizing } = useBilling();
+
+  // Loyalty
+  const [loyaltyDialogOpen, setLoyaltyDialogOpen] = useState(false);
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
 
   // Sync settings once they load
   React.useEffect(() => {
@@ -292,11 +297,11 @@ export default function Billing() {
     const calculatedTax = Number(((subtotal * taxRate) / 100).toFixed(2));
     const taxAmount = applyGst ? calculatedTax : 0;
     const totalBeforeDiscount = subtotal + taxAmount;
-    const discountAmount = discountValue;
+    const discountAmount = discountValue + loyaltyDiscount;
     const total = Math.max(0, totalBeforeDiscount - discountAmount);
 
     return { subtotal, discountAmount, taxAmount, calculatedTax, total };
-  }, [cart, discountValue, taxRate, applyGst]);
+  }, [cart, discountValue, loyaltyDiscount, taxRate, applyGst]);
 
   // Add to cart - round prices to avoid floating point issues
   const addToCart = (product: typeof products[0]) => {
@@ -850,6 +855,16 @@ export default function Billing() {
 
         if (finalizeError) throw finalizeError;
 
+        // 4. Earn loyalty points (non-blocking, best-effort)
+        if (finalCustomerId && businessId) {
+          (supabase as any).rpc('earn_loyalty_points', {
+            p_business_id: businessId,
+            p_customer_id: finalCustomerId,
+            p_bill_id: billId,
+            p_bill_total: cartCalculations.total,
+          }).then(() => {}).catch(() => {});
+        }
+
         return { bill: finalizeData, billNumber, shouldPrint, isDraft: false };
       }
 
@@ -870,6 +885,7 @@ export default function Billing() {
       setCustomerName('');
       setSelectedCustomerId(null);
       setDiscountValue(0);
+      setLoyaltyDiscount(0);
       setApplyGst(settings?.show_gst_in_billing ?? true);
       setPaymentType(settings?.default_payment_method as any || 'cash');
       setCashAmount('');
@@ -1584,7 +1600,8 @@ export default function Billing() {
               </Button>
               <Button variant="outline" className="w-full h-10 text-sm font-semibold gap-2 border-green-300 text-green-700 hover:bg-green-50"
                 onClick={() => createBillMutation.mutate('whatsapp')}
-                disabled={cart.length === 0 || createBillMutation.isPending}>
+                disabled={cart.length === 0 || createBillMutation.isPending}
+              >
                 <MessageCircle className="h-4 w-4" />
                 Send via WhatsApp
               </Button>
@@ -1834,7 +1851,7 @@ export default function Billing() {
                 return sc ? (
                   <div className="mt-1.5 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-[10px]">
-                      <Badge variant="secondary" className="py-0 px-1.5 text-[10px] font-semibold">{sc.name}</Badge>
+                      <Badge variant="secondary" className="py-0.5 px-2 text-[11px] font-semibold">{sc.name}</Badge>
                       {sc.phone && <span className="text-muted-foreground">📱 {sc.phone}</span>}
                     </div>
                     <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-destructive" onClick={() => { setSelectedCustomerId(null); setCustomerName(''); }}>
@@ -1872,7 +1889,7 @@ export default function Billing() {
                                 onChange={(e) => setEditingCartPrice(e.target.value)}
                                 onBlur={() => handleCartPriceBlur(item.productId)}
                                 onKeyDown={(e) => handleCartPriceKeyDown(e, item.productId)}
-                                className="w-16 h-5 text-[10px] p-1 h-6"
+                                className="w-16 h-6 text-[10px] p-1"
                                 autoFocus
                                 step="0.01"
                               />
@@ -1903,348 +1920,6 @@ export default function Billing() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-6 w-6"
-                          onClick={() => updateQuantity(item.productId, -1)}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        {editingCartItemId === item.productId ? (
-                          <Input
-                            type="number"
-                            value={editingCartQuantity}
-                            onChange={(e) => setEditingCartQuantity(e.target.value)}
-                            onBlur={() => handleCartQuantityBlur(item.productId)}
-                            onKeyDown={(e) => handleCartQuantityKeyDown(e, item.productId)}
-                            className="w-12 h-6 text-center text-sm font-medium p-1"
-                            autoFocus
-                            min={0}
-                          />
-                        ) : (
-                          <span
-                            className="w-8 text-center text-sm font-medium cursor-pointer hover:bg-accent rounded px-1"
-                            onClick={() => handleCartQuantityClick(item.productId, item.quantity)}
-                            onDoubleClick={() => handleCartQuantityClick(item.productId, item.quantity)}
-                            title="Click to edit quantity"
-                          >
-                            {item.quantity}
-                          </span>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => updateQuantity(item.productId, 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-destructive"
-                          onClick={() => removeFromCart(item.productId)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-
-            {/* Totals Section */}
-            <div className="p-4 border-t border-border space-y-3">
-              {/* Subtotal */}
-              <div className="flex justify-between text-sm">
-                <span>Subtotal</span>
-                <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
-              </div>
-
-              {/* GST Display (Static) */}
-              {(settings?.show_gst_in_billing ?? true) && taxRate > 0 && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs">GST ({taxRate}%)</span>
-                  <span className="text-sm">
-                    {currencySymbol}{cartCalculations.calculatedTax.toFixed(2)}
-                  </span>
-                </div>
-              )}
-
-              {/* Discount Input */}
-              {(settings?.show_discount_in_billing ?? true) && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm">Discount</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm">{currencySymbol}</span>
-                    <Input
-                      type="number"
-                      value={discountValue || ''}
-                      onChange={(e) => setDiscountValue(Number(e.target.value))}
-                      className="w-20 h-8 text-right"
-                      min={0}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ── Payment Type Selector (hidden for salesman) ── */}
-              {!isSalesman && renderPaymentSelector()}
-
-              {/* Salesman info badge */}
-              {isSalesman && (
-                <div className="pt-2 border-t">
-                  <div className="flex items-center gap-2 p-2 rounded-lg bg-teal-500/10 border border-teal-500/20">
-                    <div className="h-6 w-6 rounded-full bg-teal-500/20 flex items-center justify-center">
-                      <Save className="h-3.5 w-3.5 text-teal-600" />
-                    </div>
-                    <p className="text-xs text-teal-700 dark:text-teal-400">
-                      Orders saved as <strong>Draft</strong>. Stock will be reserved. Admin/Manager will finalize.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Total */}
-              <div className="flex justify-between text-xl font-bold pt-2 border-t">
-                <span>Total</span>
-                <span className="text-primary">
-                  {currencySymbol}{cartCalculations.total.toFixed(2)}
-                </span>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-1.5 pt-2">
-                {isSalesman ? (
-                  <Button
-                    className="flex-1 bg-teal-600 hover:bg-teal-700 text-white"
-                    disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                    onClick={() => createBillMutation.mutate(false)}
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    {createBillMutation.isPending ? 'Saving Draft...' : 'Save Draft Order'}
-                  </Button>
-                ) : (
-                  <>
-                    {(settings?.checkout_save_enabled ?? true) && (
-                      <Button
-                        variant="outline"
-                        className="flex-1 min-w-[80px] text-xs h-9"
-                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                        onClick={() => createBillMutation.mutate(false)}
-                      >
-                        <Save className="mr-1.5 h-3.5 w-3.5" />
-                        Save
-                      </Button>
-                    )}
-                    {(settings?.checkout_print_enabled ?? true) && (
-                      <Button
-                        className="flex-1 min-w-[80px] text-xs h-9"
-                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                        onClick={() => createBillMutation.mutate(true)}
-                      >
-                        <Printer className="mr-1.5 h-3.5 w-3.5" />
-                        Print
-                      </Button>
-                    )}
-                    {(settings?.checkout_save_print_enabled ?? true) && (
-                      <Button
-                        className="flex-1 min-w-[80px] text-xs h-9 bg-indigo-600 hover:bg-indigo-700 text-white"
-                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                        onClick={() => createBillMutation.mutate('save-print')}
-                      >
-                        <Printer className="mr-1.5 h-3.5 w-3.5" />
-                        Save & Print
-                      </Button>
-                    )}
-                    {(settings?.checkout_whatsapp_enabled ?? true) && (() => {
-                      const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
-                      const hasPhone = !!(customer?.phone?.trim());
-                      return (
-                        <Button
-                          className="flex-1 min-w-[80px] text-xs h-9 bg-[#25D366] hover:bg-[#128C7E] text-white"
-                          disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill || !hasPhone}
-                          onClick={() => createBillMutation.mutate('whatsapp')}
-                          title={hasPhone ? 'Send bill via WhatsApp' : 'Select a customer with phone number first'}
-                        >
-                          <MessageCircle className="mr-1.5 h-3.5 w-3.5" />
-                          WhatsApp
-                        </Button>
-                      );
-                    })()}
-                    {(settings?.checkout_draft_enabled ?? true) && (
-                      <Button
-                        variant="outline"
-                        className="flex-1 min-w-[80px] text-xs h-9 border-amber-300 text-amber-700 hover:bg-amber-50"
-                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
-                        onClick={() => createBillMutation.mutate('draft')}
-                      >
-                        <FileText className="mr-1.5 h-3.5 w-3.5" />
-                        Draft
-                      </Button>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          /* Collapsed state - just show cart icon */
-          <div className="flex flex-col items-center py-4">
-            <ShoppingCart className="h-6 w-6 text-muted-foreground" />
-            {cart.length > 0 && (
-              <Badge className="mt-2">{cart.length}</Badge>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Mobile Cart Button - High quality FAB */}
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button
-            className="md:hidden fixed bottom-[76px] right-4 z-50 h-14 w-14 rounded-full shadow-2xl shadow-primary/30 bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all duration-200"
-            size="icon"
-          >
-            <ShoppingCart className="h-6 w-6" />
-            {cart.length > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white border-2 border-background animate-in zoom-in">
-                {cart.length}
-              </span>
-            )}
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0">
-          <SheetHeader className="p-4 border-b">
-            <SheetTitle className="flex items-center gap-2">
-              Bill #{previewBillNumber} ({totalItems} items)
-            </SheetTitle>
-          </SheetHeader>
-          <div className="flex flex-col h-[calc(100%-4rem)] p-4 gap-3">
-            {/* Mobile Customer Section — matching desktop */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  placeholder="Walk-in Customer"
-                  value={customerName || (selectedCustomerId ? customers.find(c => c.id === selectedCustomerId)?.name : '') || ''}
-                  onChange={(e) => {
-                    setCustomerName(e.target.value);
-                    if (selectedCustomerId) setSelectedCustomerId(null);
-                  }}
-                  className="pl-8 h-10 text-sm"
-                />
-              </div>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="h-10 w-10 shrink-0 border border-border"
-                onClick={() => { setCustomerSearchQuery(''); setIsCustomerDialogOpen(true); }}
-                title="Select Customer"
-              >
-                <Users className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="h-10 w-10 shrink-0 border border-border text-emerald-600"
-                onClick={() => { setQuickAddName(''); setQuickAddPhone(''); setQuickAddOpen(true); }}
-                title="Quick Add Customer"
-              >
-                <UserPlus className="h-4 w-4" />
-              </Button>
-            </div>
-            {selectedCustomerId && (() => {
-              const sc = customers.find(c => c.id === selectedCustomerId);
-              return sc ? (
-                <div className="flex items-center justify-between px-1">
-                  <div className="flex items-center gap-2 text-xs">
-                    <Badge variant="secondary" className="py-0.5 px-2 text-[11px] font-semibold">{sc.name}</Badge>
-                    {sc.phone && <span className="text-muted-foreground">📱 {sc.phone}</span>}
-                  </div>
-                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] text-muted-foreground hover:text-destructive" onClick={() => { setSelectedCustomerId(null); setCustomerName(''); }}>
-                    ✕ Clear
-                  </Button>
-                </div>
-              ) : null;
-            })()}
-
-            <ScrollArea className="flex-1 -mx-4 px-4 pb-4">
-              {/* SaaS Alerts */}
-              {isTrial && userRole === 'owner' && (
-                <div className="mb-4">
-                  <Alert className="bg-primary/5 border-primary/20 animate-pulse">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    <AlertTitle className="text-sm font-semibold">Free Trial Active ({planName})</AlertTitle>
-                    <AlertDescription className="text-xs flex items-center justify-between">
-                      <span>Enjoy full features during your 7-day trial.</span>
-                      <Button size="sm" variant="link" className="h-auto p-0 text-primary font-bold" onClick={() => navigate('/settings')}>
-                        Upgrade
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                </div>
-              )}
-
-              {isExpired && (
-                <div className="mb-4">
-                  <Alert variant="destructive" className="animate-bounce">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle className="text-sm font-semibold">Subscription Expired</AlertTitle>
-                    <AlertDescription className="text-xs flex items-center justify-between">
-                      <span>{userRole === 'owner' ? 'Renew now to continue.' : 'Contact owner to renew.'}</span>
-                      {userRole === 'owner' && (
-                        <Button size="sm" variant="link" className="h-auto p-0 text-white font-bold" onClick={() => navigate('/settings')}>
-                          Renew
-                        </Button>
-                      )}
-                    </AlertDescription>
-                  </Alert>
-                </div>
-              )}
-
-              {cart.length === 0 ? (
-                <div className="flex h-40 items-center justify-center text-muted-foreground">
-                  Cart is empty
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {cart.map((item) => (
-                    <div
-                      key={item.productId}
-                      className="flex items-center gap-2 rounded-lg border border-border p-2"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{item.name}</p>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          {editingCartPriceItemId === item.productId ? (
-                            <Input
-                              type="number"
-                              value={editingCartPrice}
-                              onChange={(e) => setEditingCartPrice(e.target.value)}
-                              onBlur={() => handleCartPriceBlur(item.productId)}
-                              onKeyDown={(e) => handleCartPriceKeyDown(e, item.productId)}
-                              className="w-16 h-6 text-[10px] p-1"
-                              autoFocus
-                              step="0.01"
-                            />
-                          ) : (
-                            <span
-                              className={cn(
-                                "text-xs cursor-pointer",
-                                item.unitPrice <= item.costPrice ? "text-destructive font-bold" : "text-muted-foreground"
-                              )}
-                              onClick={() => handleCartPriceClick(item.productId, item.unitPrice)}
-                            >
-                              {currencySymbol}{item.unitPrice.toFixed(2)}
-                            </span>
-                          )}
-                          <span className="text-xs text-muted-foreground"> × {item.quantity}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
                           className="h-8 w-8"
                           onClick={() => updateQuantity(item.productId, -1)}
                         >
@@ -2265,7 +1940,8 @@ export default function Billing() {
                           <span
                             className="w-10 text-center font-medium cursor-pointer hover:bg-accent rounded px-1 py-1"
                             onClick={() => handleCartQuantityClick(item.productId, item.quantity)}
-                            title="Tap to edit quantity"
+                            onDoubleClick={() => handleCartQuantityClick(item.productId, item.quantity)}
+                            title="Click to edit quantity"
                           >
                             {item.quantity}
                           </span>
@@ -2293,12 +1969,15 @@ export default function Billing() {
               )}
             </ScrollArea>
 
-            <div className="space-y-1 py-1">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span className="font-medium">Subtotal</span>
+            {/* Totals Section */}
+            <div className="p-4 border-t border-border space-y-3">
+              {/* Subtotal */}
+              <div className="flex justify-between text-sm">
+                <span>Subtotal</span>
                 <span>{currencySymbol}{cartCalculations.subtotal.toFixed(2)}</span>
               </div>
 
+              {/* GST Display (Static) */}
               {(settings?.show_gst_in_billing ?? true) && taxRate > 0 && (
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground/70">
                   <span>GST ({taxRate}%)</span>
@@ -2386,7 +2065,7 @@ export default function Billing() {
                           className="flex-1 h-8 text-[11px] bg-[#25D366] hover:bg-[#128C7E] text-white"
                           disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill || !hasPhone}
                           onClick={() => createBillMutation.mutate('whatsapp')}
-                          title={hasPhone ? 'Send via WhatsApp' : 'Select customer with phone'}
+                          title={hasPhone ? 'Send bill via WhatsApp' : 'Select a customer with phone number first'}
                         >
                           <MessageCircle className="mr-1 h-3 w-3" />
                           WhatsApp

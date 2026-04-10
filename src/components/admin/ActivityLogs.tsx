@@ -37,8 +37,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useActivityLogs } from '@/hooks/useBillingSystem';
+import { exportPdf } from '@/lib/exportPdf';
 import { Download, ChevronRight } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 
 const ACTION_COLORS: Record<string, string> = {
   create_bill: 'bg-blue-100 text-blue-800',
@@ -112,10 +113,43 @@ export function ActivityLogs({ businessId }: ActivityLogsProps) {
             Audit trail of all transactions and changes (visible to Owner/Manager only)
           </p>
         </div>
-        <Button onClick={exportLogs} disabled={!logs || logs.length === 0}>
-          <Download className="w-4 h-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={exportLogs} disabled={!logs || logs.length === 0} variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" />
+            CSV
+          </Button>
+          <Button
+            disabled={!filteredLogs || filteredLogs.length === 0}
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              exportPdf(
+                `Activity Logs — ${format(new Date(), 'dd MMM yyyy')}`,
+                [
+                  {
+                    title: 'Activity Log',
+                    columns: [
+                      { header: 'Timestamp', dataKey: 'created_at', format: (v) => new Date(v as string).toLocaleString() },
+                      { header: 'Action', dataKey: 'action', format: (v) => String(v).replace(/_/g, ' ') },
+                      { header: 'Type', dataKey: 'target_type' },
+                      { header: 'Description', dataKey: 'description' },
+                    ],
+                    data: filteredLogs as any,
+                  },
+                ],
+                [
+                  { label: 'Total Logs', value: String(filteredLogs.length) },
+                  { label: 'Filter', value: filterAction === 'all' ? 'All Actions' : filterAction.replace(/_/g, ' ') },
+                  { label: 'Generated', value: format(new Date(), 'dd MMM yyyy HH:mm') },
+                ],
+                `activity-logs-${format(new Date(), 'yyyy-MM-dd')}`
+              );
+            }}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            PDF
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

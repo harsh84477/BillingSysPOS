@@ -39,6 +39,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, subDays, startOfMonth, endOfMonth, startOfDay, endOfDay, parseISO, isWithinInterval, startOfWeek, endOfWeek, startOfYear, endOfYear } from 'date-fns';
 import { exportToExcel, exportStyledExcel } from '@/lib/exportToExcel';
+import { exportPdf } from '@/lib/exportPdf';
+import { GSTFilingTab } from '@/components/reports/GSTFilingTab';
 import { toast } from 'sonner';
 
 // ════════════════════════════════════════════════════
@@ -49,7 +51,7 @@ const COLORS = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'
 // ════════════════════════════════════════════════════
 // Report Tabs
 // ════════════════════════════════════════════════════
-type ReportTab = 'sales' | 'purchase' | 'profit-loss' | 'items' | 'party' | 'stock';
+type ReportTab = 'sales' | 'purchase' | 'profit-loss' | 'items' | 'party' | 'stock' | 'gst';
 
 const REPORT_TABS: { id: ReportTab; label: string; icon: React.ElementType }[] = [
   { id: 'sales', label: 'Sales', icon: TrendingUp },
@@ -57,6 +59,7 @@ const REPORT_TABS: { id: ReportTab; label: string; icon: React.ElementType }[] =
   { id: 'items', label: 'Item-wise', icon: Package },
   { id: 'stock', label: 'Stock', icon: Activity },
   { id: 'party', label: 'Party', icon: Users },
+  { id: 'gst', label: 'GST Filing', icon: Download },
 ];
 
 // ════════════════════════════════════════════════════
@@ -521,6 +524,180 @@ export default function Reports() {
   );
 
   // ════════════════════════════════════════════════════
+  // PDF Export handler
+  // ════════════════════════════════════════════════════
+  const handleExportPdf = () => {
+    const dateLabel = datePreset === 'custom' && customFrom && customTo
+      ? `${customFrom}_to_${customTo}` : datePreset;
+    const periodLabel = datePreset === 'custom' && customFrom && customTo
+      ? `${format(new Date(customFrom), 'dd MMM yyyy')} – ${format(new Date(customTo), 'dd MMM yyyy')}`
+      : DATE_PRESETS.find(p => p.id === datePreset)?.label ?? datePreset;
+    const bizName = settings?.business_name ?? '';
+
+    if (activeTab === 'sales') {
+      exportPdf(
+        `Sales Report — ${periodLabel}`,
+        [
+          {
+            title: 'Daily Sales Trend',
+            columns: [
+              { header: 'Date', dataKey: 'date' },
+              { header: 'Bills', dataKey: 'bills' },
+              { header: `Sales (${currencySymbol})`, dataKey: 'sales', format: (v) => Number(v).toFixed(2) },
+              { header: `Tax (${currencySymbol})`, dataKey: 'tax', format: (v) => Number(v).toFixed(2) },
+            ],
+            data: salesData.dailyTrend as any,
+          },
+          {
+            title: 'Bills Detail',
+            columns: [
+              { header: 'Date', dataKey: 'date' },
+              { header: 'Bill No.', dataKey: 'billNo' },
+              { header: 'Customer', dataKey: 'customer' },
+              { header: `Total (${currencySymbol})`, dataKey: 'total', format: (v) => Number(v).toFixed(2) },
+              { header: 'Payment', dataKey: 'payment' },
+            ],
+            data: filteredBills.map(b => ({
+              date: format(new Date(b.created_at), 'dd MMM yyyy'),
+              billNo: b.bill_number || b.id?.slice(0, 8),
+              customer: b.customers?.name || 'Walk-in',
+              total: b.total_amount || 0,
+              payment: b.payment_method || '—',
+            })) as any,
+          },
+        ],
+        [
+          { label: 'Total Sales', value: `${currencySymbol}${salesData.totalSales.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          { label: 'No. of Bills', value: String(salesData.billCount) },
+          { label: 'Avg Bill Value', value: `${currencySymbol}${salesData.avgBillValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          { label: 'Tax Collected', value: `${currencySymbol}${salesData.totalTax.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          { label: 'Discounts Given', value: `${currencySymbol}${salesData.totalDiscount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          { label: 'Period', value: periodLabel },
+        ],
+        `sales-report-${dateLabel}`,
+        bizName
+      );
+    } else if (activeTab === 'profit-loss') {
+      exportPdf(
+        `Profit & Loss — ${periodLabel}`,
+        [
+          {
+            title: 'Monthly P&L',
+            columns: [
+              { header: 'Month', dataKey: 'month' },
+              { header: `Revenue (${currencySymbol})`, dataKey: 'revenue', format: (v) => Number(v).toFixed(2) },
+              { header: `Cost (${currencySymbol})`, dataKey: 'cost', format: (v) => Number(v).toFixed(2) },
+              { header: `Gross Profit (${currencySymbol})`, dataKey: 'profit', format: (v) => Number(v).toFixed(2) },
+            ],
+            data: profitLossData.monthlyTrend as any,
+          },
+        ],
+        [
+          { label: 'Total Revenue', value: `${currencySymbol}${profitLossData.totalRevenue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          { label: 'Cost of Goods', value: `${currencySymbol}${profitLossData.totalCost.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          { label: 'Gross Profit', value: `${currencySymbol}${profitLossData.grossProfit.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          { label: 'Profit Margin', value: `${profitLossData.profitMargin.toFixed(2)}%` },
+          { label: 'Period', value: periodLabel },
+        ],
+        `profit-loss-${dateLabel}`,
+        bizName
+      );
+    } else if (activeTab === 'items') {
+      exportPdf(
+        `Item-wise Report — ${periodLabel}`,
+        [
+          {
+            title: 'Item-wise Sales',
+            columns: [
+              { header: '#', dataKey: 'rank' },
+              { header: 'Item Name', dataKey: 'name' },
+              { header: 'Qty Sold', dataKey: 'qtySold' },
+              { header: `Revenue (${currencySymbol})`, dataKey: 'revenue', format: (v) => Number(v).toFixed(2) },
+              { header: `Profit (${currencySymbol})`, dataKey: 'profit', format: (v) => Number(v).toFixed(2) },
+            ],
+            data: itemReportData.map((item, i) => ({ rank: i + 1, ...item })) as any,
+          },
+        ],
+        [
+          { label: 'Total SKUs', value: String(itemReportData.length) },
+          { label: 'Total Revenue', value: `${currencySymbol}${itemReportData.reduce((s, i) => s + i.revenue, 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          { label: 'Total Profit', value: `${currencySymbol}${itemReportData.reduce((s, i) => s + i.profit, 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          { label: 'Top Item', value: itemReportData[0]?.name || '—' },
+          { label: 'Period', value: periodLabel },
+        ],
+        `item-report-${dateLabel}`,
+        bizName
+      );
+    } else if (activeTab === 'party') {
+      exportPdf(
+        `Party Report — ${periodLabel}`,
+        [
+          {
+            title: 'Customer / Party Summary',
+            columns: [
+              { header: '#', dataKey: 'rank' },
+              { header: 'Customer', dataKey: 'name' },
+              { header: 'Bills', dataKey: 'bills' },
+              { header: `Total Spent (${currencySymbol})`, dataKey: 'totalSpent', format: (v) => Number(v).toFixed(2) },
+              { header: 'Last Visit', dataKey: 'lastVisit', format: (v) => v ? format(new Date(v as string), 'dd MMM yyyy') : '—' },
+            ],
+            data: partyReportData.map((p, i) => ({ rank: i + 1, ...p })) as any,
+          },
+        ],
+        [
+          { label: 'Total Customers', value: String(customers.length) },
+          { label: 'Active Buyers', value: String(partyReportData.length) },
+          { label: 'Top Customer', value: partyReportData[0]?.name || '—' },
+          { label: 'Top Spend', value: `${currencySymbol}${(partyReportData[0]?.totalSpent || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          { label: 'Period', value: periodLabel },
+        ],
+        `party-report-${dateLabel}`,
+        bizName
+      );
+    } else if (activeTab === 'stock') {
+      exportPdf(
+        'Stock Report',
+        [
+          {
+            title: 'Complete Stock List',
+            columns: [
+              { header: 'Product', dataKey: 'name' },
+              { header: 'Category', dataKey: 'category' },
+              { header: 'Stock', dataKey: 'stock' },
+              { header: 'Status', dataKey: 'status' },
+              { header: `Cost Price (${currencySymbol})`, dataKey: 'costPrice', format: (v) => Number(v).toFixed(2) },
+              { header: `Sell Price (${currencySymbol})`, dataKey: 'sellPrice', format: (v) => Number(v).toFixed(2) },
+              { header: `Stock Value (${currencySymbol})`, dataKey: 'stockValue', format: (v) => Number(v).toFixed(2) },
+            ],
+            data: products.map(p => ({
+              name: p.name,
+              category: p.categories?.name || 'Uncategorized',
+              stock: p.stock_quantity,
+              status: p.stock_quantity === 0 ? 'Out of Stock' : p.stock_quantity <= p.low_stock_threshold ? 'Low Stock' : 'In Stock',
+              costPrice: p.cost_price || 0,
+              sellPrice: p.selling_price || 0,
+              stockValue: (p.cost_price || 0) * (p.stock_quantity || 0),
+            })) as any,
+          },
+        ],
+        [
+          { label: 'Total Products', value: String(stockReportData.totalItems) },
+          { label: 'Low Stock', value: String(stockReportData.lowStockCount) },
+          { label: 'Out of Stock', value: String(stockReportData.outOfStockCount) },
+          { label: 'Stock Value', value: `${currencySymbol}${stockReportData.totalStockValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+          { label: 'Retail Value', value: `${currencySymbol}${stockReportData.totalRetailValue.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` },
+        ],
+        `stock-report-${format(new Date(), 'yyyy-MM-dd')}`,
+        bizName
+      );
+    } else {
+      toast.error('No data to export for the selected report.');
+      return;
+    }
+    toast.success('PDF report downloaded!');
+  };
+
+  // ════════════════════════════════════════════════════
   // Render
   // ════════════════════════════════════════════════════
   return (
@@ -533,7 +710,10 @@ export default function Reports() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" />Export
+            <Download className="mr-2 h-4 w-4" />Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportPdf}>
+            <Download className="mr-2 h-4 w-4" />PDF
           </Button>
         </div>
       </div>
@@ -877,6 +1057,9 @@ export default function Reports() {
             </CardContent>
           </Card>
         </div>
+      )}
+      {activeTab === 'gst' && (
+        <GSTFilingTab dateFrom={dateRange.from} dateTo={dateRange.to} />
       )}
     </div>
   );

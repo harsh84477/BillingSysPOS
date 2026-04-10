@@ -48,7 +48,7 @@ import type { ExcelTableDef, ExcelSummaryDef } from '@/lib/exportToExcel';
 import { cn } from '@/lib/utils';
 import DraftBillModal from '@/components/bills/DraftBillModal';
 import { useExpenseTracking } from '@/hooks/useBillingSystem';
-import { Wallet, Smartphone, CreditCard, Plus, UserPlus, Sun, Moon, Sunrise, Sunset } from 'lucide-react';
+import { Wallet, Smartphone, CreditCard, Plus, UserPlus, Sun, Moon, Sunrise, Sunset, ShoppingBag } from 'lucide-react';
 import DisplayNamePrompt from '@/components/auth/DisplayNamePrompt';
 
 type KPIColor = 'blue' | 'green' | 'amber' | 'red';
@@ -1285,6 +1285,12 @@ export default function Dashboard() {
                 <Button size="sm" variant="outline" className="gap-1.5 h-8 text-xs" onClick={() => navigate('/products')}>
                   <Package className="h-3.5 w-3.5" />
                   Update Stock
+                </Button>
+              )}
+              {lowStockProducts && lowStockProducts.length > 0 && (
+                <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => navigate('/purchase-order/new')}>
+                  <ShoppingBag className="h-3.5 w-3.5" />
+                  Create PO
                 </Button>
               )}
             </div>

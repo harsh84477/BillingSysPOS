@@ -53,6 +53,10 @@ import DraftBills from "./pages/DraftBills";
 import Reports from "./pages/Reports";
 import ManageProducts from "./pages/ManageProducts";
 import ManageCustomers from "./pages/ManageCustomers";
+import Suppliers from "./pages/Suppliers";
+import Purchases from "./pages/Purchases";
+import PurchaseOrderDetail from "./pages/PurchaseOrderDetail";
+import SalesReturns from "./pages/SalesReturns";
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
@@ -229,6 +233,10 @@ const App = () => (
                 <Route path="/draft-bills" element={<DraftBills />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/salesman-billing" element={<SalesmanBilling />} />
+                <Route path="/suppliers" element={<Suppliers />} />
+                <Route path="/purchases" element={<Purchases />} />
+                <Route path="/purchase-order/:id" element={<PurchaseOrderDetail />} />
+                <Route path="/sales-returns" element={<SalesReturns />} />
               </Route>
 
               <Route
