@@ -44,6 +44,8 @@ interface POItem {
   product_name: string;
   quantity: number;
   cost_price: number;
+  unit_type: 'pcs' | 'case';
+  items_per_case: number;
 }
 
 interface Product {
@@ -53,6 +55,7 @@ interface Product {
   selling_price: number | null;
   stock_quantity: number;
   sku: string | null;
+  items_per_case: number | null;
 }
 
 const STATUS_CONFIG = {
@@ -112,6 +115,8 @@ export default function PurchaseOrderDetail() {
         product_name: i.product_name,
         quantity: Number(i.quantity),
         cost_price: Number(i.cost_price),
+        unit_type: (i.unit_type as 'pcs' | 'case') || 'pcs',
+        items_per_case: Number(i.items_per_case || 0),
       })));
     }
   }, [order]);
@@ -138,7 +143,7 @@ export default function PurchaseOrderDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, cost_price, selling_price, stock_quantity, sku')
+        .select('id, name, cost_price, selling_price, stock_quantity, sku, items_per_case')
         .eq('business_id', businessId)
         .order('name');
       if (error) throw error;
@@ -155,8 +160,15 @@ export default function PurchaseOrderDetail() {
     ).slice(0, 20);
   }, [products, productSearch]);
 
+  const getEffectiveQty = (item: POItem) => {
+    if (item.unit_type === 'case' && item.items_per_case > 0) {
+      return item.quantity * item.items_per_case;
+    }
+    return item.quantity;
+  };
+
   const totalAmount = useMemo(() =>
-    items.reduce((s, i) => s + i.quantity * i.cost_price, 0),
+    items.reduce((s, i) => s + getEffectiveQty(i) * i.cost_price, 0),
   [items]);
 
   // ── Add a product row ─────────────────────────────────
@@ -172,6 +184,8 @@ export default function PurchaseOrderDetail() {
         product_name: p.name,
         quantity: 1,
         cost_price: Number(p.cost_price || p.selling_price || 0),
+        unit_type: 'pcs' as const,
+        items_per_case: Number(p.items_per_case || 0),
       }]);
     }
     setProductSearch('');
@@ -183,6 +197,12 @@ export default function PurchaseOrderDetail() {
   const updateItem = (idx: number, field: 'quantity' | 'cost_price', value: number) => {
     setItems(prev => prev.map((item, i) =>
       i === idx ? { ...item, [field]: Math.max(0, value) } : item
+    ));
+  };
+
+  const updateUnitType = (idx: number, unitType: 'pcs' | 'case') => {
+    setItems(prev => prev.map((item, i) =>
+      i === idx ? { ...item, unit_type: unitType } : item
     ));
   };
 
@@ -228,8 +248,10 @@ export default function PurchaseOrderDetail() {
         purchase_order_id: orderId,
         product_id: i.product_id,
         product_name: i.product_name,
-        quantity: i.quantity,
+        quantity: i.unit_type === 'case' && i.items_per_case > 0 ? i.quantity * i.items_per_case : i.quantity,
         cost_price: i.cost_price,
+        unit_type: i.unit_type || 'pcs',
+        items_per_case: i.items_per_case || 0,
       }));
       const { error: itemErr } = await supabase.from('purchase_order_items').insert(itemPayload);
       if (itemErr) throw itemErr;
@@ -443,6 +465,7 @@ export default function PurchaseOrderDetail() {
                     <TableRow>
                       <TableHead>Product</TableHead>
                       <TableHead className="w-28 text-center">Qty</TableHead>
+                      <TableHead className="w-28 text-center">Unit</TableHead>
                       <TableHead className="w-32 text-right">Cost Price</TableHead>
                       <TableHead className="w-28 text-right">Total</TableHead>
                       {!isReadOnly && <TableHead className="w-10" />}
@@ -472,6 +495,26 @@ export default function PurchaseOrderDetail() {
                             />
                           )}
                         </TableCell>
+                        <TableCell className="text-center">
+                          {isReadOnly ? (
+                            <span className="text-xs font-medium uppercase">{item.unit_type || 'pcs'}</span>
+                          ) : item.items_per_case > 0 ? (
+                            <Select
+                              value={item.unit_type || 'pcs'}
+                              onValueChange={(v) => updateUnitType(idx, v as 'pcs' | 'case')}
+                            >
+                              <SelectTrigger className="h-7 w-24 text-xs mx-auto">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pcs">PCS</SelectItem>
+                                <SelectItem value="case">Case ({item.items_per_case})</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">PCS</span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
                           {isReadOnly ? (
                             <span>{currencySymbol}{item.cost_price.toFixed(2)}</span>
@@ -487,7 +530,12 @@ export default function PurchaseOrderDetail() {
                           )}
                         </TableCell>
                         <TableCell className="text-right font-semibold text-sm">
-                          {currencySymbol}{(item.quantity * item.cost_price).toFixed(2)}
+                          {currencySymbol}{(getEffectiveQty(item) * item.cost_price).toFixed(2)}
+                          {item.unit_type === 'case' && item.items_per_case > 0 && (
+                            <p className="text-[10px] font-normal text-muted-foreground">
+                              {getEffectiveQty(item)} pcs
+                            </p>
+                          )}
                         </TableCell>
                         {!isReadOnly && (
                           <TableCell>
@@ -557,7 +605,7 @@ export default function PurchaseOrderDetail() {
             {items.map((item, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
                 <span className="font-medium">{item.product_name}</span>
-                <Badge variant="secondary">+{item.quantity} units</Badge>
+                <Badge variant="secondary">+{getEffectiveQty(item)} units</Badge>
               </div>
             ))}
           </div>
