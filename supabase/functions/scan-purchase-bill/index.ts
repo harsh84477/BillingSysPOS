@@ -12,6 +12,14 @@ const corsHeaders = {
 
 const GEMINI_MODEL = "gemini-2.0-flash";
 
+// Always return 200 so supabase.functions.invoke() doesn't throw on non-2xx
+function jsonResponse(body: Record<string, unknown>) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -21,29 +29,24 @@ serve(async (req: Request) => {
   try {
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
-      return new Response(
-        JSON.stringify({ error: "GEMINI_API_KEY not configured. Run: supabase secrets set GEMINI_API_KEY=your_key" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({
+        success: false,
+        error: "GEMINI_API_KEY not configured. Go to Supabase Dashboard → Edge Functions → Secrets and add GEMINI_API_KEY.",
+        items: [],
+      });
     }
 
     const body = await req.json();
     const { image } = body;
 
     if (!image) {
-      return new Response(
-        JSON.stringify({ error: "No image provided" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ success: false, error: "No image provided", items: [] });
     }
 
     // Extract base64 data and mime type from data URL
     const match = image.match(/^data:([^;]+);base64,(.+)$/);
     if (!match) {
-      return new Response(
-        JSON.stringify({ error: "Invalid image format. Expected base64 data URL." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ success: false, error: "Invalid image format. Expected base64 data URL.", items: [] });
     }
 
     const mimeType = match[1]; // e.g. image/jpeg, image/png, application/pdf
@@ -98,10 +101,11 @@ Important: Return ONLY the JSON, nothing else.`;
     if (!geminiRes.ok) {
       const errText = await geminiRes.text();
       console.error("Gemini API error:", errText);
-      return new Response(
-        JSON.stringify({ error: `Gemini API error (${geminiRes.status}): ${errText.slice(0, 200)}` }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      let friendlyMsg = `Gemini API error (${geminiRes.status})`;
+      if (geminiRes.status === 400) friendlyMsg = "Image could not be processed. Try a clearer photo.";
+      else if (geminiRes.status === 403) friendlyMsg = "Gemini API key is invalid or expired. Check your GEMINI_API_KEY secret.";
+      else if (geminiRes.status === 429) friendlyMsg = "Rate limit exceeded. Please wait a moment and try again.";
+      return jsonResponse({ success: false, error: friendlyMsg, items: [] });
     }
 
     const geminiData = await geminiRes.json();
@@ -111,10 +115,7 @@ Important: Return ONLY the JSON, nothing else.`;
       geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
     if (!textContent) {
-      return new Response(
-        JSON.stringify({ items: [], message: "AI returned empty response" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ success: false, items: [], message: "AI returned empty response. Try a clearer photo." });
     }
 
     // Parse JSON from response (handle markdown code blocks)
@@ -126,10 +127,7 @@ Important: Return ONLY the JSON, nothing else.`;
       parsed = JSON.parse(jsonStr);
     } catch {
       console.error("Failed to parse AI response:", textContent);
-      return new Response(
-        JSON.stringify({ items: [], message: "AI response was not valid JSON", raw: textContent.slice(0, 500) }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return jsonResponse({ success: false, items: [], message: "AI could not read the bill clearly. Try a different photo." });
     }
 
     // Normalize items
@@ -144,16 +142,10 @@ Important: Return ONLY the JSON, nothing else.`;
       items_per_case: Number(item.items_per_case || item.pcs_per_case || 0),
     }));
 
-    return new Response(
-      JSON.stringify({ items, count: items.length }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ success: true, items, count: items.length });
 
   } catch (err) {
     console.error("Function error:", err);
-    return new Response(
-      JSON.stringify({ error: err.message || "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ success: false, error: err.message || "Internal server error", items: [] });
   }
 });
