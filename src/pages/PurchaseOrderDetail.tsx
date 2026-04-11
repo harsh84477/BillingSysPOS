@@ -379,14 +379,32 @@ export default function PurchaseOrderDetail() {
   };
 
   // ── AI Bill Scan ──────────────────────────────────────
+  const validateFile = (file: File): string | null => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) return 'File is too large. Max 10MB.';
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+    if (!allowed.includes(file.type)) return 'Unsupported file type. Use JPG, PNG, WebP or PDF.';
+    return null;
+  };
+
   const handleAIScan = async (file: File) => {
+    const validationErr = validateFile(file);
+    if (validationErr) { toast.error(validationErr); return; }
+
     setAiScanning(true);
-    setScanPreview(URL.createObjectURL(file));
+    // Show preview for images, placeholder for PDF
+    if (file.type === 'application/pdf') {
+      setScanPreview('pdf');
+    } else {
+      setScanPreview(URL.createObjectURL(file));
+    }
+
     try {
       // Convert to base64
-      const base64 = await new Promise<string>((resolve) => {
+      const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('Failed to read file'));
         reader.readAsDataURL(file);
       });
 
@@ -395,15 +413,33 @@ export default function PurchaseOrderDetail() {
         body: { image: base64, business_id: businessId },
       });
 
-      if (error) throw error;
+      if (error) {
+        // If edge function doesn't exist or network issue, give helpful message
+        if (error.message?.includes('Failed to send') || error.message?.includes('FunctionsFetchError')) {
+          throw new Error(
+            'Edge Function not deployed yet. Run:\n' +
+            '1. supabase secrets set GEMINI_API_KEY=your_key\n' +
+            '2. supabase functions deploy scan-purchase-bill'
+          );
+        }
+        throw error;
+      }
 
-      if (data?.items && Array.isArray(data.items)) {
+      // Handle error returned from the function itself
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      if (data?.items && Array.isArray(data.items) && data.items.length > 0) {
         const newItems: POItem[] = data.items.map((scanned: any) => {
           // Try to match with existing products
-          const match = products.find(p =>
-            p.name.toLowerCase().includes(String(scanned.name || '').toLowerCase()) ||
-            String(scanned.name || '').toLowerCase().includes(p.name.toLowerCase())
-          );
+          const scannedName = String(scanned.name || '').toLowerCase().trim();
+          const match = products.find(p => {
+            const pName = p.name.toLowerCase().trim();
+            return pName === scannedName ||
+              pName.includes(scannedName) ||
+              scannedName.includes(pName);
+          });
           const ppc = Number(scanned.items_per_case || match?.items_per_case || 0);
           const stock = Number(scanned.quantity || scanned.stock || 1);
           return {
@@ -419,13 +455,18 @@ export default function PurchaseOrderDetail() {
           };
         });
         setItems(prev => [...prev, ...newItems]);
-        toast.success(`AI detected ${newItems.length} product(s) — please review & adjust`);
+        const matched = newItems.filter(i => i.product_id).length;
+        toast.success(
+          `AI detected ${newItems.length} product(s)` +
+          (matched > 0 ? ` (${matched} matched existing)` : '') +
+          ' — please review & adjust'
+        );
       } else {
-        toast.info('No products detected in the image. Try a clearer photo.');
+        toast.info(data?.message || 'No products detected. Try a clearer photo or different angle.');
       }
     } catch (err: any) {
       console.error('AI Scan error:', err);
-      toast.error('AI scan failed: ' + (err.message || 'Please try again'));
+      toast.error(err.message || 'AI scan failed. Please try again.');
     } finally {
       setAiScanning(false);
       setShowAIScan(false);
@@ -856,7 +897,7 @@ export default function PurchaseOrderDetail() {
       </Dialog>
 
       {/* ── AI Scan Dialog ─────────────────────────────── */}
-      <Dialog open={showAIScan} onOpenChange={setShowAIScan}>
+      <Dialog open={showAIScan} onOpenChange={(open) => { if (!aiScanning) { setShowAIScan(open); if (!open) setScanPreview(null); } }}>
         <DialogContent className="max-w-md w-[95vw]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -865,12 +906,21 @@ export default function PurchaseOrderDetail() {
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <p className="text-sm text-muted-foreground">
-              Take a photo or upload an image of your supplier bill. AI will automatically detect products, quantities, and prices.
+              Upload a photo or PDF of your supplier bill. AI will automatically detect products, quantities, and prices.
             </p>
 
             {scanPreview ? (
               <div className="relative rounded-lg border overflow-hidden">
-                <img src={scanPreview} alt="Bill preview" className="w-full max-h-64 object-contain bg-muted/30" />
+                {scanPreview === 'pdf' ? (
+                  <div className="w-full h-48 bg-muted/30 flex flex-col items-center justify-center gap-2">
+                    <div className="h-14 w-14 rounded-lg bg-red-100 flex items-center justify-center">
+                      <span className="text-red-600 font-bold text-sm">PDF</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">PDF uploaded</p>
+                  </div>
+                ) : (
+                  <img src={scanPreview} alt="Bill preview" className="w-full max-h-64 object-contain bg-muted/30" />
+                )}
                 {aiScanning && (
                   <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
@@ -884,12 +934,12 @@ export default function PurchaseOrderDetail() {
                 className="border-2 border-dashed rounded-xl p-8 text-center hover:border-violet-300 hover:bg-violet-50/30 dark:hover:bg-violet-950/10 transition-colors cursor-pointer"
                 onClick={() => fileInputRef.current?.click()}>
                 <Camera className="h-10 w-10 mx-auto text-violet-300 mb-3" />
-                <p className="text-sm font-medium">Click to upload bill image</p>
-                <p className="text-xs text-muted-foreground mt-1">JPG, PNG or PDF — Max 10MB</p>
+                <p className="text-sm font-medium">Click to upload bill image or PDF</p>
+                <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WebP or PDF — Max 10MB</p>
               </div>
             )}
 
-            <input ref={fileInputRef} type="file" accept="image/*,.pdf" className="hidden"
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" className="hidden"
               onChange={e => {
                 const file = e.target.files?.[0];
                 if (file) handleAIScan(file);
@@ -897,13 +947,14 @@ export default function PurchaseOrderDetail() {
               }} />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => { setShowAIScan(false); setScanPreview(null); }}>
+            <Button type="button" variant="outline" disabled={aiScanning}
+              onClick={() => { setShowAIScan(false); setScanPreview(null); }}>
               Cancel
             </Button>
-            {!scanPreview && (
+            {!scanPreview && !aiScanning && (
               <Button type="button" onClick={() => fileInputRef.current?.click()}
                 className="gap-1.5 bg-violet-600 hover:bg-violet-700">
-                <Upload className="h-3.5 w-3.5" /> Upload Photo
+                <Upload className="h-3.5 w-3.5" /> Upload Photo / PDF
               </Button>
             )}
           </DialogFooter>
