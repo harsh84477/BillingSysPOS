@@ -2,16 +2,9 @@
 /**
  * pages/PurchaseOrderDetail.tsx — Create / View / Receive a Purchase Order
  *
- * Route: /purchase-order/new  → create mode
- * Route: /purchase-order/:id  → view + receive mode
- *
- * Flow:
- *  1. Select supplier (optional)
- *  2. Add products + quantity + cost price
- *  3. Save as draft or mark as "Ordered"
- *  4. On "Mark Received" → calls receive_purchase_order RPC → stock increments
+ * Google Sheets-style inline editing with AI bill scanning.
  */
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,7 +15,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -30,13 +22,16 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import {
   ArrowLeft, Plus, Trash2, Search, Package, CheckCircle2,
-  Truck, X, Save, ShoppingBag,
+  Truck, X, Save, Camera, Sparkles, Loader2, Upload, PlusCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface POItem {
   id?: string;
@@ -62,6 +57,19 @@ interface Product {
   sku: string | null;
   items_per_case: number | null;
 }
+
+type POField = 'product_name' | 'mrp_price' | 'selling_price' | 'cost_price' | 'wholesale_price' | 'items_per_case' | 'cases' | 'stock';
+
+const PO_COLUMNS: { key: POField; label: string; type: 'text' | 'number'; width: string; align: string }[] = [
+  { key: 'product_name',  label: 'Product Name',   type: 'text',   width: 'min-w-[180px]', align: 'text-left' },
+  { key: 'mrp_price',     label: 'MRP',             type: 'number', width: 'min-w-[90px]',  align: 'text-right' },
+  { key: 'selling_price', label: 'Selling Price',   type: 'number', width: 'min-w-[100px]', align: 'text-right' },
+  { key: 'cost_price',    label: 'Cost Price',      type: 'number', width: 'min-w-[90px]',  align: 'text-right' },
+  { key: 'wholesale_price', label: 'Wholesale',     type: 'number', width: 'min-w-[90px]',  align: 'text-right' },
+  { key: 'items_per_case', label: 'PCS/Case',       type: 'number', width: 'min-w-[80px]',  align: 'text-center' },
+  { key: 'cases',         label: 'Cases',            type: 'number', width: 'min-w-[80px]',  align: 'text-center' },
+  { key: 'stock',         label: 'Stock',            type: 'number', width: 'min-w-[80px]',  align: 'text-center' },
+];
 
 const STATUS_CONFIG = {
   draft:     { label: 'Draft',     color: 'bg-yellow-100 text-yellow-800' },
@@ -93,6 +101,22 @@ export default function PurchaseOrderDetail() {
   const [saving, setSaving] = useState(false);
   const [confirmReceive, setConfirmReceive] = useState(false);
   const [poNumber, setPoNumber] = useState(generatePONumber());
+
+  // ── Spreadsheet state ─────────────────────────────────
+  const [activeCell, setActiveCell] = useState<{ row: number; col: number } | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const tableRef = useRef<HTMLTableElement>(null);
+
+  // ── New product dialog state ──────────────────────────
+  const [showNewProduct, setShowNewProduct] = useState(false);
+  const [newProductSaving, setNewProductSaving] = useState(false);
+
+  // ── AI Scan state ─────────────────────────────────────
+  const [showAIScan, setShowAIScan] = useState(false);
+  const [aiScanning, setAiScanning] = useState(false);
+  const [scanPreview, setScanPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Load existing order ───────────────────────────────
   const { data: order, isLoading: orderLoading } = useQuery({
@@ -201,22 +225,212 @@ export default function PurchaseOrderDetail() {
     setShowProductSearch(false);
   };
 
-  const removeItem = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx));
+  const addBlankRow = () => {
+    setItems(prev => [...prev, {
+      product_id: null,
+      product_name: '',
+      mrp_price: 0,
+      selling_price: 0,
+      cost_price: 0,
+      wholesale_price: 0,
+      items_per_case: 0,
+      cases: 0,
+      stock: 0,
+    }]);
+    // Focus on the product name cell of new row
+    setTimeout(() => startEdit(items.length, 0), 50);
+  };
 
-  const updateItemField = (idx: number, field: keyof POItem, value: number) => {
+  const removeItem = (idx: number) => {
+    setItems(prev => prev.filter((_, i) => i !== idx));
+    setActiveCell(null);
+  };
+
+  // ── Spreadsheet cell editing ──────────────────────────
+  const getCellValue = useCallback((item: POItem, field: POField) => {
+    return item[field];
+  }, []);
+
+  const startEdit = useCallback((row: number, col: number) => {
+    const item = items[row];
+    if (!item) return;
+    const field = PO_COLUMNS[col].key;
+    const val = getCellValue(item, field);
+    setActiveCell({ row, col });
+    setEditValue(val === null || val === undefined ? '' : String(val));
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, [items, getCellValue]);
+
+  const commitEdit = useCallback(() => {
+    if (!activeCell) return;
+    const { row, col } = activeCell;
+    const field = PO_COLUMNS[col].key;
+    const colDef = PO_COLUMNS[col];
+
     setItems(prev => prev.map((item, i) => {
-      if (i !== idx) return item;
-      const updated = { ...item, [field]: Math.max(0, value) };
+      if (i !== row) return item;
+      const updated = { ...item };
+
+      if (colDef.type === 'number') {
+        let num = editValue === '' ? 0 : Number(editValue);
+        if (isNaN(num)) num = 0;
+        (updated as any)[field] = Math.max(0, num);
+      } else {
+        (updated as any)[field] = editValue.trim();
+      }
+
       // Sync cases <-> stock
       if (field === 'cases' && updated.items_per_case > 0) {
-        updated.stock = Math.round(value * updated.items_per_case * 100) / 100;
+        updated.stock = Math.round((updated.cases * updated.items_per_case) * 100) / 100;
       } else if (field === 'stock' && updated.items_per_case > 0) {
-        updated.cases = Math.round((value / updated.items_per_case) * 100) / 100;
-      } else if (field === 'items_per_case' && value > 0) {
-        updated.cases = Math.round((updated.stock / value) * 100) / 100;
+        updated.cases = Math.round((updated.stock / updated.items_per_case) * 100) / 100;
+      } else if (field === 'items_per_case' && updated.items_per_case > 0) {
+        updated.cases = Math.round((updated.stock / updated.items_per_case) * 100) / 100;
       }
+
       return updated;
     }));
+  }, [activeCell, editValue]);
+
+  const cancelEdit = useCallback(() => {
+    setActiveCell(null);
+    setEditValue('');
+  }, []);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!activeCell) return;
+    const { row, col } = activeCell;
+
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      commitEdit();
+      if (e.key === 'Tab' && e.shiftKey) {
+        const newCol = col > 0 ? col - 1 : PO_COLUMNS.length - 1;
+        const newRow = col > 0 ? row : Math.max(0, row - 1);
+        startEdit(newRow, newCol);
+      } else if (e.key === 'Tab') {
+        const newCol = col < PO_COLUMNS.length - 1 ? col + 1 : 0;
+        const newRow = col < PO_COLUMNS.length - 1 ? row : Math.min(items.length - 1, row + 1);
+        startEdit(newRow, newCol);
+      } else {
+        if (row < items.length - 1) startEdit(row + 1, col);
+        else cancelEdit();
+      }
+    } else if (e.key === 'Escape') {
+      cancelEdit();
+    } else if (e.key === 'ArrowUp' && e.altKey) {
+      e.preventDefault();
+      commitEdit();
+      if (row > 0) startEdit(row - 1, col);
+    } else if (e.key === 'ArrowDown' && e.altKey) {
+      e.preventDefault();
+      commitEdit();
+      if (row < items.length - 1) startEdit(row + 1, col);
+    } else if (e.key === 'Delete' && e.ctrlKey) {
+      e.preventDefault();
+      removeItem(row);
+    }
+  }, [activeCell, commitEdit, cancelEdit, startEdit, items.length, removeItem]);
+
+  const handleCellBlur = useCallback(() => {
+    commitEdit();
+    setTimeout(() => {
+      setActiveCell(prev => prev);
+    }, 100);
+  }, [commitEdit]);
+
+  // ── New product creation ──────────────────────────────
+  const handleCreateProduct = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setNewProductSaving(true);
+    try {
+      const fd = new FormData(e.currentTarget);
+      const payload = {
+        business_id: businessId,
+        name: String(fd.get('name')).trim(),
+        mrp_price: Number(fd.get('mrp_price')) || 0,
+        selling_price: Number(fd.get('selling_price')) || 0,
+        cost_price: Number(fd.get('cost_price')) || 0,
+        wholesale_price: Number(fd.get('wholesale_price')) || 0,
+        items_per_case: Number(fd.get('items_per_case')) || 0,
+        stock_quantity: Number(fd.get('stock_quantity')) || 0,
+      };
+      if (!payload.name) { toast.error('Product name is required'); return; }
+
+      const { data, error } = await supabase
+        .from('products')
+        .insert(payload)
+        .select('id, name, mrp_price, cost_price, selling_price, wholesale_price, stock_quantity, sku, items_per_case')
+        .single();
+      if (error) throw error;
+
+      qc.invalidateQueries({ queryKey: ['products-for-po', businessId] });
+      qc.invalidateQueries({ queryKey: ['products', businessId] });
+
+      // Auto-add to PO
+      addProduct(data as Product);
+      setShowNewProduct(false);
+      toast.success(`"${payload.name}" created & added to order`);
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setNewProductSaving(false);
+    }
+  };
+
+  // ── AI Bill Scan ──────────────────────────────────────
+  const handleAIScan = async (file: File) => {
+    setAiScanning(true);
+    setScanPreview(URL.createObjectURL(file));
+    try {
+      // Convert to base64
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+
+      // Call Supabase Edge Function for AI processing
+      const { data, error } = await supabase.functions.invoke('scan-purchase-bill', {
+        body: { image: base64, business_id: businessId },
+      });
+
+      if (error) throw error;
+
+      if (data?.items && Array.isArray(data.items)) {
+        const newItems: POItem[] = data.items.map((scanned: any) => {
+          // Try to match with existing products
+          const match = products.find(p =>
+            p.name.toLowerCase().includes(String(scanned.name || '').toLowerCase()) ||
+            String(scanned.name || '').toLowerCase().includes(p.name.toLowerCase())
+          );
+          const ppc = Number(scanned.items_per_case || match?.items_per_case || 0);
+          const stock = Number(scanned.quantity || scanned.stock || 1);
+          return {
+            product_id: match?.id || null,
+            product_name: scanned.name || match?.name || 'Unknown Product',
+            mrp_price: Number(scanned.mrp_price || scanned.mrp || match?.mrp_price || 0),
+            selling_price: Number(scanned.selling_price || match?.selling_price || 0),
+            cost_price: Number(scanned.cost_price || scanned.price || match?.cost_price || 0),
+            wholesale_price: Number(scanned.wholesale_price || match?.wholesale_price || 0),
+            items_per_case: ppc,
+            cases: ppc > 0 ? Math.round((stock / ppc) * 100) / 100 : 0,
+            stock,
+          };
+        });
+        setItems(prev => [...prev, ...newItems]);
+        toast.success(`AI detected ${newItems.length} product(s) — please review & adjust`);
+      } else {
+        toast.info('No products detected in the image. Try a clearer photo.');
+      }
+    } catch (err: any) {
+      console.error('AI Scan error:', err);
+      toast.error('AI scan failed: ' + (err.message || 'Please try again'));
+    } finally {
+      setAiScanning(false);
+      setShowAIScan(false);
+      setScanPreview(null);
+    }
   };
 
   // ── Save order ────────────────────────────────────────
@@ -312,318 +526,391 @@ export default function PurchaseOrderDetail() {
   }
 
   return (
-    <div className="space-y-5 p-4 md:p-6 lg:p-8 max-w-[1400px]">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/purchases')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="spos-page-heading">{isNew ? 'New Purchase Order' : `PO #${poNumber}`}</h1>
-            {order?.status && (
-              <Badge className={`${STATUS_CONFIG[order.status]?.color} text-xs`} variant="outline">
-                {STATUS_CONFIG[order.status]?.label}
-              </Badge>
-            )}
-          </div>
-          {!isNew && order?.received_at && (
+    <div className="flex flex-col h-full p-4 md:p-6 lg:p-8" style={{ gap: 16 }}>
+      {/* ── Header ─────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => navigate('/purchases')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="spos-page-heading" style={{ marginBottom: 0 }}>
+                {isNew ? 'New Purchase Order' : `PO #${poNumber}`}
+              </h1>
+              {order?.status && (
+                <Badge className={`${STATUS_CONFIG[order.status]?.color} text-xs`} variant="outline">
+                  {STATUS_CONFIG[order.status]?.label}
+                </Badge>
+              )}
+            </div>
             <p className="spos-page-subhead" style={{ marginBottom: 0 }}>
-              Received on {format(new Date(order.received_at), 'dd MMM yyyy HH:mm')}
+              {isNew ? 'Click any cell to edit — like a spreadsheet' : order?.received_at
+                ? `Received on ${format(new Date(order.received_at), 'dd MMM yyyy HH:mm')}`
+                : 'Click any cell to edit'}
             </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {canReceive && (
+            <Button className="bg-green-600 hover:bg-green-700 text-white gap-2" size="sm"
+              onClick={() => setConfirmReceive(true)}>
+              <CheckCircle2 className="h-3.5 w-3.5" /> Mark Received
+            </Button>
+          )}
+          {!isReadOnly && (
+            <>
+              <Button variant="outline" size="sm" onClick={() => saveOrder('draft')}
+                disabled={saving || items.length === 0}>
+                <Save className="mr-1.5 h-3.5 w-3.5" /> Save Draft
+              </Button>
+              <Button size="sm" onClick={() => saveOrder('ordered')}
+                disabled={saving || items.length === 0} className="gap-1.5">
+                <Truck className="h-3.5 w-3.5" />
+                {saving ? 'Saving...' : 'Place Order'}
+              </Button>
+            </>
           )}
         </div>
-        {canReceive && (
-          <Button
-            className="bg-green-600 hover:bg-green-700 text-white gap-2 shrink-0"
-            onClick={() => setConfirmReceive(true)}
-          >
-            <CheckCircle2 className="h-4 w-4" />
-            Mark Received
+      </div>
+
+      {/* ── Order Details Row ──────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div>
+          <Label className="text-[10px] font-semibold uppercase text-muted-foreground">PO Number</Label>
+          <Input value={poNumber} onChange={e => setPoNumber(e.target.value)}
+            className="mt-1 h-8 text-sm font-mono" readOnly={isReadOnly} />
+        </div>
+        <div>
+          <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Supplier</Label>
+          <Select value={supplierId} onValueChange={setSupplierId} disabled={isReadOnly}>
+            <SelectTrigger className="mt-1 h-8 text-sm">
+              <SelectValue placeholder="Select supplier" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No supplier</SelectItem>
+              {suppliers.map(s => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {!isReadOnly && (
+            <button className="text-[10px] text-primary mt-0.5 hover:underline" type="button"
+              onClick={() => navigate('/suppliers')}>+ Add new supplier</button>
+          )}
+        </div>
+        <div className="sm:col-span-2">
+          <Label className="text-[10px] font-semibold uppercase text-muted-foreground">Notes</Label>
+          <Textarea value={notes} onChange={e => setNotes(e.target.value)}
+            placeholder="Any special instructions..." rows={1}
+            className="mt-1 text-sm min-h-[32px] resize-none" readOnly={isReadOnly} />
+        </div>
+      </div>
+
+      {/* ── Toolbar ────────────────────────────────────── */}
+      {!isReadOnly && (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search & add products..."
+              value={productSearch}
+              onChange={e => { setProductSearch(e.target.value); setShowProductSearch(true); }}
+              onFocus={() => setShowProductSearch(true)}
+              className="pl-9 h-8 text-sm" />
+            {showProductSearch && productSearch && (
+              <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                {filteredProducts.length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-3 text-center">No products found</p>
+                ) : filteredProducts.map(p => (
+                  <button key={p.id}
+                    className="w-full text-left px-3 py-2 hover:bg-muted flex items-center justify-between text-sm border-b last:border-0"
+                    onClick={() => addProduct(p)}>
+                    <div className="flex items-center gap-2">
+                      <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="font-medium">{p.name}</span>
+                      {p.sku && <span className="text-[10px] text-muted-foreground">{p.sku}</span>}
+                    </div>
+                    <div className="text-right shrink-0 ml-2">
+                      <span className="text-xs text-muted-foreground">Stock: {p.stock_quantity}</span>
+                      <span className="text-xs font-medium ml-2">{currencySymbol}{p.cost_price || 0}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs"
+            onClick={() => setShowNewProduct(true)}>
+            <PlusCircle className="h-3.5 w-3.5" /> New Product
           </Button>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs"
+            onClick={addBlankRow}>
+            <Plus className="h-3.5 w-3.5" /> Add Row
+          </Button>
+          <Button variant="outline" size="sm"
+            className="h-8 gap-1.5 text-xs bg-gradient-to-r from-violet-50 to-blue-50 border-violet-200 text-violet-700 hover:from-violet-100 hover:to-blue-100 dark:from-violet-950/30 dark:to-blue-950/30 dark:text-violet-300 dark:border-violet-800"
+            onClick={() => setShowAIScan(true)}>
+            <Sparkles className="h-3.5 w-3.5" /> Scan Bill with AI
+          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">{items.length} item{items.length !== 1 ? 's' : ''}</span>
+            <div className="rounded-lg border bg-muted/40 px-3 py-1">
+              <span className="text-[10px] text-muted-foreground mr-1">Total:</span>
+              <span className="text-sm font-bold text-primary">
+                {currencySymbol}{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Spreadsheet Table ──────────────────────────── */}
+      <div className="flex-1 overflow-auto border rounded-lg bg-card">
+        {items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-48 gap-3">
+            <Package className="h-12 w-12 text-muted-foreground/20" />
+            <p className="text-sm text-muted-foreground">No products added yet</p>
+            {!isReadOnly && (
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setShowProductSearch(true); }}
+                  className="gap-1.5">
+                  <Search className="h-3.5 w-3.5" /> Search Products
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setShowAIScan(true)}
+                  className="gap-1.5 text-violet-600">
+                  <Sparkles className="h-3.5 w-3.5" /> Scan Bill
+                </Button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <table ref={tableRef} className="w-full text-sm border-collapse">
+            <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur-sm">
+              <tr>
+                <th className="px-2 py-2 text-left text-[10px] font-bold uppercase text-muted-foreground border-b w-8">#</th>
+                {PO_COLUMNS.map(col => (
+                  <th key={col.key} className={cn(
+                    'px-2 py-2 text-[10px] font-bold uppercase text-muted-foreground border-b',
+                    col.width, col.align
+                  )}>
+                    {col.label}
+                  </th>
+                ))}
+                <th className="px-2 py-2 text-[10px] font-bold uppercase text-muted-foreground border-b text-right min-w-[90px]">Total</th>
+                {!isReadOnly && <th className="px-1 py-2 border-b w-8" />}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, rowIdx) => (
+                <tr key={rowIdx}
+                  className="border-b border-border/50 hover:bg-muted/30 transition-colors group">
+                  <td className="px-2 py-1 text-muted-foreground text-xs tabular-nums">{rowIdx + 1}</td>
+                  {PO_COLUMNS.map((col, colIdx) => {
+                    const isActive = activeCell?.row === rowIdx && activeCell?.col === colIdx;
+                    const value = getCellValue(item, col.key);
+                    const isCasesDisabled = col.key === 'cases' && item.items_per_case <= 0;
+
+                    return (
+                      <td key={col.key}
+                        className={cn(
+                          'px-1 py-0.5 transition-colors',
+                          !isReadOnly && !isCasesDisabled && 'cursor-pointer',
+                          isActive && 'ring-2 ring-primary ring-inset bg-primary/5',
+                          col.width
+                        )}
+                        onClick={() => {
+                          if (isReadOnly || isCasesDisabled) return;
+                          if (!isActive) {
+                            if (activeCell) commitEdit();
+                            startEdit(rowIdx, colIdx);
+                          }
+                        }}>
+                        {isActive && !isReadOnly ? (
+                          <input ref={inputRef}
+                            type={col.type === 'number' ? 'number' : 'text'}
+                            value={editValue}
+                            onChange={e => setEditValue(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            onBlur={handleCellBlur}
+                            className={cn(
+                              'w-full h-7 px-2 text-xs bg-transparent outline-none border-0 tabular-nums',
+                              col.align === 'text-right' && 'text-right',
+                              col.align === 'text-center' && 'text-center'
+                            )}
+                            step={col.type === 'number' ? 'any' : undefined}
+                            min={col.type === 'number' ? 0 : undefined} />
+                        ) : (
+                          <div className={cn(
+                            'px-2 py-1 text-xs truncate',
+                            col.type === 'number' && 'tabular-nums',
+                            col.align,
+                            isCasesDisabled && 'text-muted-foreground',
+                            !value && value !== 0 && 'text-muted-foreground'
+                          )}>
+                            {isCasesDisabled ? '—' :
+                              col.key === 'product_name' ? (
+                                <div className="flex items-center gap-1.5">
+                                  <div className="h-5 w-5 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                                    <Package className="h-3 w-3 text-primary" />
+                                  </div>
+                                  <span className="font-medium truncate">{value || '(empty)'}</span>
+                                </div>
+                              ) : col.type === 'number' && (col.key === 'mrp_price' || col.key === 'selling_price' || col.key === 'cost_price' || col.key === 'wholesale_price')
+                                ? `${currencySymbol}${Number(value ?? 0).toFixed(2)}`
+                                : (value ?? 0)
+                            }
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                  {/* Total column */}
+                  <td className="px-2 py-1 text-right">
+                    <span className="text-xs font-semibold tabular-nums">
+                      {currencySymbol}{(item.stock * item.cost_price).toFixed(2)}
+                    </span>
+                  </td>
+                  {/* Delete */}
+                  {!isReadOnly && (
+                    <td className="px-1 py-0.5">
+                      <button
+                        className="h-6 w-6 flex items-center justify-center rounded text-destructive/50 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
+                        onClick={() => removeItem(rowIdx)}>
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {/* Left: Supplier + Notes */}
-        <Card className="md:col-span-1 h-fit">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-              Order Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label className="text-xs font-medium">PO Number</Label>
-              <Input
-                value={poNumber}
-                onChange={e => setPoNumber(e.target.value)}
-                className="mt-1 font-mono"
-                readOnly={isReadOnly}
-              />
-            </div>
-            <div>
-              <Label className="text-xs font-medium">Supplier</Label>
-              <Select value={supplierId} onValueChange={setSupplierId} disabled={isReadOnly}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Select supplier (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No supplier</SelectItem>
-                  {suppliers.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {!isReadOnly && (
-                <button
-                  className="text-xs text-primary mt-1 hover:underline"
-                  onClick={() => navigate('/suppliers')}
-                  type="button"
-                >
-                  + Add new supplier
-                </button>
-              )}
-            </div>
-            <div>
-              <Label className="text-xs font-medium">Notes</Label>
-              <Textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="Any special instructions..."
-                rows={3}
-                className="mt-1 text-sm"
-                readOnly={isReadOnly}
-              />
-            </div>
-          </CardContent>
-        </Card>
+      {/* ── Keyboard shortcuts ─────────────────────────── */}
+      {!isReadOnly && items.length > 0 && (
+        <div className="text-[10px] text-muted-foreground flex items-center gap-4">
+          <span><kbd className="px-1 py-0.5 bg-muted rounded text-[9px]">Enter</kbd> move down</span>
+          <span><kbd className="px-1 py-0.5 bg-muted rounded text-[9px]">Tab</kbd> move right</span>
+          <span><kbd className="px-1 py-0.5 bg-muted rounded text-[9px]">Esc</kbd> cancel</span>
+          <span><kbd className="px-1 py-0.5 bg-muted rounded text-[9px]">Ctrl+Del</kbd> delete row</span>
+        </div>
+      )}
 
-        {/* Right: Items */}
-        <div className="md:col-span-2 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                  Products ({items.length})
-                </CardTitle>
-                {!isReadOnly && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs gap-1"
-                    onClick={() => setShowProductSearch(true)}
-                  >
-                    <Plus className="h-3.5 w-3.5" />Add Product
-                  </Button>
+      {/* ── New Product Dialog ─────────────────────────── */}
+      <Dialog open={showNewProduct} onOpenChange={setShowNewProduct}>
+        <DialogContent className="max-w-lg w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PlusCircle className="h-5 w-5 text-primary" /> Create New Product
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateProduct} className="space-y-4 mt-2">
+            <div className="space-y-1">
+              <Label htmlFor="np-name" className="text-xs font-medium">Product Name *</Label>
+              <Input id="np-name" name="name" required placeholder="e.g. Coca Cola 500ml" className="h-9" />
+            </div>
+            <div className="p-3 rounded-lg border bg-muted/30">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Pricing</p>
+              <div className="grid grid-cols-4 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[10px]">MRP</Label>
+                  <Input name="mrp_price" type="number" step="0.01" min="0" defaultValue={0} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px]">Selling *</Label>
+                  <Input name="selling_price" type="number" step="0.01" min="0" defaultValue={0} required className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px]">Cost</Label>
+                  <Input name="cost_price" type="number" step="0.01" min="0" defaultValue={0} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px]">Wholesale</Label>
+                  <Input name="wholesale_price" type="number" step="0.01" min="0" defaultValue={0} className="h-8 text-sm" />
+                </div>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg border bg-muted/30">
+              <p className="text-[10px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Stock</p>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-[10px]">PCS/Case</Label>
+                  <Input name="items_per_case" type="number" min="0" defaultValue={0} className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px]">Stock (PCS)</Label>
+                  <Input name="stock_quantity" type="number" min="0" defaultValue={0} className="h-8 text-sm" />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowNewProduct(false)}>Cancel</Button>
+              <Button type="submit" disabled={newProductSaving}>
+                {newProductSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                Create & Add
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── AI Scan Dialog ─────────────────────────────── */}
+      <Dialog open={showAIScan} onOpenChange={setShowAIScan}>
+        <DialogContent className="max-w-md w-[95vw]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-violet-500" /> Scan Supplier Bill with AI
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <p className="text-sm text-muted-foreground">
+              Take a photo or upload an image of your supplier bill. AI will automatically detect products, quantities, and prices.
+            </p>
+
+            {scanPreview ? (
+              <div className="relative rounded-lg border overflow-hidden">
+                <img src={scanPreview} alt="Bill preview" className="w-full max-h-64 object-contain bg-muted/30" />
+                {aiScanning && (
+                  <div className="absolute inset-0 bg-background/80 flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+                    <p className="text-sm font-medium text-violet-600">AI is reading your bill...</p>
+                    <p className="text-xs text-muted-foreground">This may take a few seconds</p>
+                  </div>
                 )}
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {/* Product search dropdown */}
-              {showProductSearch && (
-                <div className="p-3 border-b bg-muted/30">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search products to add..."
-                      value={productSearch}
-                      onChange={e => setProductSearch(e.target.value)}
-                      className="pl-9 h-9"
-                      autoFocus
-                    />
-                    <button
-                      onClick={() => { setShowProductSearch(false); setProductSearch(''); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  {productSearch && (
-                    <div className="mt-2 border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
-                      {filteredProducts.length === 0 ? (
-                        <p className="text-xs text-muted-foreground p-3 text-center">No products found</p>
-                      ) : filteredProducts.map(p => (
-                        <button
-                          key={p.id}
-                          className="w-full text-left px-3 py-2 hover:bg-muted flex items-center justify-between group text-sm border-b last:border-0"
-                          onClick={() => addProduct(p)}
-                        >
-                          <div>
-                            <span className="font-medium">{p.name}</span>
-                            {p.sku && <span className="text-xs text-muted-foreground ml-2">{p.sku}</span>}
-                          </div>
-                          <div className="text-right shrink-0 ml-2">
-                            <p className="text-xs text-muted-foreground">Stock: {p.stock_quantity}</p>
-                            <p className="text-xs font-medium">{currencySymbol}{p.cost_price || 0}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {items.length === 0 ? (
-                <div className="p-8 text-center space-y-2">
-                  <Package className="h-10 w-10 mx-auto text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground">No products added yet</p>
-                  {!isReadOnly && (
-                    <Button variant="outline" size="sm" onClick={() => setShowProductSearch(true)}>
-                      <Plus className="mr-2 h-3.5 w-3.5" />Add Products
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/40">
-                        <TableHead className="min-w-[180px] text-xs font-semibold uppercase tracking-wider">Product Name</TableHead>
-                        <TableHead className="min-w-[90px] text-xs font-semibold uppercase tracking-wider text-right">MRP</TableHead>
-                        <TableHead className="min-w-[100px] text-xs font-semibold uppercase tracking-wider text-right">Selling Price</TableHead>
-                        <TableHead className="min-w-[90px] text-xs font-semibold uppercase tracking-wider text-right">Cost Price</TableHead>
-                        <TableHead className="min-w-[90px] text-xs font-semibold uppercase tracking-wider text-right">Wholesale</TableHead>
-                        <TableHead className="min-w-[80px] text-xs font-semibold uppercase tracking-wider text-center">PCS/Case</TableHead>
-                        <TableHead className="min-w-[80px] text-xs font-semibold uppercase tracking-wider text-center">Cases</TableHead>
-                        <TableHead className="min-w-[80px] text-xs font-semibold uppercase tracking-wider text-center">Stock</TableHead>
-                        <TableHead className="min-w-[90px] text-xs font-semibold uppercase tracking-wider text-right">Total</TableHead>
-                        {!isReadOnly && <TableHead className="w-10" />}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {items.map((item, idx) => (
-                        <TableRow key={idx} className="group">
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                <Package className="h-3.5 w-3.5 text-primary" />
-                              </div>
-                              <span className="text-sm font-medium truncate max-w-[160px]">{item.product_name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {isReadOnly ? (
-                              <span className="text-sm">{currencySymbol}{item.mrp_price.toFixed(2)}</span>
-                            ) : (
-                              <Input type="number" min="0" step="0.01" value={item.mrp_price}
-                                onChange={e => updateItemField(idx, 'mrp_price', Number(e.target.value))}
-                                className="h-7 w-24 text-right text-sm ml-auto" />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {isReadOnly ? (
-                              <span className="text-sm">{currencySymbol}{item.selling_price.toFixed(2)}</span>
-                            ) : (
-                              <Input type="number" min="0" step="0.01" value={item.selling_price}
-                                onChange={e => updateItemField(idx, 'selling_price', Number(e.target.value))}
-                                className="h-7 w-24 text-right text-sm ml-auto" />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {isReadOnly ? (
-                              <span className="text-sm">{currencySymbol}{item.cost_price.toFixed(2)}</span>
-                            ) : (
-                              <Input type="number" min="0" step="0.01" value={item.cost_price}
-                                onChange={e => updateItemField(idx, 'cost_price', Number(e.target.value))}
-                                className="h-7 w-24 text-right text-sm ml-auto" />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {isReadOnly ? (
-                              <span className="text-sm">{currencySymbol}{item.wholesale_price.toFixed(2)}</span>
-                            ) : (
-                              <Input type="number" min="0" step="0.01" value={item.wholesale_price}
-                                onChange={e => updateItemField(idx, 'wholesale_price', Number(e.target.value))}
-                                className="h-7 w-20 text-right text-sm ml-auto" />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {isReadOnly ? (
-                              <span className="text-sm">{item.items_per_case || '—'}</span>
-                            ) : (
-                              <Input type="number" min="0" step="1" value={item.items_per_case || ''}
-                                onChange={e => updateItemField(idx, 'items_per_case', Number(e.target.value))}
-                                className="h-7 w-16 text-center text-sm mx-auto"
-                                placeholder="—" />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {isReadOnly ? (
-                              <span className="text-sm">{item.items_per_case > 0 ? item.cases : '—'}</span>
-                            ) : item.items_per_case > 0 ? (
-                              <Input type="number" min="0" step="0.01" value={item.cases}
-                                onChange={e => updateItemField(idx, 'cases', Number(e.target.value))}
-                                className="h-7 w-16 text-center text-sm mx-auto" />
-                            ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {isReadOnly ? (
-                              <span className="text-sm font-medium">{item.stock}</span>
-                            ) : (
-                              <Input type="number" min="0" step="1" value={item.stock}
-                                onChange={e => updateItemField(idx, 'stock', Number(e.target.value))}
-                                className="h-7 w-16 text-center text-sm mx-auto font-medium" />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-sm">
-                            {currencySymbol}{(item.stock * item.cost_price).toFixed(2)}
-                          </TableCell>
-                          {!isReadOnly && (
-                            <TableCell>
-                              <Button variant="ghost" size="icon"
-                                className="h-7 w-7 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => removeItem(idx)}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Total + Action buttons */}
-          <div className="flex flex-col sm:flex-row items-end justify-between gap-3">
-            <div className="w-full sm:w-auto rounded-xl border bg-muted/40 px-5 py-3 space-y-1">
-              <p className="text-xs text-muted-foreground">Order Total</p>
-              <p className="text-2xl font-black text-primary">
-                {currencySymbol}{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-            </div>
-            {!isReadOnly && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => saveOrder('draft')}
-                  disabled={saving || items.length === 0}
-                  size="sm"
-                >
-                  <Save className="mr-2 h-3.5 w-3.5" />
-                  Save Draft
-                </Button>
-                <Button
-                  onClick={() => saveOrder('ordered')}
-                  disabled={saving || items.length === 0}
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Truck className="h-3.5 w-3.5" />
-                  {saving ? 'Saving...' : 'Place Order'}
-                </Button>
+            ) : (
+              <div
+                className="border-2 border-dashed rounded-xl p-8 text-center hover:border-violet-300 hover:bg-violet-50/30 dark:hover:bg-violet-950/10 transition-colors cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}>
+                <Camera className="h-10 w-10 mx-auto text-violet-300 mb-3" />
+                <p className="text-sm font-medium">Click to upload bill image</p>
+                <p className="text-xs text-muted-foreground mt-1">JPG, PNG or PDF — Max 10MB</p>
               </div>
             )}
-          </div>
-        </div>
-      </div>
 
-      {/* Confirm Receive Dialog */}
+            <input ref={fileInputRef} type="file" accept="image/*,.pdf" className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) handleAIScan(file);
+                e.target.value = '';
+              }} />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => { setShowAIScan(false); setScanPreview(null); }}>
+              Cancel
+            </Button>
+            {!scanPreview && (
+              <Button type="button" onClick={() => fileInputRef.current?.click()}
+                className="gap-1.5 bg-violet-600 hover:bg-violet-700">
+                <Upload className="h-3.5 w-3.5" /> Upload Photo
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Confirm Receive Dialog ─────────────────────── */}
       <AlertDialog open={confirmReceive} onOpenChange={setConfirmReceive}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -633,7 +920,7 @@ export default function PurchaseOrderDetail() {
               This action <strong>cannot be undone</strong>.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="my-2 rounded-lg border bg-muted/40 p-3 space-y-1.5">
+          <div className="my-2 rounded-lg border bg-muted/40 p-3 space-y-1.5 max-h-48 overflow-y-auto">
             {items.map((item, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
                 <span className="font-medium">{item.product_name}</span>
@@ -643,12 +930,9 @@ export default function PurchaseOrderDetail() {
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-green-600 hover:bg-green-700"
-              onClick={() => receiveMutation.mutate()}
-            >
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              Confirm Receipt
+            <AlertDialogAction className="bg-green-600 hover:bg-green-700"
+              onClick={() => receiveMutation.mutate()}>
+              <CheckCircle2 className="mr-2 h-4 w-4" /> Confirm Receipt
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
