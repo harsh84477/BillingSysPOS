@@ -42,17 +42,22 @@ interface POItem {
   id?: string;
   product_id: string | null;
   product_name: string;
-  quantity: number;
+  mrp_price: number;
+  selling_price: number;
   cost_price: number;
-  unit_type: 'pcs' | 'case';
+  wholesale_price: number;
   items_per_case: number;
+  cases: number;
+  stock: number;
 }
 
 interface Product {
   id: string;
   name: string;
+  mrp_price: number | null;
   cost_price: number | null;
   selling_price: number | null;
+  wholesale_price: number | null;
   stock_quantity: number;
   sku: string | null;
   items_per_case: number | null;
@@ -109,15 +114,22 @@ export default function PurchaseOrderDetail() {
       setSupplierId(order.supplier_id || 'none');
       setNotes(order.notes || '');
       setPoNumber(order.order_number);
-      setItems((order.purchase_order_items || []).map(i => ({
-        id: i.id,
-        product_id: i.product_id,
-        product_name: i.product_name,
-        quantity: Number(i.quantity),
-        cost_price: Number(i.cost_price),
-        unit_type: (i.unit_type as 'pcs' | 'case') || 'pcs',
-        items_per_case: Number(i.items_per_case || 0),
-      })));
+      setItems((order.purchase_order_items || []).map(i => {
+        const ppc = Number(i.items_per_case || 0);
+        const qty = Number(i.quantity);
+        return {
+          id: i.id,
+          product_id: i.product_id,
+          product_name: i.product_name,
+          mrp_price: Number(i.mrp_price || 0),
+          selling_price: Number(i.selling_price || 0),
+          cost_price: Number(i.cost_price),
+          wholesale_price: Number(i.wholesale_price || 0),
+          items_per_case: ppc,
+          cases: ppc > 0 ? Math.round((qty / ppc) * 100) / 100 : 0,
+          stock: qty,
+        };
+      }));
     }
   }, [order]);
 
@@ -143,7 +155,7 @@ export default function PurchaseOrderDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, cost_price, selling_price, stock_quantity, sku, items_per_case')
+        .select('id, name, mrp_price, cost_price, selling_price, wholesale_price, stock_quantity, sku, items_per_case')
         .eq('business_id', businessId)
         .order('name');
       if (error) throw error;
@@ -160,15 +172,8 @@ export default function PurchaseOrderDetail() {
     ).slice(0, 20);
   }, [products, productSearch]);
 
-  const getEffectiveQty = (item: POItem) => {
-    if (item.unit_type === 'case' && item.items_per_case > 0) {
-      return item.quantity * item.items_per_case;
-    }
-    return item.quantity;
-  };
-
   const totalAmount = useMemo(() =>
-    items.reduce((s, i) => s + getEffectiveQty(i) * i.cost_price, 0),
+    items.reduce((s, i) => s + i.stock * i.cost_price, 0),
   [items]);
 
   // ── Add a product row ─────────────────────────────────
@@ -176,16 +181,20 @@ export default function PurchaseOrderDetail() {
     const exists = items.findIndex(i => i.product_id === p.id);
     if (exists >= 0) {
       setItems(prev => prev.map((item, idx) =>
-        idx === exists ? { ...item, quantity: item.quantity + 1 } : item
+        idx === exists ? { ...item, stock: item.stock + 1, cases: item.items_per_case > 0 ? Math.round(((item.stock + 1) / item.items_per_case) * 100) / 100 : 0 } : item
       ));
     } else {
+      const ppc = Number(p.items_per_case || 0);
       setItems(prev => [...prev, {
         product_id: p.id,
         product_name: p.name,
-        quantity: 1,
+        mrp_price: Number(p.mrp_price || 0),
+        selling_price: Number(p.selling_price || 0),
         cost_price: Number(p.cost_price || p.selling_price || 0),
-        unit_type: 'pcs' as const,
-        items_per_case: Number(p.items_per_case || 0),
+        wholesale_price: Number(p.wholesale_price || 0),
+        items_per_case: ppc,
+        cases: ppc > 0 ? Math.round((1 / ppc) * 100) / 100 : 0,
+        stock: 1,
       }]);
     }
     setProductSearch('');
@@ -194,16 +203,20 @@ export default function PurchaseOrderDetail() {
 
   const removeItem = (idx: number) => setItems(prev => prev.filter((_, i) => i !== idx));
 
-  const updateItem = (idx: number, field: 'quantity' | 'cost_price', value: number) => {
-    setItems(prev => prev.map((item, i) =>
-      i === idx ? { ...item, [field]: Math.max(0, value) } : item
-    ));
-  };
-
-  const updateUnitType = (idx: number, unitType: 'pcs' | 'case') => {
-    setItems(prev => prev.map((item, i) =>
-      i === idx ? { ...item, unit_type: unitType } : item
-    ));
+  const updateItemField = (idx: number, field: keyof POItem, value: number) => {
+    setItems(prev => prev.map((item, i) => {
+      if (i !== idx) return item;
+      const updated = { ...item, [field]: Math.max(0, value) };
+      // Sync cases <-> stock
+      if (field === 'cases' && updated.items_per_case > 0) {
+        updated.stock = Math.round(value * updated.items_per_case * 100) / 100;
+      } else if (field === 'stock' && updated.items_per_case > 0) {
+        updated.cases = Math.round((value / updated.items_per_case) * 100) / 100;
+      } else if (field === 'items_per_case' && value > 0) {
+        updated.cases = Math.round((updated.stock / value) * 100) / 100;
+      }
+      return updated;
+    }));
   };
 
   // ── Save order ────────────────────────────────────────
@@ -248,9 +261,11 @@ export default function PurchaseOrderDetail() {
         purchase_order_id: orderId,
         product_id: i.product_id,
         product_name: i.product_name,
-        quantity: i.unit_type === 'case' && i.items_per_case > 0 ? i.quantity * i.items_per_case : i.quantity,
+        quantity: i.stock,
         cost_price: i.cost_price,
-        unit_type: i.unit_type || 'pcs',
+        mrp_price: i.mrp_price,
+        selling_price: i.selling_price,
+        wholesale_price: i.wholesale_price,
         items_per_case: i.items_per_case || 0,
       }));
       const { error: itemErr } = await supabase.from('purchase_order_items').insert(itemPayload);
@@ -297,7 +312,7 @@ export default function PurchaseOrderDetail() {
   }
 
   return (
-    <div className="space-y-5 p-4 md:p-6 lg:p-8 max-w-5xl">
+    <div className="space-y-5 p-4 md:p-6 lg:p-8 max-w-[1400px]">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/purchases')}>
@@ -329,9 +344,9 @@ export default function PurchaseOrderDetail() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Left: Supplier + Notes */}
-        <Card className="lg:col-span-1 h-fit">
+        <Card className="md:col-span-1 h-fit">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Order Details
@@ -385,7 +400,7 @@ export default function PurchaseOrderDetail() {
         </Card>
 
         {/* Right: Items */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="md:col-span-2 space-y-4">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -460,99 +475,116 @@ export default function PurchaseOrderDetail() {
                   )}
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead className="w-28 text-center">Qty</TableHead>
-                      <TableHead className="w-28 text-center">Unit</TableHead>
-                      <TableHead className="w-32 text-right">Cost Price</TableHead>
-                      <TableHead className="w-28 text-right">Total</TableHead>
-                      {!isReadOnly && <TableHead className="w-10" />}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((item, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                              <Package className="h-3.5 w-3.5 text-primary" />
-                            </div>
-                            <span className="text-sm font-medium">{item.product_name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {isReadOnly ? (
-                            <span className="font-medium">{item.quantity}</span>
-                          ) : (
-                            <Input
-                              type="number"
-                              min="1"
-                              value={item.quantity}
-                              onChange={e => updateItem(idx, 'quantity', Number(e.target.value))}
-                              className="h-7 w-20 text-center text-sm mx-auto"
-                            />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {isReadOnly ? (
-                            <span className="text-xs font-medium uppercase">{item.unit_type || 'pcs'}</span>
-                          ) : item.items_per_case > 0 ? (
-                            <Select
-                              value={item.unit_type || 'pcs'}
-                              onValueChange={(v) => updateUnitType(idx, v as 'pcs' | 'case')}
-                            >
-                              <SelectTrigger className="h-7 w-24 text-xs mx-auto">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pcs">PCS</SelectItem>
-                                <SelectItem value="case">Case ({item.items_per_case})</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">PCS</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {isReadOnly ? (
-                            <span>{currencySymbol}{item.cost_price.toFixed(2)}</span>
-                          ) : (
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.cost_price}
-                              onChange={e => updateItem(idx, 'cost_price', Number(e.target.value))}
-                              className="h-7 w-28 text-right text-sm ml-auto"
-                            />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold text-sm">
-                          {currencySymbol}{(getEffectiveQty(item) * item.cost_price).toFixed(2)}
-                          {item.unit_type === 'case' && item.items_per_case > 0 && (
-                            <p className="text-[10px] font-normal text-muted-foreground">
-                              {getEffectiveQty(item)} pcs
-                            </p>
-                          )}
-                        </TableCell>
-                        {!isReadOnly && (
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive hover:text-destructive"
-                              onClick={() => removeItem(idx)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </TableCell>
-                        )}
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/40">
+                        <TableHead className="min-w-[180px] text-xs font-semibold uppercase tracking-wider">Product Name</TableHead>
+                        <TableHead className="min-w-[90px] text-xs font-semibold uppercase tracking-wider text-right">MRP</TableHead>
+                        <TableHead className="min-w-[100px] text-xs font-semibold uppercase tracking-wider text-right">Selling Price</TableHead>
+                        <TableHead className="min-w-[90px] text-xs font-semibold uppercase tracking-wider text-right">Cost Price</TableHead>
+                        <TableHead className="min-w-[90px] text-xs font-semibold uppercase tracking-wider text-right">Wholesale</TableHead>
+                        <TableHead className="min-w-[80px] text-xs font-semibold uppercase tracking-wider text-center">PCS/Case</TableHead>
+                        <TableHead className="min-w-[80px] text-xs font-semibold uppercase tracking-wider text-center">Cases</TableHead>
+                        <TableHead className="min-w-[80px] text-xs font-semibold uppercase tracking-wider text-center">Stock</TableHead>
+                        <TableHead className="min-w-[90px] text-xs font-semibold uppercase tracking-wider text-right">Total</TableHead>
+                        {!isReadOnly && <TableHead className="w-10" />}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((item, idx) => (
+                        <TableRow key={idx} className="group">
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <Package className="h-3.5 w-3.5 text-primary" />
+                              </div>
+                              <span className="text-sm font-medium truncate max-w-[160px]">{item.product_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {isReadOnly ? (
+                              <span className="text-sm">{currencySymbol}{item.mrp_price.toFixed(2)}</span>
+                            ) : (
+                              <Input type="number" min="0" step="0.01" value={item.mrp_price}
+                                onChange={e => updateItemField(idx, 'mrp_price', Number(e.target.value))}
+                                className="h-7 w-24 text-right text-sm ml-auto" />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {isReadOnly ? (
+                              <span className="text-sm">{currencySymbol}{item.selling_price.toFixed(2)}</span>
+                            ) : (
+                              <Input type="number" min="0" step="0.01" value={item.selling_price}
+                                onChange={e => updateItemField(idx, 'selling_price', Number(e.target.value))}
+                                className="h-7 w-24 text-right text-sm ml-auto" />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {isReadOnly ? (
+                              <span className="text-sm">{currencySymbol}{item.cost_price.toFixed(2)}</span>
+                            ) : (
+                              <Input type="number" min="0" step="0.01" value={item.cost_price}
+                                onChange={e => updateItemField(idx, 'cost_price', Number(e.target.value))}
+                                className="h-7 w-24 text-right text-sm ml-auto" />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {isReadOnly ? (
+                              <span className="text-sm">{currencySymbol}{item.wholesale_price.toFixed(2)}</span>
+                            ) : (
+                              <Input type="number" min="0" step="0.01" value={item.wholesale_price}
+                                onChange={e => updateItemField(idx, 'wholesale_price', Number(e.target.value))}
+                                className="h-7 w-20 text-right text-sm ml-auto" />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {isReadOnly ? (
+                              <span className="text-sm">{item.items_per_case || '—'}</span>
+                            ) : (
+                              <Input type="number" min="0" step="1" value={item.items_per_case || ''}
+                                onChange={e => updateItemField(idx, 'items_per_case', Number(e.target.value))}
+                                className="h-7 w-16 text-center text-sm mx-auto"
+                                placeholder="—" />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {isReadOnly ? (
+                              <span className="text-sm">{item.items_per_case > 0 ? item.cases : '—'}</span>
+                            ) : item.items_per_case > 0 ? (
+                              <Input type="number" min="0" step="0.01" value={item.cases}
+                                onChange={e => updateItemField(idx, 'cases', Number(e.target.value))}
+                                className="h-7 w-16 text-center text-sm mx-auto" />
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {isReadOnly ? (
+                              <span className="text-sm font-medium">{item.stock}</span>
+                            ) : (
+                              <Input type="number" min="0" step="1" value={item.stock}
+                                onChange={e => updateItemField(idx, 'stock', Number(e.target.value))}
+                                className="h-7 w-16 text-center text-sm mx-auto font-medium" />
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-sm">
+                            {currencySymbol}{(item.stock * item.cost_price).toFixed(2)}
+                          </TableCell>
+                          {!isReadOnly && (
+                            <TableCell>
+                              <Button variant="ghost" size="icon"
+                                className="h-7 w-7 text-destructive hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => removeItem(idx)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -605,7 +637,7 @@ export default function PurchaseOrderDetail() {
             {items.map((item, i) => (
               <div key={i} className="flex items-center justify-between text-sm">
                 <span className="font-medium">{item.product_name}</span>
-                <Badge variant="secondary">+{getEffectiveQty(item)} units</Badge>
+                <Badge variant="secondary">+{item.stock} units</Badge>
               </div>
             ))}
           </div>
