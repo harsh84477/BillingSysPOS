@@ -97,14 +97,15 @@ export default function LoyaltyTab() {
           <form onSubmit={handleSubmit}>
             <SettingRow
               label="Enable Loyalty Program"
-              description="Customers earn points on completed bills"
-            >
-              <Toggle
-                checked={form.is_enabled}
-                onChange={(v) => setForm(f => ({ ...f, is_enabled: v }))}
-                disabled={!isAdmin}
-              />
-            </SettingRow>
+              desc="Customers earn points on completed bills"
+              right={
+                <Toggle
+                  on={form.is_enabled}
+                  onChange={(v) => setForm(f => ({ ...f, is_enabled: v }))}
+                  disabled={!isAdmin}
+                />
+              }
+            />
 
             <div style={{ marginTop: 20, opacity: form.is_enabled ? 1 : 0.5, pointerEvents: form.is_enabled ? 'auto' : 'none' }}>
               <div style={{ marginBottom: 14 }}>
