@@ -284,8 +284,13 @@ export default function Billing() {
 
   // Filter products
   const filteredProducts = useMemo(() => {
+    const q = searchQuery.toLowerCase();
     return products.filter((product) => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = !q ||
+        product.name.toLowerCase().includes(q) ||
+        (product.sku || '').toLowerCase().includes(q) ||
+        (product.item_code || '').toLowerCase().includes(q) ||
+        (product.barcode || '').toLowerCase().includes(q);
       const matchesCategory = selectedCategory === 'all' || product.category_id === selectedCategory;
       return matchesSearch && matchesCategory;
     });
@@ -1709,7 +1714,7 @@ export default function Billing() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search products..."
+                placeholder="Search by name, SKU, or item code..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-background h-9"
