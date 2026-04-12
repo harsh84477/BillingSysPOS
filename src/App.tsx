@@ -61,6 +61,7 @@ import SalesmanDashboard from "./pages/SalesmanDashboard";
 import SalesmanStores from "./pages/SalesmanStores";
 import SalesmanTargets from "./pages/SalesmanTargets";
 import SalesmanControl from "./pages/SalesmanControl";
+import SalesmanSettings from "./pages/SalesmanSettings";
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
@@ -245,6 +246,7 @@ const App = () => (
                 <Route path="/salesman-stores" element={<SalesmanStores />} />
                 <Route path="/salesman-targets" element={<SalesmanTargets />} />
                 <Route path="/salesman-control" element={<SalesmanControl />} />
+                <Route path="/salesman-settings" element={<SalesmanSettings />} />
               </Route>
 
               <Route

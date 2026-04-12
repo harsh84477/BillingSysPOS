@@ -46,6 +46,9 @@ export function MobileQuickBilling() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'products' | 'cart'>('products');
   const { data: settings } = useBusinessSettings();
+  const [billLayout] = useState<'grid' | 'list'>(() =>
+    (localStorage.getItem('salesman_bill_layout') as 'grid' | 'list') || 'grid'
+  );
 
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
   const [quantityDialogProduct, setQuantityDialogProduct] = useState<any>(null);
@@ -96,7 +99,7 @@ export function MobileQuickBilling() {
   };
 
   const handleProductClick = (product: any) => {
-    if (settings?.ask_quantity_first) {
+    if (billLayout === 'list' || settings?.ask_quantity_first) {
       setQuantityDialogProduct(product);
       setQuantityValue('1');
       setQuantityDialogOpen(true);
@@ -176,23 +179,6 @@ export function MobileQuickBilling() {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
-      {/* ── Compact Header ── */}
-      <header className="bg-primary text-primary-foreground px-4 py-2.5 flex items-center justify-between shrink-0 safe-area-top">
-        <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-white/15 flex items-center justify-center">
-            <ShoppingCart className="w-4 h-4" />
-          </div>
-          <div>
-            <h1 className="text-sm font-bold leading-none">Quick POS</h1>
-            <p className="text-[10px] opacity-70 leading-none mt-0.5">v2 Professional</p>
-          </div>
-        </div>
-        {cartCount > 0 && (
-          <Badge className="bg-white/90 text-primary font-bold text-xs px-2 py-0.5 border-none">
-            {cartCount} items · ₹{total.toFixed(0)}
-          </Badge>
-        )}
-      </header>
 
       {/* ── Desktop Layout (md+) ── */}
       <div className="hidden md:grid md:grid-cols-12 flex-1 overflow-hidden">
@@ -218,6 +204,47 @@ export function MobileQuickBilling() {
               <div className="text-center py-20 text-muted-foreground">
                 <Package className="h-12 w-12 mx-auto mb-3 opacity-20" />
                 <p className="font-medium">No products found</p>
+              </div>
+            ) : billLayout === 'list' ? (
+              <div className="space-y-1">
+                {filteredProducts.map((product: any) => {
+                  const available = product.stock_quantity - (product.reserved_quantity || 0);
+                  const isLow = available <= product.low_stock_threshold;
+                  const inCart = cart.find(i => i.product_id === product.id);
+                  return (
+                    <button
+                      key={product.id}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border/50 bg-card text-left hover:shadow-sm transition-all active:scale-[0.98]",
+                        available <= 0 && "opacity-30 pointer-events-none",
+                        inCart && "ring-2 ring-primary/40"
+                      )}
+                      onClick={() => handleProductClick(product)}
+                    >
+                      <div className="h-10 w-10 rounded-lg bg-muted/40 flex items-center justify-center shrink-0 relative">
+                        <Package className="w-5 h-5 text-muted-foreground/20" />
+                        {inCart && (
+                          <span className="absolute -top-1 -left-1 bg-primary text-primary-foreground text-[9px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
+                            {inCart.quantity}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm leading-tight truncate">{product.name}</p>
+                        {product.sku && <p className="text-[10px] text-muted-foreground">{product.sku}</p>}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-primary font-bold text-sm">₹{product.selling_price}</p>
+                        <p className={cn("text-[10px] font-medium", isLow ? "text-red-500" : "text-muted-foreground")}>
+                          {available} left
+                        </p>
+                      </div>
+                      {isLow && available > 0 && (
+                        <Badge className="bg-amber-500 text-white text-[8px] px-1 py-0 h-4 border-none shrink-0">Low</Badge>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             ) : (
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -397,6 +424,41 @@ export function MobileQuickBilling() {
                 <div className="text-center py-16 text-muted-foreground/40">
                   <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
                   <p className="text-sm font-medium">No products found</p>
+                </div>
+              ) : billLayout === 'list' ? (
+                <div className="space-y-1">
+                  {filteredProducts.map((product: any) => {
+                    const available = product.stock_quantity - (product.reserved_quantity || 0);
+                    const isLow = available <= product.low_stock_threshold;
+                    const inCart = cart.find(i => i.product_id === product.id);
+                    return (
+                      <button
+                        key={product.id}
+                        className={cn(
+                          "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg border border-border/50 bg-card text-left active:scale-[0.98] transition-transform",
+                          available <= 0 && "opacity-30 pointer-events-none",
+                          inCart && "ring-2 ring-primary/40"
+                        )}
+                        onClick={() => handleProductClick(product)}
+                      >
+                        <div className="h-9 w-9 rounded-lg bg-muted/30 flex items-center justify-center shrink-0 relative">
+                          <Package className="w-4 h-4 text-muted-foreground/15" />
+                          {inCart && (
+                            <span className="absolute -top-1 -left-1 bg-primary text-primary-foreground text-[8px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center">
+                              {inCart.quantity}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-medium leading-tight line-clamp-1">{product.name}</p>
+                          <p className={cn("text-[9px] font-medium", isLow ? "text-red-500" : "text-muted-foreground/60")}>
+                            {available} left {isLow && available > 0 ? '· LOW' : ''}
+                          </p>
+                        </div>
+                        <p className="text-primary font-bold text-xs shrink-0">₹{product.selling_price}</p>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-2">

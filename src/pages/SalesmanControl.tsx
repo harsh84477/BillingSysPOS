@@ -64,18 +64,26 @@ export default function SalesmanControl() {
   const { data: salesmen = [], isLoading: loadingSalesmen } = useQuery({
     queryKey: ['all-salesmen', businessId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: roles, error } = await supabase
         .from('user_roles')
-        .select('user_id, role, created_at, profiles(display_name, email)')
+        .select('user_id, role, created_at')
         .eq('business_id', businessId)
         .eq('role', 'salesman');
       if (error) throw error;
-      return (data || []).map((r: any) => ({
-        user_id: r.user_id,
-        name: r.profiles?.display_name || r.profiles?.email?.split('@')[0] || 'Salesman',
-        email: r.profiles?.email || '',
-        joined: r.created_at,
-      }));
+      if (!roles || roles.length === 0) return [];
+      const userIds = roles.map((r: any) => r.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, display_name')
+        .in('user_id', userIds);
+      return roles.map((r: any) => {
+        const p = (profiles as any[])?.find(pr => pr.user_id === r.user_id);
+        return {
+          user_id: r.user_id,
+          name: p?.display_name || 'Salesman',
+          joined: r.created_at,
+        };
+      });
     },
     enabled: !!businessId,
   });

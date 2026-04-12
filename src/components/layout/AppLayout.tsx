@@ -140,7 +140,9 @@ const navSections: NavSection[] = [
   },
 ];
 
-const settingsItem: NavItemDef = { name: 'Settings', href: '/settings', icon: Settings, roles: ['owner', 'manager', 'salesman'] };
+const settingsItem: NavItemDef = { name: 'Settings', href: '/settings', icon: Settings, roles: ['owner', 'manager'] };
+
+const salesmanSettingsItem: NavItemDef = { name: 'Settings', href: '/salesman-settings', icon: Settings, roles: ['salesman'] };
 
 const mobileNavItems = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier'] },
@@ -151,6 +153,7 @@ const mobileNavItems = [
   { name: 'Due', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'] },
   { name: 'History', href: '/bills-history', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'] },
   { name: 'More', href: '/settings', icon: Settings, roles: ['owner', 'manager'] },
+  { name: 'More', href: '/salesman-settings', icon: Settings, roles: ['salesman'] },
 ];
 
 // ═══════════════════════════════════════════════
@@ -177,6 +180,7 @@ const pageTitleMap: Record<string, string> = {
   '/salesman-stores': 'My Stores',
   '/salesman-targets': 'My Targets',
   '/salesman-control': 'Salesman Control',
+  '/salesman-settings': 'Settings',
   '/settings': 'Settings',
 };
 
@@ -221,7 +225,8 @@ export default function AppLayout() {
     }))
     .filter(section => section.items.length > 0);
 
-  const showSettings = !userRole || settingsItem.roles.includes(userRole);
+  const currentSettingsItem = userRole === 'salesman' ? salesmanSettingsItem : settingsItem;
+  const showSettings = !userRole || currentSettingsItem.roles.includes(userRole);
   const filteredMobileNav = mobileNavItems.filter(item => !userRole || item.roles.includes(userRole));
 
   return (
@@ -271,8 +276,8 @@ export default function AppLayout() {
             <>
               <div className="spos-sidebar-divider" />
               <Link
-                to="/settings"
-                className={cn('spos-sidebar-nav-item', location.pathname === '/settings' && 'active')}
+                to={currentSettingsItem.href}
+                className={cn('spos-sidebar-nav-item', location.pathname === currentSettingsItem.href && 'active')}
               >
                 <Settings />
                 <span>Settings</span>
@@ -352,7 +357,7 @@ export default function AppLayout() {
                 {showSettings && (
                   <>
                     <div className="spos-sidebar-divider" />
-                    <Link to="/settings" className={cn('spos-sidebar-nav-item', location.pathname === '/settings' && 'active')}>
+                    <Link to={currentSettingsItem.href} className={cn('spos-sidebar-nav-item', location.pathname === currentSettingsItem.href && 'active')}>
                       <Settings />
                       <span>Settings</span>
                     </Link>
