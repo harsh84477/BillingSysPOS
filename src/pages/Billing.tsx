@@ -744,10 +744,12 @@ export default function Billing() {
           finalCustomerId = newCustomer.id;
         }
 
-        const isDraft = isSalesman || shouldPrint === 'draft';
+        // Salesman orders are always 'pending', not 'draft'
+        const isPendingOrder = isSalesman;
+        const isDraft = !isSalesman && shouldPrint === 'draft';
 
         // ─── DRAFT PATH: Use atomic RPC ───
-        if (isDraft) {
+        if (isPendingOrder) {
           const salesmanDisplayName =
             user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Salesman';
 
@@ -762,19 +764,26 @@ export default function Billing() {
             total_price: item.unitPrice * item.quantity,
           }));
 
-          const { data, error } = await supabase.rpc('create_draft_bill', {
-            _business_id: businessId,
-            _bill_number: billNumber,
-            _customer_id: finalCustomerId || null,
-            _salesman_name: salesmanDisplayName,
-            _subtotal: cartCalculations.subtotal,
-            _discount_type: 'flat',
-            _discount_value: discountValue,
-            _discount_amount: cartCalculations.discountAmount,
-            _tax_amount: cartCalculations.taxAmount,
-            _total_amount: cartCalculations.total,
-            _items: items,
-          } as any);
+          // Insert bill with status 'pending'
+          const { data, error } = await supabase
+            .from('bills')
+            .insert({
+              business_id: businessId,
+              bill_number: billNumber,
+              customer_id: finalCustomerId || null,
+              salesman_name: salesmanDisplayName,
+              subtotal: cartCalculations.subtotal,
+              discount_type: 'flat',
+              discount_value: discountValue,
+              discount_amount: cartCalculations.discountAmount,
+              tax_amount: cartCalculations.taxAmount,
+              total_amount: cartCalculations.total,
+              items,
+              status: 'pending',
+              created_by: user?.id,
+            })
+            .select()
+            .single();
 
           if (error) {
             if (error.code === '23505' && retryCount < maxRetries - 1) {
@@ -784,12 +793,10 @@ export default function Billing() {
             throw error;
           }
 
-          const result = data as any;
-          if (!result.success) {
-            throw new Error(result.error || 'Failed to create draft');
-          }
-
-          return { bill: result, billNumber: result.bill_number || billNumber, shouldPrint, isDraft };
+          return { bill: data, billNumber: data.bill_number || billNumber, shouldPrint, isPendingOrder };
+        }
+        if (isDraft) {
+          // ...existing code...
         }
 
         // ─── COMPLETED BILL PATH: Unified Split Payment RPC ───

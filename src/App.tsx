@@ -50,6 +50,7 @@ import Expenses from "./pages/Expenses";
 import ActivityLogs from "./pages/ActivityLogs";
 import SalesmanBilling from "./pages/SalesmanBilling";
 import DraftBills from "./pages/DraftBills";
+import SalesmanOrders from "./pages/SalesmanOrders";
 import Reports from "./pages/Reports";
 import ManageProducts from "./pages/ManageProducts";
 import ManageCustomers from "./pages/ManageCustomers";
@@ -238,6 +239,7 @@ const App = () => (
                 <Route path="/draft-bills" element={<DraftBills />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/salesman-billing" element={<SalesmanBilling />} />
+                <Route path="/salesman-orders" element={<SalesmanOrders />} />
                 <Route path="/suppliers" element={<Suppliers />} />
                 <Route path="/purchases" element={<Purchases />} />
                 <Route path="/purchase-order/:id" element={<PurchaseOrderDetail />} />
