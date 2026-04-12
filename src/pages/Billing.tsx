@@ -793,6 +793,12 @@ export default function Billing() {
             throw error;
           }
 
+          await updateSalesmanTargetProgress({
+            businessId,
+            salesmanId: user?.id,
+            billAmount: data.total_amount,
+            billDate: data.created_at || new Date().toISOString(),
+          });
           return { bill: data, billNumber: data.bill_number || billNumber, shouldPrint, isPendingOrder };
         }
         if (isDraft) {
@@ -1866,7 +1872,7 @@ export default function Billing() {
                   <div className="mt-1.5 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-[10px]">
                       <Badge variant="secondary" className="py-0.5 px-2 text-[11px] font-semibold">{sc.name}</Badge>
-                      {sc.phone && <span className="text-muted-foreground">📱 {sc.phone}</span>}
+                      {sc.phone && <span className="text-muted-foreground">{sc.phone}</span>}
                     </div>
                     <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-destructive" onClick={() => { setSelectedCustomerId(null); setCustomerName(''); }}>
                       ✕ Clear
@@ -1893,7 +1899,7 @@ export default function Billing() {
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{item.name}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                        <div className="flex items-center gap-1 mt-0.5">
                           {editingCartPriceItemId === item.productId ? (
                             <div className="flex items-center gap-1">
                               <span className="text-[10px] text-muted-foreground">{currencySymbol}</span>
@@ -1921,13 +1927,7 @@ export default function Billing() {
                               </span>
                             </div>
                           )}
-                          <span className="text-[10px] text-muted-foreground">× {item.quantity} = </span>
-                          <span className={cn(
-                            "text-xs font-bold",
-                            item.unitPrice <= item.costPrice ? "text-destructive" : "text-primary"
-                          )}>
-                            {currencySymbol}{(item.unitPrice * item.quantity).toFixed(2)}
-                          </span>
+                          <span className="text-xs text-muted-foreground"> x {item.quantity}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
@@ -2023,7 +2023,6 @@ export default function Billing() {
             </div>
 
             <div className="flex flex-col gap-2 relative z-10">
-              {/* Payment Type Selector inside Mobile Drawer */}
               {!isSalesman && renderPaymentSelector()}
 
               {isSalesman ? (
@@ -2247,10 +2246,20 @@ export default function Billing() {
                             {item.quantity}
                           </span>
                         )}
-                        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateQuantity(item.productId, 1)}>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => updateQuantity(item.productId, 1)}
+                        >
                           <Plus className="h-3 w-3" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeFromCart(item.productId)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive"
+                          onClick={() => removeFromCart(item.productId)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -2349,7 +2358,7 @@ export default function Billing() {
                           className="flex-1 h-8 text-[11px] bg-[#25D366] hover:bg-[#128C7E] text-white"
                           disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill || !hasPhone}
                           onClick={() => createBillMutation.mutate('whatsapp')}
-                          title={hasPhone ? 'Send via WhatsApp' : 'Select customer with phone'}
+                          title={hasPhone ? 'Send via WhatsApp' : 'Select a customer with phone'}
                         >
                           <MessageCircle className="mr-1 h-3 w-3" />
                           WhatsApp

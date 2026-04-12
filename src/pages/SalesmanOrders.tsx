@@ -48,6 +48,22 @@ export default function SalesmanOrders() {
     (bill.customers?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Finalize a pending bill (owner/manager only)
+  async function finalizeBill(bill) {
+    await supabase
+      .from('bills')
+      .update({ status: 'complete' })
+      .eq('id', bill.id);
+    // Update target progress again (if not already counted)
+    await supabase.rpc('increment_salesman_target', {
+      p_business_id: bill.business_id,
+      p_salesman_id: bill.created_by,
+      p_bill_amount: bill.total_amount,
+      p_bill_date: bill.created_at,
+    });
+    window.location.reload();
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -88,7 +104,7 @@ export default function SalesmanOrders() {
                 <TableCell>
                   {/* Finalize button for owner/manager */}
                   {(userRole === 'owner' || userRole === 'manager') && bill.status === 'pending' && (
-                    <Button size="sm" variant="default">Finalize</Button>
+                    <Button size="sm" variant="default" onClick={() => finalizeBill(bill)}>Finalize</Button>
                   )}
                 </TableCell>
               </TableRow>
