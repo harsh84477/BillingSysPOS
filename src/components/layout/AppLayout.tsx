@@ -61,6 +61,9 @@ import {
   Truck,
   ShoppingBag,
   RotateCcw,
+  Target,
+  Store,
+  UserCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -89,7 +92,8 @@ const navSections: NavSection[] = [
   {
     label: 'MAIN',
     items: [
-      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+      { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier'] },
+      { name: 'Dashboard', href: '/salesman-dashboard', icon: LayoutDashboard, roles: ['salesman'] },
     ],
   },
   {
@@ -101,6 +105,13 @@ const navSections: NavSection[] = [
       { name: 'Bills History', href: '/bills-history', icon: Receipt, roles: ['owner', 'manager', 'cashier', 'salesman'] },
       { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'], badgeKey: 'due' },
       { name: 'Sales Returns', href: '/sales-returns', icon: RotateCcw, roles: ['owner', 'manager'] },
+    ],
+  },
+  {
+    label: 'TERRITORY',
+    items: [
+      { name: 'My Stores', href: '/salesman-stores', icon: Store, roles: ['salesman'] },
+      { name: 'My Targets', href: '/salesman-targets', icon: Target, roles: ['salesman'] },
     ],
   },
   {
@@ -124,6 +135,7 @@ const navSections: NavSection[] = [
     label: 'CRM',
     items: [
       { name: 'Customers', href: '/customers', icon: Users, roles: ['owner', 'manager'] },
+      { name: 'Salesman Control', href: '/salesman-control', icon: UserCheck, roles: ['owner', 'manager'] },
     ],
   },
 ];
@@ -131,9 +143,11 @@ const navSections: NavSection[] = [
 const settingsItem: NavItemDef = { name: 'Settings', href: '/settings', icon: Settings, roles: ['owner', 'manager', 'salesman'] };
 
 const mobileNavItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier', 'salesman'] },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['owner', 'manager', 'cashier'] },
+  { name: 'Dashboard', href: '/salesman-dashboard', icon: LayoutDashboard, roles: ['salesman'] },
   { name: 'Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier'] },
   { name: 'Bill', href: '/salesman-billing', icon: ShoppingCart, roles: ['salesman'] },
+  { name: 'Stores', href: '/salesman-stores', icon: Store, roles: ['salesman'] },
   { name: 'Due', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'] },
   { name: 'History', href: '/bills-history', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'] },
   { name: 'More', href: '/settings', icon: Settings, roles: ['owner', 'manager'] },
@@ -159,6 +173,10 @@ const pageTitleMap: Record<string, string> = {
   '/reports': 'Reports',
   '/activity-logs': 'Activity Log',
   '/customers': 'Customers',
+  '/salesman-dashboard': 'Dashboard',
+  '/salesman-stores': 'My Stores',
+  '/salesman-targets': 'My Targets',
+  '/salesman-control': 'Salesman Control',
   '/settings': 'Settings',
 };
 
