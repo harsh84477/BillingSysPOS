@@ -9,7 +9,7 @@
  *  - Click to view or finalize (mark as complete)
  */
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +21,7 @@ import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 
 export default function SalesmanOrders() {
+  const queryClient = useQueryClient();
   const { businessId, user, userRole } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -61,7 +62,8 @@ export default function SalesmanOrders() {
       p_bill_amount: bill.total_amount,
       p_bill_date: bill.created_at,
     });
-    window.location.reload();
+    // Invalidate queries so dashboard/targets update
+    queryClient.invalidateQueries();
   }
 
   return (

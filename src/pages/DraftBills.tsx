@@ -44,9 +44,9 @@ export default function DraftBills() {
                 .eq('business_id', businessId)
                 .eq('status', 'draft')
                 .order('created_at', { ascending: false });
-
+            // Never show salesman orders in Draft Bills
             if (userRole === 'salesman') {
-                query = query.eq('created_by', user?.id);
+                query = query.eq('created_by', user?.id).neq('status', 'pending');
             }
 
             const { data, error } = await query;
