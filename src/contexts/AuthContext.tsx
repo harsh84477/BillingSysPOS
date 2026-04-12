@@ -458,6 +458,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsCustomAdmin(false);
     setNeedsBusinessSetup(false);
     localStorage.removeItem('pos_custom_admin');
+    setBusinessId(null);
+    setUserRole(null);
+    setBusinessInfo(null);
+    await supabase.auth.signOut();
   };
 
   const superAdminLogout = () => {
