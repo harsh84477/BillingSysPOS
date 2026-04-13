@@ -29,6 +29,7 @@ import { FileText, Eye, ShoppingCart, User, Clock, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import DraftBillModal from '@/components/bills/DraftBillModal';
+import SalesmanOrders from './SalesmanOrders';
 
 export default function DraftBills() {
     const { businessId, user, userRole } = useAuth();
@@ -195,12 +196,8 @@ export default function DraftBills() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {/* Reuse SalesmanOrders component for listing */}
                     <div className="mt-4">
-                        {/* The SalesmanOrders component will handle its own logic and UI */}
-                        {/* If you want to customize, you can copy its logic here instead */}
-                        {/** @ts-ignore */}
-                        <require('../pages/SalesmanOrders').default />
+                        <SalesmanOrders />
                     </div>
                 </CardContent>
             </Card>
