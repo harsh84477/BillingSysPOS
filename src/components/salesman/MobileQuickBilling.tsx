@@ -173,78 +173,45 @@ export function MobileQuickBilling() {
       queryClient.invalidateQueries({ queryKey: ['salesmanOrders'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
-    onError: (error: any) => {
-      toast.error(`Failed: ${error.message}`);
-    },
-  });
-
-  const filteredProducts = products.filter((p: any) =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const selectedCustomer = customers.find((c: any) => c.id === selectedCustomerId);
-
-  return (
-    <div className="flex flex-col h-[100dvh] bg-background">
-
-      {/* ── Desktop Layout (md+) ── */}
-      <div className="hidden md:grid md:grid-cols-12 flex-1 overflow-hidden">
-        {/* Left: Products */}
-        <div className="md:col-span-7 lg:col-span-8 flex flex-col border-r border-border overflow-hidden">
-          <div className="p-3 border-b border-border bg-muted/20">
-            <div className="relative max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-10 rounded-lg"
-              />
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4">
-            {productsLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="animate-spin h-6 w-6 text-primary" />
-              </div>
-            ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-20 text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                <p className="font-medium">No products found</p>
-              </div>
-            ) : billLayout === 'list' ? (
-              <div className="space-y-1">
                 {filteredProducts.map((product: any) => {
                   const available = product.stock_quantity - (product.reserved_quantity || 0);
                   const isLow = available <= product.low_stock_threshold;
                   const inCart = cart.find(i => i.product_id === product.id);
                   return (
-                    <button
+                    <Card
                       key={product.id}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-border/50 bg-card text-left hover:shadow-sm transition-all active:scale-[0.98]",
-                        available <= 0 && "opacity-30 pointer-events-none",
+                        "cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-95",
+                        available <= 0 && "opacity-40 pointer-events-none",
                         inCart && "ring-2 ring-primary/40"
                       )}
                       onClick={() => handleProductClick(product)}
                     >
-                      <div className="h-10 w-10 rounded-lg bg-muted/40 flex items-center justify-center shrink-0 relative">
-                        <Package className="w-5 h-5 text-muted-foreground/20" />
-                        {inCart && (
-                          <span className="absolute -top-1 -left-1 bg-primary text-primary-foreground text-[9px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
-                            {inCart.quantity}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm leading-tight truncate">{product.name}</p>
-                        {product.sku && <p className="text-[10px] text-muted-foreground">{product.sku}</p>}
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-primary font-bold text-sm">₹{product.selling_price}</p>
-                        <p className={cn("text-[10px] font-medium", isLow ? "text-red-500" : "text-muted-foreground")}>
-                          {available} left
-                        </p>
+                      <CardContent className="p-0">
+                        <div className="h-24 bg-muted/40 flex items-center justify-center relative">
+                          <Package className="w-8 h-8 text-muted-foreground/15" />
+                          {isLow && available > 0 && (
+                            <Badge className="absolute top-1.5 right-1.5 bg-amber-500 text-white text-[8px] px-1 py-0 h-4 border-none">Low</Badge>
+                          )}
+                          {inCart && (
+                            <span className="absolute top-1 left-1 bg-primary text-primary-foreground text-[9px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
+                              {inCart.quantity}
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-2.5">
+                          <p className="font-semibold text-xs line-clamp-2 leading-tight mb-1">{product.name}</p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-primary font-bold text-sm">₹{product.selling_price}</span>
+                            <span className={cn("text-[10px] font-medium", isLow ? "text-red-500" : "text-muted-foreground")}> 
+                              {available} left
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
                       </div>
                       {isLow && available > 0 && (
                         <Badge className="bg-amber-500 text-white text-[8px] px-1 py-0 h-4 border-none shrink-0">Low</Badge>
