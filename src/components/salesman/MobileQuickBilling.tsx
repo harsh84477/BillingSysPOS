@@ -173,11 +173,6 @@ export function MobileQuickBilling() {
       queryClient.invalidateQueries({ queryKey: ['salesmanOrders'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
-                      className="w-full h-11 rounded-xl font-bold text-sm"
-                      disabled={generateOrderMutation.isPending}
-                      onClick={() => generateOrderMutation.mutate()}
-                    >
-                      {generateOrderMutation.isPending ? (
                         <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Processing...</>
                       ) : (
                         <><Check className="w-4 h-4 mr-2" /> Generate Order · ₹{total.toFixed(0)}</>
