@@ -101,9 +101,9 @@ const navSections: NavSection[] = [
     items: [
       { name: 'New Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier'] },
       { name: 'Quick Bill', href: '/salesman-billing', icon: ShoppingCart, roles: ['salesman'] },
-      { name: 'Draft Bills', href: '/draft-bills', icon: FileText, roles: ['owner', 'manager', 'cashier'], badgeKey: 'drafts' },
-      { name: 'Bills History', href: '/bills-history', icon: Receipt, roles: ['owner', 'manager', 'cashier'] },
+      { name: 'Draft Bills', href: '/draft-bills', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'], badgeKey: 'drafts' },
       { name: 'Salesman Orders', href: '/salesman-orders', icon: FileText, roles: ['salesman'], badgeKey: 'drafts' },
+      { name: 'Bills History', href: '/bills-history', icon: Receipt, roles: ['owner', 'manager', 'cashier'] },
       { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'], badgeKey: 'due' },
       { name: 'Sales Returns', href: '/sales-returns', icon: RotateCcw, roles: ['owner', 'manager'] },
     ],

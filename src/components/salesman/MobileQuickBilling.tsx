@@ -249,17 +249,17 @@ export function MobileQuickBilling() {
                       {isLow && available > 0 && (
                         <Badge className="bg-amber-500 text-white text-[8px] px-1 py-0 h-4 border-none shrink-0">Low</Badge>
                       )}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {filteredProducts.map((product: any) => {
-                  const available = product.stock_quantity - (product.reserved_quantity || 0);
-                  const isLow = available <= product.low_stock_threshold;
-                  return (
-                    <Card
+                    <Button
+                      className="w-full h-11 rounded-xl font-bold text-sm"
+                      disabled={generateOrderMutation.isPending}
+                      onClick={() => generateOrderMutation.mutate()}
+                    >
+                      {generateOrderMutation.isPending ? (
+                        <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Processing...</>
+                      ) : (
+                        <><Check className="w-4 h-4 mr-2" /> Generate Order · ₹{total.toFixed(0)}</>
+                      )}
+                    </Button>
                       key={product.id}
                       className={cn(
                         "cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-95",
