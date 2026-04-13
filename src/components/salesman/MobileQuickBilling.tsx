@@ -133,7 +133,8 @@ export function MobileQuickBilling() {
     ));
   };
 
-  const createDraftMutation = useMutation({
+  // Mutation to generate a new order (status: 'pending')
+  const generateOrderMutation = useMutation({
     mutationFn: async () => {
       if (cart.length === 0) throw new Error('Cart is empty');
       const salesmanName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Salesman';
@@ -145,25 +146,31 @@ export function MobileQuickBilling() {
         cost_price: item.cost_price,
         total_price: item.unit_price * item.quantity,
       }));
-      const { data, error } = await (supabase.rpc as any)('create_draft_bill', {
-        _business_id: businessId,
-        _bill_number: `DFT-${Date.now().toString().slice(-6)}`,
-        _customer_id: selectedCustomerId,
-        _salesman_name: salesmanName,
-        _subtotal: subtotal,
-        _discount_amount: 0,
-        _tax_amount: 0,
-        _total_amount: total,
-        _items: items,
-      });
+      const { data, error } = await supabase
+        .from('bills')
+        .insert({
+          business_id: businessId,
+          bill_number: `ORD-${Date.now().toString().slice(-6)}`,
+          customer_id: selectedCustomerId,
+          salesman_name: salesmanName,
+          subtotal: subtotal,
+          discount_amount: 0,
+          tax_amount: 0,
+          total_amount: total,
+          items,
+          status: 'pending',
+          created_by: user?.id,
+        })
+        .select()
+        .single();
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      toast.success('Draft order saved!');
+      toast.success('Order generated!');
       clearCart();
       setActiveView('products');
-      queryClient.invalidateQueries({ queryKey: ['draftBills'] });
+      queryClient.invalidateQueries({ queryKey: ['salesmanOrders'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
     onError: (error: any) => {
@@ -351,13 +358,13 @@ export function MobileQuickBilling() {
               </button>
               <Button
                 className="w-full h-12 rounded-xl font-bold text-sm"
-                disabled={cart.length === 0 || createDraftMutation.isPending}
-                onClick={() => createDraftMutation.mutate()}
+                disabled={cart.length === 0 || generateOrderMutation.isPending}
+                onClick={() => generateOrderMutation.mutate()}
               >
-                {createDraftMutation.isPending ? (
-                  <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Processing...</>
+                {generateOrderMutation.isPending ? (
+                  <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Generating...</>
                 ) : (
-                  <><Check className="w-4 h-4 mr-2" /> Save Draft · ₹{total.toFixed(0)}</>
+                  <><Check className="w-4 h-4 mr-2" /> Generate Order · ₹{total.toFixed(0)}</>
                 )}
               </Button>
             </div>

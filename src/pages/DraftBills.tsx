@@ -184,5 +184,26 @@ export default function DraftBills() {
             )
             }
         </div >
+
+        {/* ─── Salesman Orders Section ─── */}
+        <div className="mt-10">
+            <Card>
+                <CardHeader className="pb-3">
+                    <CardTitle>Salesman Orders</CardTitle>
+                    <CardDescription>
+                        View all salesmen and their generated orders. You can also see their target progress and finalize orders.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {/* Reuse SalesmanOrders component for listing */}
+                    <div className="mt-4">
+                        {/* The SalesmanOrders component will handle its own logic and UI */}
+                        {/* If you want to customize, you can copy its logic here instead */}
+                        {/** @ts-ignore */}
+                        <require('../pages/SalesmanOrders').default />
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
     );
 }
