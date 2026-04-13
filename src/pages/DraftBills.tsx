@@ -63,144 +63,145 @@ export default function DraftBills() {
     );
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h1 className="spos-page-heading">Draft Bills</h1>
-                    <p className="spos-page-subhead" style={{ marginBottom: 0 }}>
-                      Manage and finalize your incomplete bills. Salesman orders now appear in the Pending Bills section, not here.
-                    </p>
-                </div>
-            </div>
-
-            {/* Filters Section */}
-            <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
-                <div className="relative w-full sm:max-w-sm">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Search draft number or customer..."
-                        className="pl-8"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-            </div>
-
-            <Card>
-                <CardHeader className="pb-3">
-                    <div className="flex flex-col gap-1">
-                        <CardTitle>Draft Bills</CardTitle>
-                        <CardDescription>
-                            {userRole === 'salesman'
-                              ? 'Your orders now appear in Pending Bills, not here.'
-                              : `You have ${draftBills.length} incomplete draft bills.`}
-                        </CardDescription>
+        <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h1 className="spos-page-heading">Draft Bills</h1>
+                        <p className="spos-page-subhead" style={{ marginBottom: 0 }}>
+                          Manage and finalize your incomplete bills. Salesman orders now appear in the Pending Bills section, not here.
+                        </p>
                     </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Bill No.</TableHead>
-                                    <TableHead>Customer</TableHead>
-                                    <TableHead>Amount</TableHead>
-                                    <TableHead className="hidden md:table-cell">Created At</TableHead>
-                                    <TableHead className="hidden sm:table-cell">Salesman</TableHead>
-                                    <TableHead className="text-right">Action</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {isLoading ? (
+                </div>
+
+                {/* Filters Section */}
+                <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+                    <div className="relative w-full sm:max-w-sm">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search draft number or customer..."
+                            className="pl-8"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                <Card>
+                    <CardHeader className="pb-3">
+                        <div className="flex flex-col gap-1">
+                            <CardTitle>Draft Bills</CardTitle>
+                            <CardDescription>
+                                {userRole === 'salesman'
+                                  ? 'Your orders now appear in Pending Bills, not here.'
+                                  : `You have ${draftBills.length} incomplete draft bills.`}
+                            </CardDescription>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
                                     <TableRow>
-                                        <TableCell colSpan={6} className="p-0">
-                                            <TableSkeleton columns={6} rows={4} />
-                                        </TableCell>
+                                        <TableHead>Bill No.</TableHead>
+                                        <TableHead>Customer</TableHead>
+                                        <TableHead>Amount</TableHead>
+                                        <TableHead className="hidden md:table-cell">Created At</TableHead>
+                                        <TableHead className="hidden sm:table-cell">Salesman</TableHead>
+                                        <TableHead className="text-right">Action</TableHead>
                                     </TableRow>
-                                ) : filteredBills.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={6} className="p-0">
-                                            <EmptyState
-                                                icon="drafts"
-                                                title="No draft bills found"
-                                                description="Draft bills created by your team will appear here."
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    filteredBills.map((bill) => (
-                                        <TableRow key={bill.id}>
-                                            <TableCell className="font-medium text-xs sm:text-sm">
-                                                <div className="flex items-center gap-2">
-                                                    <ShoppingCart className="h-4 w-4 text-amber-500 hidden sm:block" />
-                                                    {bill.bill_number}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-xs sm:text-sm truncate max-w-[80px] sm:max-w-none">
-                                                <div className="flex flex-col">
-                                                    <span className="font-medium">{bill.customers?.name || 'Walk-in'}</span>
-                                                    <span className="text-[10px] text-muted-foreground">{bill.customers?.phone || ''}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="font-semibold text-primary text-xs sm:text-sm">
-                                                ₹{bill.total_amount.toFixed(2)}
-                                            </TableCell>
-                                            <TableCell className="hidden md:table-cell text-muted-foreground text-xs sm:text-sm">
-                                                <div className="flex items-center gap-1">
-                                                    <Clock className="h-3 w-3" />
-                                                    {format(new Date(bill.created_at), 'dd MMM, hh:mm a')}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="hidden sm:table-cell text-xs sm:text-sm">
-                                                <Badge variant="outline" className="font-normal text-[10px] bg-primary/5">
-                                                    <User className="mr-1 h-3 w-3" />
-                                                    {(bill as any).salesman_name || 'System'}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => setSelectedBillId(bill.id)}
-                                                >
-                                                    <Eye className="h-4 w-4 sm:mr-1" />
-                                                    <span className="hidden sm:inline">Open</span>
-                                                </Button>
+                                </TableHeader>
+                                <TableBody>
+                                    {isLoading ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="p-0">
+                                                <TableSkeleton columns={6} rows={4} />
                                             </TableCell>
                                         </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                </CardContent>
-            </Card>
+                                    ) : filteredBills.length === 0 ? (
+                                        <TableRow>
+                                            <TableCell colSpan={6} className="p-0">
+                                                <EmptyState
+                                                    icon="drafts"
+                                                    title="No draft bills found"
+                                                    description="Draft bills created by your team will appear here."
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    ) : (
+                                        filteredBills.map((bill) => (
+                                            <TableRow key={bill.id}>
+                                                <TableCell className="font-medium text-xs sm:text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <ShoppingCart className="h-4 w-4 text-amber-500 hidden sm:block" />
+                                                        {bill.bill_number}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-xs sm:text-sm truncate max-w-[80px] sm:max-w-none">
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium">{bill.customers?.name || 'Walk-in'}</span>
+                                                        <span className="text-[10px] text-muted-foreground">{bill.customers?.phone || ''}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="font-semibold text-primary text-xs sm:text-sm">
+                                                    ₹{bill.total_amount.toFixed(2)}
+                                                </TableCell>
+                                                <TableCell className="hidden md:table-cell text-muted-foreground text-xs sm:text-sm">
+                                                    <div className="flex items-center gap-1">
+                                                        <Clock className="h-3 w-3" />
+                                                        {format(new Date(bill.created_at), 'dd MMM, hh:mm a')}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="hidden sm:table-cell text-xs sm:text-sm">
+                                                    <Badge variant="outline" className="font-normal text-[10px] bg-primary/5">
+                                                        <User className="mr-1 h-3 w-3" />
+                                                        {(bill as any).salesman_name || 'System'}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setSelectedBillId(bill.id)}
+                                                    >
+                                                        <Eye className="h-4 w-4 sm:mr-1" />
+                                                        <span className="hidden sm:inline">Open</span>
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
 
-            {selectedBillId && (
-                <DraftBillModal
-                    billId={selectedBillId}
-                    open={!!selectedBillId}
-                    onClose={() => setSelectedBillId(null)}
-                />
-            )
-            }
-        </div >
+                {selectedBillId && (
+                    <DraftBillModal
+                        billId={selectedBillId}
+                        open={!!selectedBillId}
+                        onClose={() => setSelectedBillId(null)}
+                    />
+                )}
+            </div>
 
-        {/* ─── Salesman Orders Section ─── */}
-        <div className="mt-10">
-            <Card>
-                <CardHeader className="pb-3">
-                    <CardTitle>Salesman Orders</CardTitle>
-                    <CardDescription>
-                        View all salesmen and their generated orders. You can also see their target progress and finalize orders.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="mt-4">
-                        <SalesmanOrders />
-                    </div>
-                </CardContent>
-            </Card>
-        </div>
+            {/* ─── Salesman Orders Section ─── */}
+            <div className="mt-10">
+                <Card>
+                    <CardHeader className="pb-3">
+                        <CardTitle>Salesman Orders</CardTitle>
+                        <CardDescription>
+                            View all salesmen and their generated orders. You can also see their target progress and finalize orders.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="mt-4">
+                            <SalesmanOrders />
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </>
     );
 }
