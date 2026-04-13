@@ -173,11 +173,47 @@ export function MobileQuickBilling() {
       queryClient.invalidateQueries({ queryKey: ['salesmanOrders'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
-                        <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Processing...</>
-                      ) : (
-                        <><Check className="w-4 h-4 mr-2" /> Generate Order · ₹{total.toFixed(0)}</>
-                      )}
-                    </Button>
+  });
+
+  const selectedCustomer = customers.find((c: any) => c.id === selectedCustomerId);
+  const filteredProducts = (products as any[]).filter((p: any) =>
+    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="flex flex-col h-full bg-background">
+      {/* ── Desktop Layout ── */}
+      <div className="hidden md:grid md:grid-cols-12 flex-1 overflow-hidden">
+        {/* Left: Products */}
+        <div className="md:col-span-7 lg:col-span-8 flex flex-col overflow-hidden border-r border-border">
+          <div className="p-3 border-b border-border bg-background shrink-0">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
+              <Input
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-9 bg-muted/30 border-none rounded-lg text-sm"
+              />
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3">
+            {productsLoading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="animate-spin text-primary h-5 w-5" />
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground/40">
+                <Package className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm font-medium">No products found</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 lg:grid-cols-4 gap-2.5">
+                {filteredProducts.map((product: any) => {
+                  const available = product.stock_quantity - (product.reserved_quantity || 0);
+                  const isLow = available <= product.low_stock_threshold;
+                  return (
+                    <Card
                       key={product.id}
                       className={cn(
                         "cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-95",
@@ -511,13 +547,13 @@ export function MobileQuickBilling() {
                 </div>
                 <Button
                   className="w-full h-11 rounded-xl font-bold text-sm"
-                  disabled={createDraftMutation.isPending}
-                  onClick={() => createDraftMutation.mutate()}
+                  disabled={generateOrderMutation.isPending}
+                  onClick={() => generateOrderMutation.mutate()}
                 >
-                  {createDraftMutation.isPending ? (
-                    <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Processing...</>
+                  {generateOrderMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Generating...</>
                   ) : (
-                    <><Check className="w-4 h-4 mr-2" /> Save Draft Order</>
+                    <><Check className="w-4 h-4 mr-2" /> Generate Order · ₹{total.toFixed(0)}</>
                   )}
                 </Button>
               </div>
