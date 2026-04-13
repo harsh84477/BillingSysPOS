@@ -173,11 +173,6 @@ export function MobileQuickBilling() {
       queryClient.invalidateQueries({ queryKey: ['salesmanOrders'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
-                      </div>
-                      {isLow && available > 0 && (
-                        <Badge className="bg-amber-500 text-white text-[8px] px-1 py-0 h-4 border-none shrink-0">Low</Badge>
-                      )}
-                    <Button
                       className="w-full h-11 rounded-xl font-bold text-sm"
                       disabled={generateOrderMutation.isPending}
                       onClick={() => generateOrderMutation.mutate()}
