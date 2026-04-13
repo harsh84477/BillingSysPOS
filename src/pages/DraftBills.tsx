@@ -66,7 +66,9 @@ export default function DraftBills() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h1 className="spos-page-heading">Draft Bills</h1>
-                    <p className="spos-page-subhead" style={{ marginBottom: 0 }}>Manage and finalize your pending orders.</p>
+                    <p className="spos-page-subhead" style={{ marginBottom: 0 }}>
+                      Manage and finalize your incomplete bills. Salesman orders now appear in the Pending Bills section, not here.
+                    </p>
                 </div>
             </div>
 
@@ -86,9 +88,11 @@ export default function DraftBills() {
             <Card>
                 <CardHeader className="pb-3">
                     <div className="flex flex-col gap-1">
-                        <CardTitle>Draft Orders</CardTitle>
+                        <CardTitle>Draft Bills</CardTitle>
                         <CardDescription>
-                            You have {draftBills.length} pending draft bills.
+                            {userRole === 'salesman'
+                              ? 'Your orders now appear in Pending Bills, not here.'
+                              : `You have ${draftBills.length} incomplete draft bills.`}
                         </CardDescription>
                     </div>
                 </CardHeader>

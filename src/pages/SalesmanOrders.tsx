@@ -69,7 +69,7 @@ export default function SalesmanOrders() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Salesman Orders</CardTitle>
+        <CardTitle>Pending Bills</CardTitle>
         <div className="flex gap-2 mt-2">
           <Input
             placeholder="Search by bill number or customer..."
@@ -78,6 +78,9 @@ export default function SalesmanOrders() {
             className="max-w-xs"
           />
         </div>
+        <p className="text-muted-foreground text-xs mt-2">
+          Salesmen now take orders, which appear here as pending bills. Draft bills are no longer used for salesman orders.
+        </p>
       </CardHeader>
       <CardContent>
         <Table>
