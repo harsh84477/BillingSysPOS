@@ -173,45 +173,6 @@ export function MobileQuickBilling() {
       queryClient.invalidateQueries({ queryKey: ['salesmanOrders'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
-                {filteredProducts.map((product: any) => {
-                  const available = product.stock_quantity - (product.reserved_quantity || 0);
-                  const isLow = available <= product.low_stock_threshold;
-                  const inCart = cart.find(i => i.product_id === product.id);
-                  return (
-                    <Card
-                      key={product.id}
-                      className={cn(
-                        "cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-95",
-                        available <= 0 && "opacity-40 pointer-events-none",
-                        inCart && "ring-2 ring-primary/40"
-                      )}
-                      onClick={() => handleProductClick(product)}
-                    >
-                      <CardContent className="p-0">
-                        <div className="h-24 bg-muted/40 flex items-center justify-center relative">
-                          <Package className="w-8 h-8 text-muted-foreground/15" />
-                          {isLow && available > 0 && (
-                            <Badge className="absolute top-1.5 right-1.5 bg-amber-500 text-white text-[8px] px-1 py-0 h-4 border-none">Low</Badge>
-                          )}
-                          {inCart && (
-                            <span className="absolute top-1 left-1 bg-primary text-primary-foreground text-[9px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
-                              {inCart.quantity}
-                            </span>
-                          )}
-                        </div>
-                        <div className="p-2.5">
-                          <p className="font-semibold text-xs line-clamp-2 leading-tight mb-1">{product.name}</p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-primary font-bold text-sm">₹{product.selling_price}</span>
-                            <span className={cn("text-[10px] font-medium", isLow ? "text-red-500" : "text-muted-foreground")}> 
-                              {available} left
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
                       </div>
                       {isLow && available > 0 && (
                         <Badge className="bg-amber-500 text-white text-[8px] px-1 py-0 h-4 border-none shrink-0">Low</Badge>
