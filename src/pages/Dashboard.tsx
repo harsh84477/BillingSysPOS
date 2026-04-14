@@ -189,6 +189,8 @@ export default function Dashboard() {
       if (error) throw error;
       return data?.reduce((sum, bill) => sum + Number(bill.total_amount), 0) || 0;
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Fetch monthly stats (Sales, Profit, Orders, Due)
@@ -304,6 +306,8 @@ export default function Dashboard() {
       };
     },
     enabled: !!businessId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Fetch today's payments and due collection
@@ -349,6 +353,8 @@ export default function Dashboard() {
       if (error) throw error;
       return count || 0;
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Fetch draft bills (visible to all, but salesman sees own only)
@@ -421,6 +427,8 @@ export default function Dashboard() {
       if (error) throw error;
       return (data || []) as any[];
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Fetch due stats
@@ -455,6 +463,8 @@ export default function Dashboard() {
       if (error) throw error;
       return ((data || []) as any[]).reduce((s: number, b: any) => s + Number(b.profit || 0), 0);
     },
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // Fetch customer count

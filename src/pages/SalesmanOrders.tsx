@@ -70,6 +70,8 @@ export default function SalesmanOrders() {
       return (data || []) as any[];
     },
     enabled: !!businessId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // ─── Fetch targets ───
@@ -85,6 +87,8 @@ export default function SalesmanOrders() {
       return data || [];
     },
     enabled: !!businessId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   // ─── Per-salesman stats ───

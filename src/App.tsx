@@ -77,8 +77,9 @@ const queryClient = new QueryClient({
     queries: {
       // Serve stale cache immediately when offline; retry in background when online
       networkMode: 'offlineFirst',
-      staleTime: 1000 * 60 * 5,          // 5 minutes before background refetch
+      staleTime: 1000 * 30,               // 30 seconds before background refetch
       gcTime: 1000 * 60 * 60 * 24 * 7,  // Keep cache 7 days
+      refetchOnWindowFocus: true,
       retry: (failureCount, error: any) => {
         // Don't retry auth errors; retry network errors up to 2 times
         if (error?.status === 401 || error?.status === 403) return false;

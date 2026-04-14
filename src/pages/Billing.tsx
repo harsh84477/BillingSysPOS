@@ -917,11 +917,25 @@ export default function Billing() {
       queryClient.invalidateQueries({ queryKey: ['bills'] });
       queryClient.invalidateQueries({ queryKey: ['draftBills'] });
       queryClient.invalidateQueries({ queryKey: ['profit-summary'] });
+      // Dashboard keys
+      queryClient.invalidateQueries({ queryKey: ['todaySales'] });
+      queryClient.invalidateQueries({ queryKey: ['todayStats'] });
+      queryClient.invalidateQueries({ queryKey: ['todayPayments'] });
+      queryClient.invalidateQueries({ queryKey: ['todayProfit'] });
+      queryClient.invalidateQueries({ queryKey: ['recentBills'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingBills'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyStats'] });
+      queryClient.invalidateQueries({ queryKey: ['monthlyPayments'] });
+      queryClient.invalidateQueries({ queryKey: ['dueStats'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
       if (isPendingOrder) {
         queryClient.invalidateQueries({ queryKey: ['salesman-my-orders'] });
         queryClient.invalidateQueries({ queryKey: ['salesman-today-bills'] });
         queryClient.invalidateQueries({ queryKey: ['salesman-target'] });
         queryClient.invalidateQueries({ queryKey: ['salesman-all-targets'] });
+        queryClient.invalidateQueries({ queryKey: ['salesman-orders-all'] });
+        queryClient.invalidateQueries({ queryKey: ['salesman-orders-targets'] });
+        queryClient.invalidateQueries({ queryKey: ['salesmanOrders'] });
       }
       setCart([]);
       setCustomerName('');

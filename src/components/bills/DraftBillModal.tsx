@@ -433,6 +433,22 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
         queryClient.invalidateQueries({ queryKey: ['draftBillItems'] });
         queryClient.invalidateQueries({ queryKey: ['products'] });
         queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+        // Dashboard keys
+        queryClient.invalidateQueries({ queryKey: ['todaySales'] });
+        queryClient.invalidateQueries({ queryKey: ['todayStats'] });
+        queryClient.invalidateQueries({ queryKey: ['todayPayments'] });
+        queryClient.invalidateQueries({ queryKey: ['todayProfit'] });
+        queryClient.invalidateQueries({ queryKey: ['recentBills'] });
+        queryClient.invalidateQueries({ queryKey: ['pendingBills'] });
+        queryClient.invalidateQueries({ queryKey: ['monthlyStats'] });
+        queryClient.invalidateQueries({ queryKey: ['monthlyPayments'] });
+        queryClient.invalidateQueries({ queryKey: ['dueStats'] });
+        queryClient.invalidateQueries({ queryKey: ['profit-summary'] });
+        // Salesman keys
+        queryClient.invalidateQueries({ queryKey: ['salesman-orders-all'] });
+        queryClient.invalidateQueries({ queryKey: ['salesman-orders-targets'] });
+        queryClient.invalidateQueries({ queryKey: ['salesman-my-orders'] });
+        queryClient.invalidateQueries({ queryKey: ['salesmanOrders'] });
     };
 
     const isLoading = billLoading || itemsLoading;

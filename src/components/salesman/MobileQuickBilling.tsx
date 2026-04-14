@@ -175,7 +175,18 @@ export function MobileQuickBilling() {
       queryClient.invalidateQueries({ queryKey: ['salesman-target'] });
       queryClient.invalidateQueries({ queryKey: ['salesman-all-targets'] });
       queryClient.invalidateQueries({ queryKey: ['salesman-bills-for-targets'] });
+      queryClient.invalidateQueries({ queryKey: ['salesman-orders-targets'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      // Dashboard keys
+      queryClient.invalidateQueries({ queryKey: ['todaySales'] });
+      queryClient.invalidateQueries({ queryKey: ['todayStats'] });
+      queryClient.invalidateQueries({ queryKey: ['todayPayments'] });
+      queryClient.invalidateQueries({ queryKey: ['todayProfit'] });
+      queryClient.invalidateQueries({ queryKey: ['recentBills'] });
+      queryClient.invalidateQueries({ queryKey: ['pendingBills'] });
+      queryClient.invalidateQueries({ queryKey: ['draftBills'] });
+      queryClient.invalidateQueries({ queryKey: ['bills'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
     },
     onError: (error: any) => {
       toast.error(error?.message || 'Failed to generate order');
