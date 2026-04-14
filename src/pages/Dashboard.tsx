@@ -290,7 +290,7 @@ export default function Dashboard() {
         .from('bills')
         .select('*, customers(name, phone)')
         .eq('status', 'completed')
-        .gte('completed_at', startOfToday.toISOString());
+        .or(`completed_at.gte.${startOfToday.toISOString()},and(completed_at.is.null,updated_at.gte.${startOfToday.toISOString()})`);
 
       if (error) throw error;
       const bills = (data || []) as any[];

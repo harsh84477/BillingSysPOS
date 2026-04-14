@@ -846,6 +846,7 @@ BEGIN
   -- Update bill status
   UPDATE public.bills SET
     status = 'completed',
+    completed_at = now(),
     payment_status = _payment_status::public.payment_status,
     payment_type = _payment_type::public.payment_mode,
     paid_amount = _paid_amount,

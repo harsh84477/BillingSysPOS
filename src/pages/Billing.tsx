@@ -802,7 +802,36 @@ export default function Billing() {
           return { bill: data, billNumber: data.bill_number || billNumber, shouldPrint, isPendingOrder };
         }
         if (isDraft) {
-          // ...existing code...
+          const items = cart.map(item => ({
+            product_id: item.productId,
+            product_name: item.name,
+            quantity: item.quantity,
+            unit_price: item.unitPrice,
+            cost_price: item.costPrice,
+            mrp_price: item.mrpPrice,
+            items_per_case: item.itemsPerCase || 0,
+            total_price: item.unitPrice * item.quantity,
+          }));
+          const { data: draftResult, error: draftErr } = await (supabase.rpc as any)('create_draft_bill', {
+            _business_id: businessId,
+            _bill_number: billNumber,
+            _customer_id: finalCustomerId || null,
+            _subtotal: cartCalculations.subtotal,
+            _discount_amount: cartCalculations.discountAmount,
+            _tax_amount: cartCalculations.taxAmount,
+            _total_amount: cartCalculations.total,
+            _items: items,
+          });
+          if (draftErr) {
+            if (draftErr.code === '23505' && retryCount < maxRetries - 1) {
+              retryCount++;
+              continue;
+            }
+            throw draftErr;
+          }
+          const dr = draftResult as any;
+          if (!dr?.success) throw new Error(dr?.error || 'Failed to save draft');
+          return { bill: dr, billNumber, shouldPrint, isDraft: true };
         }
 
         // ─── COMPLETED BILL PATH: Unified Split Payment RPC ───
