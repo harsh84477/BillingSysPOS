@@ -102,7 +102,8 @@ const navSections: NavSection[] = [
     items: [
       { name: 'New Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier'] },
       { name: 'Quick Bill', href: '/salesman-billing', icon: ShoppingCart, roles: ['salesman'] },
-      { name: 'Draft Bills', href: '/draft-bills', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'], badgeKey: 'drafts' },
+      { name: 'Draft Bills', href: '/draft-bills', icon: FileText, roles: ['owner', 'manager', 'cashier'], badgeKey: 'drafts' },
+      { name: 'My Orders', href: '/salesman-my-orders', icon: ClipboardList, roles: ['salesman'] },
       { name: 'Salesman Orders', href: '/salesman-orders', icon: ClipboardList, roles: ['owner', 'manager'] },
       { name: 'Bills History', href: '/bills-history', icon: Receipt, roles: ['owner', 'manager', 'cashier'] },
       { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'], badgeKey: 'due' },
@@ -154,7 +155,7 @@ const mobileNavItems = [
   { name: 'Stores', href: '/salesman-stores', icon: Store, roles: ['salesman'] },
   { name: 'Due', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'] },
   { name: 'History', href: '/bills-history', icon: FileText, roles: ['owner', 'manager', 'cashier'] },
-  { name: 'Drafts', href: '/draft-bills', icon: FileText, roles: ['salesman'] },
+  { name: 'Orders', href: '/salesman-my-orders', icon: ClipboardList, roles: ['salesman'] },
   { name: 'More', href: '/settings', icon: Settings, roles: ['owner', 'manager'] },
   { name: 'More', href: '/salesman-settings', icon: Settings, roles: ['salesman'] },
 ];
@@ -169,6 +170,7 @@ const pageTitleMap: Record<string, string> = {
   '/draft-bills': 'Draft Bills',
   '/bills-history': 'Bills History',
   '/salesman-orders': 'Salesman Orders',
+  '/salesman-my-orders': 'My Orders',
   '/due-bills': 'Due Bills',
   '/products': 'Products',
   '/categories': 'Categories',

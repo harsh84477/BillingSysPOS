@@ -168,6 +168,13 @@ export function MobileQuickBilling() {
       setActiveView('products');
       queryClient.invalidateQueries({ queryKey: ['salesmanOrders'] });
       queryClient.invalidateQueries({ queryKey: ['salesman-orders-all'] });
+      queryClient.invalidateQueries({ queryKey: ['salesman-my-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['salesman-today-bills'] });
+      queryClient.invalidateQueries({ queryKey: ['salesman-month-bills'] });
+      queryClient.invalidateQueries({ queryKey: ['salesman-recent-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['salesman-target'] });
+      queryClient.invalidateQueries({ queryKey: ['salesman-all-targets'] });
+      queryClient.invalidateQueries({ queryKey: ['salesman-bills-for-targets'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
     },
     onError: (error: any) => {
