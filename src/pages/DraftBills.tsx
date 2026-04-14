@@ -29,7 +29,6 @@ import { FileText, Eye, ShoppingCart, User, Clock, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import DraftBillModal from '@/components/bills/DraftBillModal';
-import SalesmanOrders from './SalesmanOrders';
 
 export default function DraftBills() {
     const { businessId, user, userRole } = useAuth();
@@ -39,15 +38,15 @@ export default function DraftBills() {
     const { data: draftBills = [], isLoading } = useQuery({
         queryKey: ['draftBills', businessId, user?.id, userRole],
         queryFn: async () => {
-            let query = supabase
+            let query = (supabase as any)
                 .from('bills')
                 .select('*, customers(name, phone, address)')
                 .eq('business_id', businessId)
                 .eq('status', 'draft')
+                .is('salesman_name', null)
                 .order('created_at', { ascending: false });
-            // Never show salesman orders in Draft Bills
             if (userRole === 'salesman') {
-                query = query.eq('created_by', user?.id).neq('status', 'pending');
+                query = query.eq('created_by', user?.id);
             }
 
             const { data, error } = await query;
@@ -69,7 +68,7 @@ export default function DraftBills() {
                     <div>
                         <h1 className="spos-page-heading">Draft Bills</h1>
                         <p className="spos-page-subhead" style={{ marginBottom: 0 }}>
-                          Manage and finalize your incomplete bills. Salesman orders now appear in the Pending Bills section, not here.
+                          Manage and finalize your incomplete bills.
                         </p>
                     </div>
                 </div>
@@ -93,7 +92,7 @@ export default function DraftBills() {
                             <CardTitle>Draft Bills</CardTitle>
                             <CardDescription>
                                 {userRole === 'salesman'
-                                  ? 'Your orders now appear in Pending Bills, not here.'
+                                  ? 'Your draft bills.'
                                   : `You have ${draftBills.length} incomplete draft bills.`}
                             </CardDescription>
                         </div>
@@ -184,23 +183,6 @@ export default function DraftBills() {
                         onClose={() => setSelectedBillId(null)}
                     />
                 )}
-            </div>
-
-            {/* ─── Salesman Orders Section ─── */}
-            <div className="mt-10">
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle>Salesman Orders</CardTitle>
-                        <CardDescription>
-                            View all salesmen and their generated orders. You can also see their target progress and finalize orders.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="mt-4">
-                            <SalesmanOrders />
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
         </>
     );

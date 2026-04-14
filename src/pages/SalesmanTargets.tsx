@@ -45,7 +45,7 @@ export default function SalesmanTargets() {
   });
 
   // ─── Bills grouped by month for achievement ───
-  // Include both 'pending' and 'completed' bills for targets
+  // Include both 'draft' (salesman orders) and 'completed' bills for targets
   const { data: billsData = [] } = useQuery({
     queryKey: ['salesman-bills-for-targets', user?.id, businessId],
     queryFn: async () => {
@@ -54,7 +54,7 @@ export default function SalesmanTargets() {
         .select('id, total_amount, status, created_at')
         .eq('business_id', businessId)
         .eq('created_by', user!.id)
-        .in('status', ['pending', 'completed'])
+        .in('status', ['draft', 'completed'])
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];

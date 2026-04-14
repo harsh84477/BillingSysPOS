@@ -158,7 +158,7 @@ export function MobileQuickBilling() {
           tax_amount: 0,
           total_amount: total,
           items,
-          status: 'pending',
+          status: 'draft',
           created_by: user?.id,
         })
         .select()
