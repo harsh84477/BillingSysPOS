@@ -416,10 +416,13 @@ export default function BillsHistory() {
     toast({ title: 'PDF downloaded successfully' });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (status: string, bill?: any) => {
+    const displayStatus = getStatusText(status, bill);
+    switch (displayStatus) {
       case 'completed':
         return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-orange-100 text-orange-800';
       case 'draft':
         return 'bg-yellow-100 text-yellow-800';
       case 'cancelled':
@@ -427,6 +430,11 @@ export default function BillsHistory() {
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getStatusText = (status: string, bill?: any) => {
+    if (status === 'draft' && bill?.salesman_name) return 'pending';
+    return status;
   };
 
   return (
@@ -628,8 +636,8 @@ export default function BillsHistory() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-sm">#{bill.bill_number}</p>
-                        <Badge className={`${getStatusColor(bill.status)} text-[10px] px-1.5 py-0`} variant="secondary">
-                          {bill.status}
+                        <Badge className={`${getStatusColor(bill.status, bill)} text-[10px] px-1.5 py-0`} variant="secondary">
+                          {getStatusText(bill.status, bill)}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">{bill.customers?.name || 'Walk-in'}</p>
@@ -694,8 +702,8 @@ export default function BillsHistory() {
                         </TableCell>
                         <TableCell>{bill.customers?.name || 'Walk-in'}</TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(bill.status)} variant="secondary">
-                            {bill.status}
+                          <Badge className={getStatusColor(bill.status, bill)} variant="secondary">
+                            {getStatusText(bill.status, bill)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right font-semibold">

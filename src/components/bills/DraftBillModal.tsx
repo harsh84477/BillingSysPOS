@@ -85,9 +85,23 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
     const [confirmFinalize, setConfirmFinalize] = useState(false);
 
     // Payment fields for finalization
-    const [paymentType, setPaymentType] = useState<'cash' | 'due'>('cash');
+    const [paymentType, setPaymentType] = useState<'cash' | 'online' | 'split' | 'due'>(
+        (settings?.default_payment_method as any) || 'cash'
+    );
     const [paidAmount, setPaidAmount] = useState<number | ''>('');
     const [dueDate, setDueDate] = useState('');
+    const [cashAmount, setCashAmount] = useState<number | ''>('');
+    const [onlineAmount, setOnlineAmount] = useState<number | ''>('');
+
+    // Derive available payment methods from settings
+    const availablePaymentMethods = useMemo(() => {
+        const methods: { id: string; label: string; icon: string }[] = [];
+        if (settings?.enable_payment_cash ?? true) methods.push({ id: 'cash', label: 'Cash', icon: '💵' });
+        if (settings?.enable_payment_online ?? true) methods.push({ id: 'online', label: 'UPI', icon: '📱' });
+        if (settings?.enable_payment_split ?? true) methods.push({ id: 'split', label: 'Split', icon: '💳' });
+        if (settings?.enable_payment_due ?? true) methods.push({ id: 'due', label: 'Due', icon: '📋' });
+        return methods;
+    }, [settings]);
 
     // Fetch bill details
     const { data: billData, isLoading: billLoading } = useQuery({
@@ -340,18 +354,36 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
             if (!updateResult.success) throw new Error(updateResult.error || 'Failed to update draft before finalization');
 
             // Then finalize
-            const resolvedPaidAmount = paymentType === 'cash'
-                ? calculations.total
-                : (typeof paidAmount === 'number' ? paidAmount : 0);
-            const resolvedDueAmount = Math.max(0, calculations.total - resolvedPaidAmount);
-            const resolvedPaymentStatus = paymentType === 'cash' ? 'paid'
-                : resolvedDueAmount <= 0 ? 'paid'
-                    : resolvedPaidAmount > 0 ? 'partial'
-                        : 'unpaid';
+            let resolvedPaidAmount = 0;
+            let resolvedDueAmount = 0;
+            let resolvedPaymentStatus = 'paid';
+            let resolvedPaymentType = paymentType === 'online' ? 'upi' : paymentType === 'split' ? 'cash' : paymentType === 'due' ? 'cash' : 'cash';
+
+            if (paymentType === 'cash') {
+                resolvedPaidAmount = calculations.total;
+                resolvedPaymentType = 'cash';
+            } else if (paymentType === 'online') {
+                resolvedPaidAmount = calculations.total;
+                resolvedPaymentType = 'upi';
+            } else if (paymentType === 'split') {
+                const cAmt = typeof cashAmount === 'number' ? cashAmount : 0;
+                const oAmt = typeof onlineAmount === 'number' ? onlineAmount : 0;
+                resolvedPaidAmount = cAmt + oAmt;
+                resolvedDueAmount = Math.max(0, calculations.total - resolvedPaidAmount);
+                resolvedPaymentType = 'cash';
+            } else if (paymentType === 'due') {
+                resolvedPaidAmount = typeof paidAmount === 'number' ? paidAmount : 0;
+                resolvedDueAmount = Math.max(0, calculations.total - resolvedPaidAmount);
+                resolvedPaymentType = 'cash';
+            }
+
+            resolvedPaymentStatus = resolvedDueAmount <= 0 ? 'paid'
+                : resolvedPaidAmount > 0 ? 'partial'
+                    : 'unpaid';
 
             const { data, error } = await supabase.rpc('finalize_draft_bill', {
                 _bill_id: billId,
-                _payment_type: paymentType,
+                _payment_type: resolvedPaymentType,
                 _payment_status: resolvedPaymentStatus,
                 _paid_amount: resolvedPaidAmount,
                 _due_amount: resolvedDueAmount,
@@ -676,28 +708,46 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                                     </div>
                                 )}
 
-                                {/* Payment fields (shown only when finalizing) */}
                                 {canFinalize && confirmFinalize && (
                                     <div className="space-y-2 p-3 border rounded-lg bg-muted/20">
                                         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Payment Details</Label>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                variant={paymentType === 'cash' ? 'default' : 'outline'}
-                                                size="sm"
-                                                className="flex-1"
-                                                onClick={() => setPaymentType('cash')}
-                                            >
-                                                💵 Cash
-                                            </Button>
-                                            <Button
-                                                variant={paymentType === 'due' ? 'default' : 'outline'}
-                                                size="sm"
-                                                className="flex-1"
-                                                onClick={() => setPaymentType('due')}
-                                            >
-                                                📋 Due
-                                            </Button>
+                                        <div className="flex flex-wrap gap-2">
+                                            {availablePaymentMethods.map((m) => (
+                                                <Button
+                                                    key={m.id}
+                                                    variant={paymentType === m.id ? 'default' : 'outline'}
+                                                    size="sm"
+                                                    className="flex-1 min-w-[70px]"
+                                                    onClick={() => setPaymentType(m.id as any)}
+                                                >
+                                                    {m.icon} {m.label}
+                                                </Button>
+                                            ))}
                                         </div>
+                                        {paymentType === 'split' && (
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <Label className="text-xs">Cash Amount</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={cashAmount}
+                                                        onChange={(e) => setCashAmount(Number(e.target.value) || '')}
+                                                        className="h-8 text-sm"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs">Online Amount</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={onlineAmount}
+                                                        onChange={(e) => setOnlineAmount(Number(e.target.value) || '')}
+                                                        className="h-8 text-sm"
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
                                         {paymentType === 'due' && (
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div>
