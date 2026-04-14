@@ -755,7 +755,7 @@ export default function Billing() {
 
           const items = cart.map(item => ({
             product_id: item.productId,
-            product_name: item.name,
+            product_name: item.name || 'Unknown Product',
             quantity: item.quantity,
             unit_price: item.unitPrice,
             cost_price: item.costPrice,
@@ -804,7 +804,7 @@ export default function Billing() {
         if (isDraft) {
           const items = cart.map(item => ({
             product_id: item.productId,
-            product_name: item.name,
+            product_name: item.name || 'Unknown Product',
             quantity: item.quantity,
             unit_price: item.unitPrice,
             cost_price: item.costPrice,
@@ -837,7 +837,7 @@ export default function Billing() {
         // ─── COMPLETED BILL PATH: Unified Split Payment RPC ───
         const items = cart.map(item => ({
           product_id: item.productId,
-          product_name: item.name,
+          product_name: item.name || 'Unknown Product',
           quantity: item.quantity,
           unit_price: item.unitPrice,
           cost_price: item.costPrice,
