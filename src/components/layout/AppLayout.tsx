@@ -64,6 +64,7 @@ import {
   Target,
   Store,
   UserCheck,
+  ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,7 @@ const navSections: NavSection[] = [
       { name: 'New Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier'] },
       { name: 'Quick Bill', href: '/salesman-billing', icon: ShoppingCart, roles: ['salesman'] },
       { name: 'Draft Bills', href: '/draft-bills', icon: FileText, roles: ['owner', 'manager', 'cashier', 'salesman'], badgeKey: 'drafts' },
+      { name: 'Salesman Orders', href: '/salesman-orders', icon: ClipboardList, roles: ['owner', 'manager'] },
       { name: 'Bills History', href: '/bills-history', icon: Receipt, roles: ['owner', 'manager', 'cashier'] },
       { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'], badgeKey: 'due' },
       { name: 'Sales Returns', href: '/sales-returns', icon: RotateCcw, roles: ['owner', 'manager'] },

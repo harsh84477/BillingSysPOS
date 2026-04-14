@@ -38,11 +38,12 @@ export default function DraftBills() {
     const { data: draftBills = [], isLoading } = useQuery({
         queryKey: ['draftBills', businessId, user?.id, userRole],
         queryFn: async () => {
-            let query = supabase
+            let query = (supabase as any)
                 .from('bills')
                 .select('*, customers(name, phone, address)')
                 .eq('business_id', businessId)
                 .eq('status', 'draft')
+                .is('salesman_name', null)
                 .order('created_at', { ascending: false });
             if (userRole === 'salesman') {
                 query = query.eq('created_by', user?.id);
