@@ -31,12 +31,12 @@ BEGIN
   
   -- Create bill record
   INSERT INTO public.bills (
-    business_id, bill_number, customer_id, salesman_name,
+    business_id, bill_number, customer_id, created_by, salesman_name,
     subtotal, discount_type, discount_value, discount_amount, tax_amount, total_amount,
     status, created_at, updated_at
   )
   VALUES (
-    _business_id, _bill_number, _customer_id, _salesman_name,
+    _business_id, _bill_number, _customer_id, auth.uid(), _salesman_name,
     _subtotal, _discount_type, _discount_value, _discount_amount, _tax_amount, _total_amount,
     'draft', now(), now()
   )

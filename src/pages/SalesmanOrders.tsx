@@ -7,7 +7,7 @@
  * Target progress shown with gray for unfinalized, theme color for finalized.
  */
 import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -18,17 +18,18 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import {
   Search, User, Target, TrendingUp, ShoppingCart, Check,
-  Loader2, Clock, ChevronRight, IndianRupee, Package
+  Clock, ChevronRight, IndianRupee, Package
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import DraftBillModal from '@/components/bills/DraftBillModal';
 
 export default function SalesmanOrders() {
   const { businessId, userRole } = useAuth();
   const queryClient = useQueryClient();
   const [selectedSalesman, setSelectedSalesman] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
   const today = new Date();
 
   // ─── Fetch all salesmen ───
@@ -84,25 +85,6 @@ export default function SalesmanOrders() {
       return data || [];
     },
     enabled: !!businessId,
-  });
-
-  // ─── Finalize mutation ───
-  const finalizeMutation = useMutation({
-    mutationFn: async (billId: string) => {
-      const { error } = await supabase
-        .from('bills')
-        .update({ status: 'completed' as any, completed_at: new Date().toISOString() })
-        .eq('id', billId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Order finalized!');
-      queryClient.invalidateQueries({ queryKey: ['salesman-orders-all'] });
-      queryClient.invalidateQueries({ queryKey: ['salesman-orders-targets'] });
-      queryClient.invalidateQueries({ queryKey: ['draftBills'] });
-      queryClient.invalidateQueries({ queryKey: ['salesman-control-bills'] });
-      queryClient.invalidateQueries({ queryKey: ['bills'] });
-    },
   });
 
   // ─── Per-salesman stats ───
@@ -419,14 +401,9 @@ export default function SalesmanOrders() {
                                     size="sm"
                                     variant="default"
                                     className="h-7 text-xs"
-                                    disabled={finalizeMutation.isPending}
-                                    onClick={() => finalizeMutation.mutate(order.id)}
+                                    onClick={() => setSelectedBillId(order.id)}
                                   >
-                                    {finalizeMutation.isPending ? (
-                                      <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                      <><Check className="h-3 w-3 mr-1" /> Finalize</>
-                                    )}
+                                    <Check className="h-3 w-3 mr-1" /> Finalize
                                   </Button>
                                 )}
                                 {order.status === 'completed' && (
@@ -445,6 +422,21 @@ export default function SalesmanOrders() {
           )}
         </div>
       </div>
+
+      {/* DraftBillModal for editing items, payment method, and finalizing */}
+      {selectedBillId && (
+        <DraftBillModal
+          billId={selectedBillId}
+          open={!!selectedBillId}
+          onClose={() => {
+            setSelectedBillId(null);
+            queryClient.invalidateQueries({ queryKey: ['salesman-orders-all'] });
+            queryClient.invalidateQueries({ queryKey: ['salesman-orders-targets'] });
+            queryClient.invalidateQueries({ queryKey: ['salesman-control-bills'] });
+            queryClient.invalidateQueries({ queryKey: ['bills'] });
+          }}
+        />
+      )}
     </div>
   );
 }
