@@ -133,7 +133,7 @@ export function MobileQuickBilling() {
     ));
   };
 
-  // Mutation to generate a new order (status: 'pending')
+  // Mutation to generate a new order via RPC (creates bill + bill_items + reserves stock)
   const generateOrderMutation = useMutation({
     mutationFn: async () => {
       if (cart.length === 0) throw new Error('Cart is empty');
@@ -146,32 +146,32 @@ export function MobileQuickBilling() {
         cost_price: item.cost_price,
         total_price: item.unit_price * item.quantity,
       }));
-      const { data, error } = await supabase
-        .from('bills')
-        .insert({
-          business_id: businessId,
-          bill_number: `ORD-${Date.now().toString().slice(-6)}`,
-          customer_id: selectedCustomerId,
-          salesman_name: salesmanName,
-          subtotal: subtotal,
-          discount_amount: 0,
-          tax_amount: 0,
-          total_amount: total,
-          items,
-          status: 'draft',
-          created_by: user?.id,
-        })
-        .select()
-        .single();
+      const { data, error } = await (supabase.rpc as any)('create_draft_bill', {
+        _business_id: businessId,
+        _bill_number: `ORD-${Date.now().toString().slice(-6)}`,
+        _customer_id: selectedCustomerId || null,
+        _salesman_name: salesmanName,
+        _subtotal: subtotal,
+        _discount_amount: 0,
+        _tax_amount: 0,
+        _total_amount: total,
+        _items: items,
+      });
       if (error) throw error;
-      return data;
+      const result = data as any;
+      if (!result?.success) throw new Error(result?.error || 'Failed to create order');
+      return result;
     },
     onSuccess: () => {
-      toast.success('Order generated!');
+      toast.success('Order generated successfully!');
       clearCart();
       setActiveView('products');
       queryClient.invalidateQueries({ queryKey: ['salesmanOrders'] });
+      queryClient.invalidateQueries({ queryKey: ['salesman-orders-all'] });
       queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.message || 'Failed to generate order');
     },
   });
 
