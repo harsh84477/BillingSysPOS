@@ -711,9 +711,31 @@ export default function Billing() {
     }
   };
 
+  // Build items payload from cart — guarantees product_name is never null
+  const buildItemsPayload = () =>
+    cart.map(item => {
+      const name = item.name || products.find(p => p.id === item.productId)?.name || 'Product';
+      return {
+        product_id: item.productId,
+        product_name: name,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        cost_price: item.costPrice,
+        mrp_price: item.mrpPrice,
+        items_per_case: item.itemsPerCase || 0,
+        total_price: item.unitPrice * item.quantity,
+      };
+    });
+
   // Create bill mutation with retry logic for duplicate key handling
   const createBillMutation = useMutation({
     mutationFn: async (shouldPrint: boolean | 'whatsapp' | 'draft' | 'save-print') => {
+      // Cart item validation — catch corrupt items before they hit the DB
+      const invalidItem = cart.find(item => !item.productId || !item.name);
+      if (invalidItem) {
+        throw new Error(`Cart contains an invalid item (missing name or ID). Please clear your cart and try again.`);
+      }
+
       // Due bill validation — require customer details
       if (paymentType === 'due') {
         const hasCustomer = selectedCustomerId || customerName.trim();
@@ -753,37 +775,19 @@ export default function Billing() {
           const salesmanDisplayName =
             user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Salesman';
 
-          const items = cart.map(item => ({
-            product_id: item.productId,
-            product_name: item.name || 'Unknown Product',
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            cost_price: item.costPrice,
-            mrp_price: item.mrpPrice,
-            items_per_case: item.itemsPerCase || 0,
-            total_price: item.unitPrice * item.quantity,
-          }));
+          const items = buildItemsPayload();
 
-          // Insert bill with status 'pending'
-          const { data, error } = await supabase
-            .from('bills')
-            .insert({
-              business_id: businessId,
-              bill_number: billNumber,
-              customer_id: finalCustomerId || null,
-              salesman_name: salesmanDisplayName,
-              subtotal: cartCalculations.subtotal,
-              discount_type: 'flat',
-              discount_value: discountValue,
-              discount_amount: cartCalculations.discountAmount,
-              tax_amount: cartCalculations.taxAmount,
-              total_amount: cartCalculations.total,
-              items,
-              status: 'pending',
-              created_by: user?.id,
-            })
-            .select()
-            .single();
+          const { data, error } = await (supabase.rpc as any)('create_draft_bill', {
+            _business_id: businessId,
+            _bill_number: billNumber,
+            _customer_id: finalCustomerId || null,
+            _salesman_name: salesmanDisplayName,
+            _subtotal: cartCalculations.subtotal,
+            _discount_amount: cartCalculations.discountAmount,
+            _tax_amount: cartCalculations.taxAmount,
+            _total_amount: cartCalculations.total,
+            _items: items,
+          });
 
           if (error) {
             if (error.code === '23505' && retryCount < maxRetries - 1) {
@@ -793,25 +797,19 @@ export default function Billing() {
             throw error;
           }
 
+          const salData = data as any;
+          if (!salData?.success) throw new Error(salData?.error || 'Failed to create order');
+
           await updateSalesmanTargetProgress({
             businessId,
             salesmanId: user?.id,
-            billAmount: data.total_amount,
-            billDate: data.created_at || new Date().toISOString(),
+            billAmount: cartCalculations.total,
+            billDate: new Date().toISOString(),
           });
-          return { bill: data, billNumber: data.bill_number || billNumber, shouldPrint, isPendingOrder };
+          return { bill: salData, billNumber: salData.bill_number || billNumber, shouldPrint, isPendingOrder };
         }
         if (isDraft) {
-          const items = cart.map(item => ({
-            product_id: item.productId,
-            product_name: item.name || 'Unknown Product',
-            quantity: item.quantity,
-            unit_price: item.unitPrice,
-            cost_price: item.costPrice,
-            mrp_price: item.mrpPrice,
-            items_per_case: item.itemsPerCase || 0,
-            total_price: item.unitPrice * item.quantity,
-          }));
+          const items = buildItemsPayload();
           const { data: draftResult, error: draftErr } = await (supabase.rpc as any)('create_draft_bill', {
             _business_id: businessId,
             _bill_number: billNumber,
@@ -835,16 +833,7 @@ export default function Billing() {
         }
 
         // ─── COMPLETED BILL PATH: Unified Split Payment RPC ───
-        const items = cart.map(item => ({
-          product_id: item.productId,
-          product_name: item.name || 'Unknown Product',
-          quantity: item.quantity,
-          unit_price: item.unitPrice,
-          cost_price: item.costPrice,
-          mrp_price: item.mrpPrice,
-          items_per_case: item.itemsPerCase || 0,
-          total_price: item.unitPrice * item.quantity,
-        }));
+        const items = buildItemsPayload();
 
         // 1. Create a draft bill first (atomically reserves stock)
         const { data: draftData, error: draftError } = await (supabase.rpc as any)('create_draft_bill', {
@@ -917,17 +906,23 @@ export default function Billing() {
 
       throw new Error('Failed to generate unique bill number after multiple attempts');
     },
-    onSuccess: ({ billNumber, shouldPrint, isDraft }) => {
-      if ((shouldPrint === true || shouldPrint === 'save-print') && !isDraft) {
+    onSuccess: ({ billNumber, shouldPrint, isDraft, isPendingOrder }) => {
+      if ((shouldPrint === true || shouldPrint === 'save-print') && !isDraft && !isPendingOrder) {
         printBill(billNumber);
       }
-      if (shouldPrint === 'whatsapp' && !isDraft) {
+      if (shouldPrint === 'whatsapp' && !isDraft && !isPendingOrder) {
         handleWhatsAppAfterSave(billNumber);
       }
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
       queryClient.invalidateQueries({ queryKey: ['draftBills'] });
       queryClient.invalidateQueries({ queryKey: ['profit-summary'] });
+      if (isPendingOrder) {
+        queryClient.invalidateQueries({ queryKey: ['salesman-my-orders'] });
+        queryClient.invalidateQueries({ queryKey: ['salesman-today-bills'] });
+        queryClient.invalidateQueries({ queryKey: ['salesman-target'] });
+        queryClient.invalidateQueries({ queryKey: ['salesman-all-targets'] });
+      }
       setCart([]);
       setCustomerName('');
       setSelectedCustomerId(null);
@@ -939,7 +934,9 @@ export default function Billing() {
       setOnlineAmount('');
       setPaidAmount('');
       generateBillNumber().then(setPreviewBillNumber);
-      if (isDraft) {
+      if (isPendingOrder) {
+        toast.success('Order generated! Visible in My Orders.');
+      } else if (isDraft) {
         toast.success('Draft saved! Stock reserved. Resume from Draft Bills.');
       } else if (shouldPrint === 'whatsapp') {
         toast.success('Bill saved! Opening WhatsApp...');
