@@ -189,14 +189,51 @@ function ElectronOAuthCallbackHandler() {
   return null;
 }
 
+import React from 'react';
+
+// ─── Error Boundary to prevent white screen crashes ───
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 40, textAlign: 'center', fontFamily: 'system-ui' }}>
+          <h2 style={{ marginBottom: 12 }}>Something went wrong</h2>
+          <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>{this.state.error?.message}</p>
+          <button
+            onClick={() => {
+              localStorage.removeItem('smartpos_query_cache');
+              window.location.hash = '#/dashboard';
+              window.location.reload();
+            }}
+            style={{ padding: '10px 24px', background: '#10b981', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14 }}
+          >
+            Clear Cache & Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const App = () => (
+  <ErrorBoundary>
   <PersistQueryClientProvider
     client={queryClient}
     persistOptions={{
       persister,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      buster: '1',                       // bump this string to wipe old cache
+      buster: '2',                       // bump this string to wipe old cache
     }}
   >
     <AuthProvider>
@@ -269,6 +306,7 @@ const App = () => (
       </ThemeProvider>
     </AuthProvider>
   </PersistQueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
