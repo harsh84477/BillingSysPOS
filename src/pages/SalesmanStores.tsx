@@ -4,7 +4,7 @@
  * Click a store → see its bills/order history
  */
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +16,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
 import {
   Store, Search, MapPin, Phone, Filter, ShoppingCart,
   ArrowLeft, IndianRupee, FileText, Plus, X,
@@ -26,6 +29,7 @@ import { cn } from '@/lib/utils';
 export default function SalesmanStores() {
   const { user, businessId } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedStoreId = searchParams.get('store');
 
@@ -33,6 +37,17 @@ export default function SalesmanStores() {
   const [filterType, setFilterType] = useState('all');
   const [filterArea, setFilterArea] = useState('all');
   const [filterPincode, setFilterPincode] = useState('all');
+
+  // Add Customer state
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [newStoreName, setNewStoreName] = useState('');
+  const [newCustName, setNewCustName] = useState('');
+  const [newCustPhone, setNewCustPhone] = useState('');
+  const [newCustAddress, setNewCustAddress] = useState('');
+  const [newCustStoreType, setNewCustStoreType] = useState('');
+  const [newCustLocation, setNewCustLocation] = useState('');
+  const [newCustPincode, setNewCustPincode] = useState('');
+  const [addingSaving, setAddingSaving] = useState(false);
 
   // ─── Fetch settings ───
   const { data: settings } = useQuery({
@@ -51,7 +66,7 @@ export default function SalesmanStores() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('salesman_stores')
-        .select('id, customer_id, assigned_at, customers(id, name, phone, email, address, store_type, location_name, pincode)')
+        .select('id, customer_id, assigned_at, customers(id, name, phone, email, address, store_type, store_name, location_name, pincode)')
         .eq('business_id', businessId)
         .eq('salesman_id', user!.id);
       if (error) throw error;
@@ -85,7 +100,7 @@ export default function SalesmanStores() {
   const filteredStores = useMemo(() => {
     const q = search.toLowerCase();
     return stores.filter((s: any) => {
-      if (q && !s.name?.toLowerCase().includes(q) && !(s.phone || '').includes(q)) return false;
+      if (q && !s.name?.toLowerCase().includes(q) && !(s.phone || '').includes(q) && !(s.store_name || '').toLowerCase().includes(q)) return false;
       if (filterType !== 'all' && s.store_type !== filterType) return false;
       if (filterArea !== 'all' && s.location_name !== filterArea) return false;
       if (filterPincode !== 'all' && s.pincode !== filterPincode) return false;
@@ -108,9 +123,14 @@ export default function SalesmanStores() {
           <h1 className="text-xl font-bold flex items-center gap-2"><Store className="h-5 w-5" /> My Stores</h1>
           <p className="text-sm text-muted-foreground">{stores.length} store{stores.length !== 1 ? 's' : ''} assigned to you</p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => navigate('/salesman-billing')} className="gap-1">
-          <Plus className="h-4 w-4" /> New Order
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => { setShowAddCustomer(true); setNewStoreName(''); setNewCustName(''); setNewCustPhone(''); setNewCustAddress(''); setNewCustStoreType(''); setNewCustLocation(''); setNewCustPincode(''); }} className="gap-1">
+            <Plus className="h-4 w-4" /> Add Customer
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate('/salesman-billing')} className="gap-1">
+            <ShoppingCart className="h-4 w-4" /> New Order
+          </Button>
+        </div>
       </div>
 
       {/* ─── Search + Filters ─── */}
@@ -166,6 +186,9 @@ export default function SalesmanStores() {
                 <div className="flex items-start justify-between mb-2">
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-sm truncate">{store.name}</h3>
+                    {store.store_name && (
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">🏪 {store.store_name}</p>
+                    )}
                     {store.phone && (
                       <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                         <Phone className="h-3 w-3" /> {store.phone}
@@ -282,6 +305,91 @@ export default function SalesmanStores() {
               </Button>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Add Customer Dialog ─── */}
+      <Dialog open={showAddCustomer} onOpenChange={setShowAddCustomer}>
+        <DialogContent className="max-w-md mx-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5 text-emerald-500" /> Add Customer
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            if (!newCustName.trim()) return;
+            setAddingSaving(true);
+            try {
+              const { error } = await (supabase.from('customers') as any).insert({
+                name: newCustName.trim(),
+                phone: newCustPhone || null,
+                store_name: newStoreName.trim() || null,
+                store_type: newCustStoreType || null,
+                address: newCustAddress || null,
+                location_name: newCustLocation || null,
+                pincode: newCustPincode || null,
+                business_id: businessId,
+                assigned_salesman_id: user?.id || null,
+              });
+              if (error) throw error;
+              queryClient.invalidateQueries({ queryKey: ['customers'] });
+              queryClient.invalidateQueries({ queryKey: ['salesman-stores-full'] });
+              queryClient.invalidateQueries({ queryKey: ['salesman-stores'] });
+              toast.success(`Customer "${newCustName.trim()}" added!`);
+              setShowAddCustomer(false);
+            } catch (err: any) {
+              toast.error('Failed: ' + err.message);
+            } finally {
+              setAddingSaving(false);
+            }
+          }} className="space-y-3 mt-1">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Store / Business Name</Label>
+              <Input placeholder="e.g. Sharma General Store" value={newStoreName} onChange={e => setNewStoreName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Customer Name *</Label>
+              <Input placeholder="e.g. Ravi Kumar" value={newCustName} onChange={e => setNewCustName(e.target.value)} required autoFocus />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Phone</Label>
+                <Input type="tel" placeholder="10 digit number" value={newCustPhone} onChange={e => setNewCustPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength={10} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Store Type</Label>
+                <Input placeholder="e.g. Kirana" value={newCustStoreType} onChange={e => setNewCustStoreType(e.target.value)} list="store-types-salesman" />
+                <datalist id="store-types-salesman">
+                  <option value="Wholesale Store" />
+                  <option value="General Store" />
+                  <option value="Kirana Store" />
+                  <option value="Medical Store" />
+                  <option value="Retail Store" />
+                </datalist>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Address</Label>
+              <Textarea placeholder="Full address" value={newCustAddress} onChange={e => setNewCustAddress(e.target.value)} rows={2} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Location / Area</Label>
+                <Input placeholder="e.g. Saket" value={newCustLocation} onChange={e => setNewCustLocation(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Pincode</Label>
+                <Input placeholder="e.g. 110017" value={newCustPincode} onChange={e => setNewCustPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength={6} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button type="button" variant="outline" onClick={() => setShowAddCustomer(false)}>Cancel</Button>
+              <Button type="submit" disabled={!newCustName.trim() || addingSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                {addingSaving ? 'Saving...' : 'Add Customer'}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </div>

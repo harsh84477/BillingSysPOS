@@ -604,7 +604,7 @@ export default function Customers() {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 mt-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="store_name">Store Name</Label>
+                  <Label htmlFor="store_name">Store / Business Name</Label>
                   <Input id="store_name" name="store_name" placeholder="e.g. Sharma General Store" defaultValue={(editingCustomer as any)?.store_name || ''} />
                 </div>
                 <div className="space-y-1.5">
