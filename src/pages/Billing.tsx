@@ -210,17 +210,6 @@ export default function Billing() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
 
-  // Customer autocomplete suggestions based on typed name
-  const customerSuggestions = useMemo(() => {
-    const q = customerName?.trim().toLowerCase();
-    if (!q || q.length < 1 || selectedCustomerId) return [];
-    return customers.filter(c =>
-      c.name?.toLowerCase().includes(q) ||
-      (c.phone || '').includes(customerName.trim()) ||
-      ((c as any).store_name || '').toLowerCase().includes(q)
-    ).slice(0, 8);
-  }, [customerName, customers, selectedCustomerId]);
-
   // Long-press quantity dialog state
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
   const [quantityDialogProduct, setQuantityDialogProduct] = useState<{
@@ -291,6 +280,17 @@ export default function Billing() {
     },
     enabled: !!businessId,
   });
+
+  // Customer autocomplete suggestions based on typed name
+  const customerSuggestions = useMemo(() => {
+    const q = customerName?.trim().toLowerCase();
+    if (!q || q.length < 1 || selectedCustomerId) return [];
+    return customers.filter(c =>
+      c.name?.toLowerCase().includes(q) ||
+      (c.phone || '').includes(customerName.trim()) ||
+      ((c as any).store_name || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+  }, [customerName, customers, selectedCustomerId]);
 
   const currencySymbol = settings?.currency_symbol || '₹';
   const taxRate = settings?.tax_rate || 0;
