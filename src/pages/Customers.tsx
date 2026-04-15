@@ -123,6 +123,8 @@ export default function Customers() {
   const [locationFilter, setLocationFilter] = useState('all');
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<Set<string>>(new Set());
 
+  const [selectedSalesmanId, setSelectedSalesmanId] = useState<string>('');  
+
   /* bills panel state */
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [billPreset, setBillPreset] = useState<DatePreset>('all');
@@ -154,6 +156,28 @@ export default function Customers() {
       return (data || []).map(b => ({ ...b, customers: { name: selectedCustomer.name } })) as CustomerBill[];
     },
     enabled: !!selectedCustomer,
+  });
+
+  // Fetch salesmen for the assignment dropdown (owner/manager only)
+  const { data: salesmen = [] } = useQuery<{ id: string; full_name: string }[]>({
+    queryKey: ['salesmen-list', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'salesman')
+        .eq('business_id', businessId!);
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+      const userIds = data.map((r: any) => r.user_id);
+      const { data: profiles, error: pErr } = await supabase
+        .from('profiles')
+        .select('user_id, display_name')
+        .in('user_id', userIds);
+      if (pErr) throw pErr;
+      return (profiles || []).map((p: any) => ({ id: p.user_id, full_name: p.display_name || 'Salesman' }));
+    },
+    enabled: !!businessId && !isSalesman,
   });
 
   // ── filtered bills (by preset) ──
@@ -280,7 +304,7 @@ export default function Customers() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    saveMutation.mutate({
+    const customerData: Partial<Customer> = {
       name: fd.get('name') as string,
       email: (fd.get('email') as string) || null,
       phone: (fd.get('phone') as string) || null,
@@ -290,7 +314,12 @@ export default function Customers() {
       location_name: (fd.get('location_name') as string) || null,
       pincode: (fd.get('pincode') as string) || null,
       notes: (fd.get('notes') as string) || null,
-    });
+    };
+    // Owner/manager can set assigned salesman
+    if (!isSalesman && selectedSalesmanId) {
+      customerData.assigned_salesman_id = selectedSalesmanId === '__none__' ? null : selectedSalesmanId;
+    }
+    saveMutation.mutate(customerData);
   };
 
   // ── print ──
@@ -590,7 +619,7 @@ export default function Customers() {
           </Button>
           )}
           {canEdit && (
-            <Dialog open={isDialogOpen} onOpenChange={open => { setIsDialogOpen(open); if (!open) setEditingCustomer(null); }}>
+            <Dialog open={isDialogOpen} onOpenChange={open => { setIsDialogOpen(open); if (!open) { setEditingCustomer(null); setSelectedSalesmanId(''); } }}>
               <DialogTrigger asChild>
                 <Button size="sm">
                   <Plus className="h-4 w-4 mr-1.5" />
@@ -682,6 +711,25 @@ export default function Customers() {
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea id="notes" name="notes" defaultValue={editingCustomer?.notes || ''} rows={2} />
                 </div>
+                {!isSalesman && salesmen.length > 0 && (
+                  <div className="space-y-1.5">
+                    <Label>Assigned Salesman</Label>
+                    <Select
+                      value={selectedSalesmanId}
+                      onValueChange={setSelectedSalesmanId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select salesman (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None</SelectItem>
+                        {salesmen.map(s => (
+                          <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 <div className="flex justify-end gap-2 pt-1">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
                   <Button type="submit" disabled={saveMutation.isPending}>
@@ -865,7 +913,7 @@ export default function Customers() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-muted-foreground"
-                              onClick={() => { setEditingCustomer(customer); setIsDialogOpen(true); }}
+                              onClick={() => { setEditingCustomer(customer); setSelectedSalesmanId(customer.assigned_salesman_id || ''); setIsDialogOpen(true); }}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
