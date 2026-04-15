@@ -170,6 +170,7 @@ export default function Billing() {
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickAddName, setQuickAddName] = useState('');
   const [quickAddPhone, setQuickAddPhone] = useState('');
+  const [quickAddStoreName, setQuickAddStoreName] = useState('');
   const [quickAddSaving, setQuickAddSaving] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
 
@@ -207,6 +208,18 @@ export default function Billing() {
   const [isCartExpanded, setIsCartExpanded] = useState(true);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+
+  // Customer autocomplete suggestions based on typed name
+  const customerSuggestions = useMemo(() => {
+    const q = customerName?.trim().toLowerCase();
+    if (!q || q.length < 1 || selectedCustomerId) return [];
+    return customers.filter(c =>
+      c.name?.toLowerCase().includes(q) ||
+      (c.phone || '').includes(customerName.trim()) ||
+      ((c as any).store_name || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+  }, [customerName, customers, selectedCustomerId]);
 
   // Long-press quantity dialog state
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
@@ -1362,7 +1375,7 @@ export default function Billing() {
                 .filter(c => {
                   if (!customerSearchQuery.trim()) return true;
                   const q = customerSearchQuery.toLowerCase();
-                  return c.name?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q);
+                  return c.name?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q) || ((c as any).store_name || '').toLowerCase().includes(q);
                 })
                 .map((customer) => (
                   <Button key={customer.id} variant={selectedCustomerId === customer.id ? 'secondary' : 'ghost'}
@@ -1372,6 +1385,7 @@ export default function Billing() {
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">{customer.name?.charAt(0)?.toUpperCase()}</div>
                       <div className="text-left">
                         <div className="font-medium text-sm">{customer.name}</div>
+                        {(customer as any).store_name && <div className="text-[11px] text-muted-foreground">🏪 {(customer as any).store_name}</div>}
                         {customer.phone && <div className="text-[11px] text-muted-foreground">📱 {customer.phone}</div>}
                       </div>
                     </div>
@@ -1380,7 +1394,7 @@ export default function Billing() {
               {customers.filter(c => {
                 if (!customerSearchQuery.trim()) return true;
                 const q = customerSearchQuery.toLowerCase();
-                return c.name?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q);
+                return c.name?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q) || ((c as any).store_name || '').toLowerCase().includes(q);
               }).length === 0 && customerSearchQuery.trim() && (
                 <div className="p-4 text-center text-sm text-muted-foreground">
                   <p>No customers found</p>
@@ -1404,6 +1418,10 @@ export default function Billing() {
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Store Name</Label>
+              <Input placeholder="e.g. Sharma General Store" value={quickAddStoreName} onChange={e => setQuickAddStoreName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
               <Label className="text-xs font-bold">Customer Name *</Label>
               <Input placeholder="e.g. Ravi Kumar" value={quickAddName} onChange={e => setQuickAddName(e.target.value)} autoFocus />
             </div>
@@ -1422,7 +1440,9 @@ export default function Billing() {
               onClick={async () => {
                 setQuickAddSaving(true);
                 try {
-                  const { data: newCust, error } = await supabase.from('customers').insert({ name: quickAddName.trim(), phone: quickAddPhone || null, business_id: businessId }).select().single();
+                  const insertData: any = { name: quickAddName.trim(), phone: quickAddPhone || null, store_name: quickAddStoreName.trim() || null, business_id: businessId };
+                  if (isSalesman && user?.id) insertData.assigned_salesman_id = user.id;
+                  const { data: newCust, error } = await (supabase.from('customers') as any).insert(insertData).select().single();
                   if (error) throw error;
                   queryClient.invalidateQueries({ queryKey: ['customers'] });
                   setSelectedCustomerId(newCust.id);
@@ -1554,9 +1574,25 @@ export default function Billing() {
                     <Input
                       placeholder="Customer Name..."
                       value={customerName || (selectedCustomerId ? customers.find(c => c.id === selectedCustomerId)?.name : '') || ''}
-                      onChange={(e) => { setCustomerName(e.target.value); if (selectedCustomerId) setSelectedCustomerId(null); }}
+                      onChange={(e) => { setCustomerName(e.target.value); if (selectedCustomerId) setSelectedCustomerId(null); setShowCustomerSuggestions(true); }}
+                      onFocus={() => { if (customerName?.trim()) setShowCustomerSuggestions(true); }}
+                      onBlur={() => setTimeout(() => setShowCustomerSuggestions(false), 200)}
                       className="bg-background pl-8 h-9 text-sm"
                     />
+                    {showCustomerSuggestions && customerSuggestions.length > 0 && (
+                      <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {customerSuggestions.map(c => (
+                          <button key={c.id} className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2 text-sm"
+                            onMouseDown={(e) => { e.preventDefault(); setSelectedCustomerId(c.id); setCustomerName(c.name); setShowCustomerSuggestions(false); }}>
+                            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">{c.name?.charAt(0)}</div>
+                            <div className="min-w-0">
+                              <span className="font-medium truncate block">{c.name}</span>
+                              <span className="text-[10px] text-muted-foreground">{(c as any).store_name ? `🏪 ${(c as any).store_name} · ` : ''}{c.phone || ''}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <Button variant="secondary" size="icon" className="h-10 w-10 shrink-0"
                     onClick={() => { setCustomerSearchQuery(''); setIsCustomerDialogOpen(true); }}>
@@ -1883,9 +1919,26 @@ export default function Billing() {
                     onChange={(e) => {
                       setCustomerName(e.target.value);
                       if (selectedCustomerId) setSelectedCustomerId(null);
+                      setShowCustomerSuggestions(true);
                     }}
+                    onFocus={() => { if (customerName?.trim()) setShowCustomerSuggestions(true); }}
+                    onBlur={() => setTimeout(() => setShowCustomerSuggestions(false), 200)}
                     className="bg-background pl-8 h-9 text-xs focus-visible:ring-primary/20"
                   />
+                  {showCustomerSuggestions && customerSuggestions.length > 0 && (
+                    <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {customerSuggestions.map(c => (
+                        <button key={c.id} className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2 text-sm"
+                          onMouseDown={(e) => { e.preventDefault(); setSelectedCustomerId(c.id); setCustomerName(c.name); setShowCustomerSuggestions(false); }}>
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">{c.name?.charAt(0)}</div>
+                          <div className="min-w-0">
+                            <span className="font-medium truncate block">{c.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{(c as any).store_name ? `🏪 ${(c as any).store_name} · ` : ''}{c.phone || ''}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <Button
                   variant="secondary"
@@ -2184,9 +2237,26 @@ export default function Billing() {
                   onChange={(e) => {
                     setCustomerName(e.target.value);
                     if (selectedCustomerId) setSelectedCustomerId(null);
+                    setShowCustomerSuggestions(true);
                   }}
+                  onFocus={() => { if (customerName?.trim()) setShowCustomerSuggestions(true); }}
+                  onBlur={() => setTimeout(() => setShowCustomerSuggestions(false), 200)}
                   className="pl-8 h-10 text-sm"
                 />
+                {showCustomerSuggestions && customerSuggestions.length > 0 && (
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {customerSuggestions.map(c => (
+                      <button key={c.id} className="w-full text-left px-3 py-2 hover:bg-accent flex items-center gap-2 text-sm"
+                        onMouseDown={(e) => { e.preventDefault(); setSelectedCustomerId(c.id); setCustomerName(c.name); setShowCustomerSuggestions(false); }}>
+                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">{c.name?.charAt(0)}</div>
+                        <div className="min-w-0">
+                          <span className="font-medium truncate block">{c.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{(c as any).store_name ? `🏪 ${(c as any).store_name} · ` : ''}{c.phone || ''}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <Button
                 variant="secondary"

@@ -114,6 +114,7 @@ const navSections: NavSection[] = [
     label: 'TERRITORY',
     items: [
       { name: 'My Stores', href: '/salesman-stores', icon: Store, roles: ['salesman'] },
+      { name: 'My Customers', href: '/customers', icon: Users, roles: ['salesman'] },
       { name: 'My Targets', href: '/salesman-targets', icon: Target, roles: ['salesman'] },
     ],
   },

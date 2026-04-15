@@ -43,9 +43,15 @@ export function MobileQuickBilling() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'products' | 'cart'>('products');
   const { data: settings } = useBusinessSettings();
+  const [newCustName, setNewCustName] = useState('');
+  const [newCustPhone, setNewCustPhone] = useState('');
+  const [newCustStoreName, setNewCustStoreName] = useState('');
+  const [newCustSaving, setNewCustSaving] = useState(false);
   const [billLayout] = useState<'grid' | 'list'>(() =>
     (localStorage.getItem('salesman_bill_layout') as 'grid' | 'list') || 'grid'
   );
@@ -68,12 +74,13 @@ export function MobileQuickBilling() {
   });
 
   const { data: customers = [] } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ['customers', businessId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('customers').select('*');
+      const { data, error } = await supabase.from('customers').select('*').eq('business_id', businessId!).order('name');
       if (error) throw error;
       return data;
     },
+    enabled: !!businessId,
   });
 
   const subtotal = cart.reduce((sum, item) => sum + item.unit_price * item.quantity, 0);
@@ -580,15 +587,27 @@ export function MobileQuickBilling() {
         )}
       </div>
 
-      {/* ── Customer Modal ── */}
-      <Dialog open={showCustomerModal} onOpenChange={setShowCustomerModal}>
+      {/* ── Customer Modal (with search + add) ── */}
+      <Dialog open={showCustomerModal} onOpenChange={(o) => { setShowCustomerModal(o); if (!o) setCustomerSearch(''); }}>
         <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden">
           <DialogHeader className="p-4 border-b border-border">
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Users className="w-4 h-4 text-primary" />
-              Select Customer
+            <DialogTitle className="text-base font-bold flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-primary" />
+                Select Customer
+              </span>
+              <Button size="sm" variant="outline" className="text-xs gap-1 text-emerald-600 border-emerald-200 h-7"
+                onClick={() => { setShowCustomerModal(false); setNewCustName(''); setNewCustPhone(''); setNewCustStoreName(''); setShowAddCustomerModal(true); }}>
+                <Plus className="h-3 w-3" /> Add New
+              </Button>
             </DialogTitle>
           </DialogHeader>
+          <div className="px-3 pt-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search name, store, phone..." value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} className="pl-9 h-9 text-sm" autoFocus />
+            </div>
+          </div>
           <div className="max-h-[50vh] overflow-y-auto p-2 space-y-1">
             <Button
               variant="ghost"
@@ -598,12 +617,18 @@ export function MobileQuickBilling() {
               <Package className="w-4 h-4 mr-3 text-muted-foreground" />
               <span className="font-medium">Walk-in Customer</span>
             </Button>
-            {customers.map((c: any) => (
+            {customers
+              .filter((c: any) => {
+                if (!customerSearch.trim()) return true;
+                const q = customerSearch.toLowerCase();
+                return c.name?.toLowerCase().includes(q) || (c.phone || '').includes(customerSearch) || (c.store_name || '').toLowerCase().includes(q);
+              })
+              .map((c: any) => (
               <Button
                 key={c.id}
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start h-12 rounded-lg px-3",
+                  "w-full justify-start h-auto py-2.5 rounded-lg px-3",
                   selectedCustomerId === c.id && "bg-primary/5 text-primary"
                 )}
                 onClick={() => { setSelectedCustomerId(c.id); setShowCustomerModal(false); }}
@@ -616,11 +641,81 @@ export function MobileQuickBilling() {
                 </div>
                 <div className="text-left min-w-0">
                   <p className="font-medium text-sm truncate">{c.name}</p>
-                  {c.phone && <p className="text-[10px] text-muted-foreground">{c.phone}</p>}
+                  <div className="flex items-center gap-2">
+                    {c.store_name && <span className="text-[10px] text-muted-foreground truncate">🏪 {c.store_name}</span>}
+                    {c.phone && <span className="text-[10px] text-muted-foreground">{c.phone}</span>}
+                  </div>
                 </div>
                 {selectedCustomerId === c.id && <Check className="w-4 h-4 ml-auto text-primary" />}
               </Button>
             ))}
+            {customers.filter((c: any) => {
+              if (!customerSearch.trim()) return true;
+              const q = customerSearch.toLowerCase();
+              return c.name?.toLowerCase().includes(q) || (c.phone || '').includes(customerSearch) || (c.store_name || '').toLowerCase().includes(q);
+            }).length === 0 && customerSearch.trim() && (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                <p>No customers found</p>
+                <Button size="sm" variant="link" className="text-primary mt-1"
+                  onClick={() => { setShowCustomerModal(false); setNewCustName(customerSearch); setNewCustPhone(''); setNewCustStoreName(''); setShowAddCustomerModal(true); }}>
+                  Create "{customerSearch}" as new customer
+                </Button>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Add Customer Modal ── */}
+      <Dialog open={showAddCustomerModal} onOpenChange={setShowAddCustomerModal}>
+        <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-5">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Plus className="w-4 h-4 text-emerald-500" />
+              Add Customer
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-1">
+            <div className="space-y-1">
+              <label className="text-xs font-bold">Store Name</label>
+              <Input placeholder="e.g. Sharma General Store" value={newCustStoreName} onChange={e => setNewCustStoreName(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold">Customer Name *</label>
+              <Input placeholder="e.g. Ravi Kumar" value={newCustName} onChange={e => setNewCustName(e.target.value)} autoFocus />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-bold">Mobile Number</label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-muted-foreground bg-muted px-3 py-2 rounded-lg">+91</span>
+                <Input type="tel" placeholder="10 digit number" value={newCustPhone} onChange={e => setNewCustPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength={10} />
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button variant="outline" className="flex-1" onClick={() => setShowAddCustomerModal(false)}>Cancel</Button>
+            <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              disabled={!newCustName.trim() || newCustSaving}
+              onClick={async () => {
+                setNewCustSaving(true);
+                try {
+                  const { data: newCust, error } = await (supabase.from('customers') as any).insert({
+                    name: newCustName.trim(),
+                    phone: newCustPhone || null,
+                    store_name: newCustStoreName.trim() || null,
+                    business_id: businessId,
+                    assigned_salesman_id: user?.id || null,
+                  }).select().single();
+                  if (error) throw error;
+                  queryClient.invalidateQueries({ queryKey: ['customers'] });
+                  setSelectedCustomerId(newCust.id);
+                  toast.success(`Customer "${newCust.name}" added!`);
+                  setShowAddCustomerModal(false);
+                } catch (err: any) { toast.error('Failed: ' + err.message); }
+                finally { setNewCustSaving(false); }
+              }}>
+              {newCustSaving ? 'Saving...' : 'Add & Select'}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -54,10 +54,12 @@ interface Customer {
   email: string | null;
   phone: string | null;
   address: string | null;
+  store_name: string | null;
   store_type: string | null;
   location_name: string | null;
   pincode: string | null;
   notes: string | null;
+  assigned_salesman_id: string | null;
   created_at: string;
 }
 
@@ -104,12 +106,13 @@ const STATUS_STYLE: Record<string, string> = {
 
 // ─────────────────────────────────────────────────
 export default function Customers() {
-  const { isAdmin, isStaff, businessId } = useAuth();
+  const { isAdmin, isStaff, businessId, userRole, user } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { data: settings } = useBusinessSettings();
   const currencySymbol = settings?.currency_symbol || 'Rs.';
-  const canEdit = isAdmin || isStaff;
+  const isSalesman = userRole === 'salesman';
+  const canEdit = isAdmin || isStaff || isSalesman;
 
   /* list state */
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -176,6 +179,7 @@ export default function Customers() {
         c.name.toLowerCase().includes(q) ||
         (c.email || '').toLowerCase().includes(q) ||
         (c.phone || '').includes(searchQuery) ||
+        ((c as any).store_name || '').toLowerCase().includes(q) ||
         (c.store_type || '').toLowerCase().includes(q) ||
         (c.location_name || '').toLowerCase().includes(q) ||
         (c.pincode || '').includes(searchQuery) ||
@@ -222,10 +226,15 @@ export default function Customers() {
   const saveMutation = useMutation({
     mutationFn: async (customer: Partial<Customer>) => {
       if (editingCustomer) {
-        const { error } = await supabase.from('customers').update(customer).eq('id', editingCustomer.id);
+        const { error } = await (supabase.from('customers') as any).update(customer).eq('id', editingCustomer.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('customers').insert([{ ...customer, business_id: businessId } as { name: string }]);
+        const insertData: any = { ...customer, business_id: businessId };
+        // Auto-assign to salesman who creates the customer
+        if (isSalesman && user?.id) {
+          insertData.assigned_salesman_id = user.id;
+        }
+        const { error } = await (supabase.from('customers') as any).insert([insertData]);
         if (error) throw error;
       }
     },
@@ -276,6 +285,7 @@ export default function Customers() {
       email: (fd.get('email') as string) || null,
       phone: (fd.get('phone') as string) || null,
       address: (fd.get('address') as string) || null,
+      store_name: (fd.get('store_name') as string) || null,
       store_type: (fd.get('store_type') as string) || null,
       location_name: (fd.get('location_name') as string) || null,
       pincode: (fd.get('pincode') as string) || null,
@@ -565,16 +575,20 @@ export default function Customers() {
           <p className="spos-page-subhead" style={{ marginBottom: 0 }}>Manage your customer database</p>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
+          {!isSalesman && (
           <Button onClick={() => navigate('/manage-customers')} variant="outline" size="sm">
             <Pencil className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Manage All</span>
             <span className="sm:hidden">Edit All</span>
           </Button>
+          )}
+          {!isSalesman && (
           <Button onClick={handleExportCustomers} variant="outline" size="sm">
             <Download className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Export Excel</span>
             <span className="sm:hidden">Export</span>
           </Button>
+          )}
           {canEdit && (
             <Dialog open={isDialogOpen} onOpenChange={open => { setIsDialogOpen(open); if (!open) setEditingCustomer(null); }}>
               <DialogTrigger asChild>
@@ -590,7 +604,11 @@ export default function Customers() {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 mt-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="name">Name *</Label>
+                  <Label htmlFor="store_name">Store Name</Label>
+                  <Input id="store_name" name="store_name" placeholder="e.g. Sharma General Store" defaultValue={(editingCustomer as any)?.store_name || ''} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="name">Customer Name *</Label>
                   <Input id="name" name="name" defaultValue={editingCustomer?.name} required />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
