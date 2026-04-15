@@ -23,6 +23,7 @@
  *     /reports     → Sales and financial reports
  *     /settings    → All settings tabs
  */
+import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -188,8 +189,6 @@ function ElectronOAuthCallbackHandler() {
 
   return null;
 }
-
-import React from 'react';
 
 // ─── Error Boundary to prevent white screen crashes ───
 class ErrorBoundary extends React.Component<
