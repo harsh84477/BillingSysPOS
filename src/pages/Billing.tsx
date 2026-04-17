@@ -580,7 +580,8 @@ export default function Billing() {
 
     // Salesman orders use ORD prefix to distinguish from regular bills
     if (isSalesman) {
-      const datePrefix = `ORD-${month}${day}`;
+      const code = billPrefix?.trim() || '';
+      const datePrefix = code ? `ORD-${code}-${month}${day}` : `ORD-${month}${day}`;
       const { data: latestBill } = await supabase
         .from('bills')
         .select('bill_number')

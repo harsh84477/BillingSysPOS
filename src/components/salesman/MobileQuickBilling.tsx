@@ -51,7 +51,7 @@ interface CartItem {
 }
 
 export function MobileQuickBilling() {
-  const { businessId, user, isSalesman } = useAuth();
+  const { businessId, user, isSalesman, billPrefix } = useAuth();
   const queryClient = useQueryClient();
   const location = useLocation();
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -222,12 +222,13 @@ export function MobileQuickBilling() {
     setCostPriceAlert(null);
   };
 
-  // Generate sequential date-based order number: ORD-MMDD0001
+  // Generate sequential date-based order number: ORD-{PREFIX}-MMDD0001
   const generateOrderNumber = async (): Promise<string> => {
     const today = new Date();
     const mm = String(today.getMonth() + 1).padStart(2, '0');
     const dd = String(today.getDate()).padStart(2, '0');
-    const datePrefix = `ORD-${mm}${dd}`;
+    const code = billPrefix?.trim() || '';
+    const datePrefix = code ? `ORD-${code}-${mm}${dd}` : `ORD-${mm}${dd}`;
 
     const { data: latestBill } = await supabase
       .from('bills')
