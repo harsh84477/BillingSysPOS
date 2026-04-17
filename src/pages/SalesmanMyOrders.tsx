@@ -5,7 +5,7 @@
  * Shows all orders the salesman has generated with status (Pending / Finalized).
  */
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,17 +15,20 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   Search, ShoppingCart, Clock, Check, Package, Filter,
-  IndianRupee, TrendingUp, Loader2
+  IndianRupee, TrendingUp, Loader2, Pencil
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import DraftBillModal from '@/components/bills/DraftBillModal';
 
 type StatusFilter = 'all' | 'draft' | 'completed';
 
 export default function SalesmanMyOrders() {
   const { businessId, user } = useAuth();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['salesman-my-orders', user?.id, businessId],
@@ -172,9 +175,21 @@ export default function SalesmanMyOrders() {
                     <span className="text-muted-foreground">{order.customers?.name || 'Walk-in'}</span>
                     <span className="font-bold text-primary">₹{Number(order.total_amount).toFixed(0)}</span>
                   </div>
-                  <div className="flex items-center gap-1 mt-1.5 text-[10px] text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {format(new Date(order.created_at), 'dd MMM yyyy, hh:mm a')}
+                  <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      {format(new Date(order.created_at), 'dd MMM yyyy, hh:mm a')}
+                    </div>
+                    {order.status === 'draft' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1 border-primary/30 text-primary"
+                        onClick={() => setSelectedBillId(order.id)}
+                      >
+                        <Pencil className="h-3 w-3" /> Edit
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -193,6 +208,7 @@ export default function SalesmanMyOrders() {
                       <TableHead className="text-xs">Amount</TableHead>
                       <TableHead className="text-xs">Status</TableHead>
                       <TableHead className="text-xs">Date & Time</TableHead>
+                      <TableHead className="text-xs text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -221,6 +237,18 @@ export default function SalesmanMyOrders() {
                             {format(new Date(order.created_at), 'dd MMM yyyy, hh:mm a')}
                           </div>
                         </TableCell>
+                        <TableCell className="text-right">
+                          {order.status === 'draft' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1"
+                              onClick={() => setSelectedBillId(order.id)}
+                            >
+                              <Pencil className="h-3 w-3" /> Edit
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -229,6 +257,20 @@ export default function SalesmanMyOrders() {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* Edit Order Modal */}
+      {selectedBillId && (
+        <DraftBillModal
+          billId={selectedBillId}
+          open={!!selectedBillId}
+          onClose={() => {
+            setSelectedBillId(null);
+            queryClient.invalidateQueries({ queryKey: ['salesman-my-orders'] });
+            queryClient.invalidateQueries({ queryKey: ['salesman-orders-all'] });
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+          }}
+        />
       )}
     </div>
   );
