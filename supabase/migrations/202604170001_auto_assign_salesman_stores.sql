@@ -2,6 +2,7 @@
 -- automatically add to salesman_stores junction table so it
 -- appears in the salesman's "My Stores" dashboard.
 
+-- BEFORE INSERT: auto-set assigned_salesman_id if the inserter is a salesman
 CREATE OR REPLACE FUNCTION public.auto_assign_salesman_to_customer()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -22,13 +23,23 @@ BEGIN
     END IF;
   END IF;
 
-  -- Auto-insert into salesman_stores so customer shows up in salesman dashboard
+  RETURN NEW;
+END;
+$$;
+
+-- AFTER INSERT: add to salesman_stores (customer row exists now, so FK is satisfied)
+CREATE OR REPLACE FUNCTION public.auto_add_salesman_store()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
   IF NEW.assigned_salesman_id IS NOT NULL THEN
     INSERT INTO public.salesman_stores (business_id, salesman_id, customer_id)
     VALUES (NEW.business_id, NEW.assigned_salesman_id, NEW.id)
     ON CONFLICT (salesman_id, customer_id) DO NOTHING;
   END IF;
-
   RETURN NEW;
 END;
 $$;
@@ -60,12 +71,19 @@ BEGIN
 END;
 $$;
 
--- Recreate the INSERT trigger (already exists, replaces the function above)
+-- Recreate the BEFORE INSERT trigger (sets assigned_salesman_id)
 DROP TRIGGER IF EXISTS trg_auto_assign_salesman ON public.customers;
 CREATE TRIGGER trg_auto_assign_salesman
   BEFORE INSERT ON public.customers
   FOR EACH ROW
   EXECUTE FUNCTION public.auto_assign_salesman_to_customer();
+
+-- AFTER INSERT trigger (adds to salesman_stores — customer row exists at this point)
+DROP TRIGGER IF EXISTS trg_auto_add_salesman_store ON public.customers;
+CREATE TRIGGER trg_auto_add_salesman_store
+  AFTER INSERT ON public.customers
+  FOR EACH ROW
+  EXECUTE FUNCTION public.auto_add_salesman_store();
 
 -- New UPDATE trigger for reassignment
 DROP TRIGGER IF EXISTS trg_auto_reassign_salesman ON public.customers;
@@ -77,6 +95,7 @@ CREATE TRIGGER trg_auto_reassign_salesman
 -- Allow salesman to insert into salesman_stores for themselves
 -- (needed as a fallback if trigger runs as SECURITY DEFINER but
 --  frontend also does a direct insert)
+DROP POLICY IF EXISTS "Salesman can insert own store assignments" ON public.salesman_stores;
 CREATE POLICY "Salesman can insert own store assignments"
   ON public.salesman_stores
   FOR INSERT

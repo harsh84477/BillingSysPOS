@@ -39,7 +39,8 @@ import { toast } from 'sonner';
 import {
   Plus, Pencil, Trash2, Users, Search, Phone, Mail,
   Download, ShoppingBag, Calendar, Eye, Printer,
-  ArrowLeft, TrendingUp, FileText, X, ChevronDown, ChevronRight
+  ArrowLeft, TrendingUp, FileText, X, ChevronDown, ChevronRight,
+  Store, MapPin, UserCheck, ExternalLink, Info,
 } from 'lucide-react';
 import { CustomerImporter } from '@/components/CustomerImporter';
 import {
@@ -130,6 +131,9 @@ export default function Customers() {
   const [billPreset, setBillPreset] = useState<DatePreset>('all');
   const [viewingBill, setViewingBill] = useState<CustomerBill | null>(null);
 
+  /* ─── detail panel state ─── */
+  const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
+
   // ── queries ──
   const { data: customers = [], isLoading } = useQuery<Customer[]>({
     queryKey: ['customers'],
@@ -158,7 +162,7 @@ export default function Customers() {
     enabled: !!selectedCustomer,
   });
 
-  // Fetch salesmen for the assignment dropdown (owner/manager only)
+  // Fetch salesmen for the assignment dropdown and table display
   const { data: salesmen = [] } = useQuery<{ id: string; full_name: string }[]>({
     queryKey: ['salesmen-list', businessId],
     queryFn: async () => {
@@ -177,8 +181,15 @@ export default function Customers() {
       if (pErr) throw pErr;
       return (profiles || []).map((p: any) => ({ id: p.user_id, full_name: p.display_name || 'Salesman' }));
     },
-    enabled: !!businessId && !isSalesman,
+    enabled: !!businessId,
   });
+
+  // Map salesman IDs to names for table display
+  const salesmanMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    salesmen.forEach(s => { map[s.id] = s.full_name; });
+    return map;
+  }, [salesmen]);
 
   // ── filtered bills (by preset) ──
   const filteredBills = useMemo(() => {
@@ -851,7 +862,7 @@ export default function Customers() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="bg-muted/40">
                     {isAdmin && (
                       <TableHead className="w-12">
                         <Checkbox
@@ -861,16 +872,20 @@ export default function Customers() {
                         />
                       </TableHead>
                     )}
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Store Type</TableHead>
-                    <TableHead className="text-right w-40">Actions</TableHead>
+                    <TableHead className="font-semibold">Store Name</TableHead>
+                    <TableHead className="font-semibold">Customer</TableHead>
+                    <TableHead className="font-semibold">Contact</TableHead>
+                    <TableHead className="font-semibold">Location</TableHead>
+                    <TableHead className="font-semibold">Store Type</TableHead>
+                    <TableHead className="font-semibold">Salesman</TableHead>
+                    <TableHead className="text-right font-semibold w-48">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCustomers.map(customer => (
-                    <TableRow key={customer.id}>
+                  {filteredCustomers.map(customer => {
+                    const assignedName = customer.assigned_salesman_id ? salesmanMap[customer.assigned_salesman_id] : null;
+                    return (
+                    <TableRow key={customer.id} className="hover:bg-muted/30 transition-colors">
                       {isAdmin && (
                         <TableCell>
                           <Checkbox
@@ -879,68 +894,313 @@ export default function Customers() {
                           />
                         </TableCell>
                       )}
+                      {/* Store Name */}
                       <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-bold">{customer.name}</span>
-                          {customer.notes && <span className="text-xs text-muted-foreground line-clamp-1 truncate max-w-[200px]">{customer.notes}</span>}
-                        </div>
+                        {customer.store_name ? (
+                          <div className="flex items-center gap-1.5">
+                            <Store className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            <span className="font-medium text-sm">{customer.store_name}</span>
+                          </div>
+                        ) : <span className="text-muted-foreground text-xs">—</span>}
                       </TableCell>
+                      {/* Customer Name */}
+                      <TableCell>
+                        <span className="font-semibold text-sm">{customer.name}</span>
+                      </TableCell>
+                      {/* Contact */}
                       <TableCell>
                         <div className="text-xs space-y-0.5">
-                          {customer.phone && <div className="text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> {customer.phone}</div>}
-                          {customer.email && <div className="text-muted-foreground flex items-center gap-1"><Mail className="h-3 w-3" /> {customer.email}</div>}
+                          {customer.phone && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Phone className="h-3 w-3 flex-shrink-0" /> {customer.phone}
+                            </div>
+                          )}
+                          {customer.email && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Mail className="h-3 w-3 flex-shrink-0" /> <span className="truncate max-w-[150px]">{customer.email}</span>
+                            </div>
+                          )}
                           {!customer.phone && !customer.email && <span className="text-muted-foreground">—</span>}
                         </div>
                       </TableCell>
+                      {/* Location */}
                       <TableCell>
                         <div className="text-xs space-y-0.5">
                           {(customer.location_name || customer.pincode) ? (
-                            <>
-                              {customer.location_name && <div className="text-muted-foreground">{customer.location_name}</div>}
-                              {customer.pincode && <div className="text-muted-foreground font-medium">{customer.pincode}</div>}
-                            </>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <MapPin className="h-3 w-3 flex-shrink-0" />
+                              <span>{[customer.location_name, customer.pincode].filter(Boolean).join(', ')}</span>
+                            </div>
                           ) : <span className="text-muted-foreground">—</span>}
                         </div>
                       </TableCell>
+                      {/* Store Type */}
                       <TableCell>
                         {customer.store_type ? (
                           <Badge variant="secondary" className="text-[10px] font-medium" style={{ background: 'var(--spos-accent-lt)', color: 'var(--spos-accent)' }}>
                             {customer.store_type}
                           </Badge>
-                        ) : <span className="text-muted-foreground">—</span>}
+                        ) : <span className="text-muted-foreground text-xs">—</span>}
                       </TableCell>
+                      {/* Salesman */}
+                      <TableCell>
+                        {assignedName ? (
+                          <div className="flex items-center gap-1.5">
+                            <UserCheck className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                            <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">{assignedName}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </TableCell>
+                      {/* Actions */}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="h-8"
-                            onClick={() => { setSelectedCustomer(customer); setBillPreset('all'); }}
+                            className="h-7 text-xs gap-1 px-2.5"
+                            onClick={() => setDetailCustomer(customer)}
                           >
-                            <FileText className="h-4 w-4 mr-1" />
-                            <span className="text-xs">Bills</span>
+                            <Eye className="h-3.5 w-3.5" />
+                            More Details
                           </Button>
                           {canEdit && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-muted-foreground"
+                              className="h-7 w-7 text-muted-foreground"
                               onClick={() => { setEditingCustomer(customer); setSelectedSalesmanId(customer.assigned_salesman_id || ''); setIsDialogOpen(true); }}
                             >
-                              <Pencil className="h-4 w-4" />
+                              <Pencil className="h-3.5 w-3.5" />
                             </Button>
                           )}
                           {isAdmin && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-destructive opacity-50 hover:opacity-100"
+                              className="h-7 w-7 text-destructive opacity-50 hover:opacity-100"
                               onClick={() => { if (confirm('Delete this customer?')) deleteMutation.mutate(customer.id); }}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           )}
                         </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ═══ Customer More Details Dialog ═══ */}
+      <CustomerDetailDialog
+        customer={detailCustomer}
+        open={!!detailCustomer}
+        onClose={() => setDetailCustomer(null)}
+        onViewBills={(c) => { setDetailCustomer(null); setSelectedCustomer(c); setBillPreset('all'); }}
+        onEdit={(c) => { setDetailCustomer(null); setEditingCustomer(c); setSelectedSalesmanId(c.assigned_salesman_id || ''); setIsDialogOpen(true); }}
+        salesmanMap={salesmanMap}
+        currencySymbol={currencySymbol}
+        businessId={businessId}
+        canEdit={canEdit}
+      />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════
+// Customer Detail Dialog Component
+// ═══════════════════════════════════════════
+function CustomerDetailDialog({ customer, open, onClose, onViewBills, onEdit, salesmanMap, currencySymbol, businessId, canEdit }: {
+  customer: Customer | null;
+  open: boolean;
+  onClose: () => void;
+  onViewBills: (c: Customer) => void;
+  onEdit: (c: Customer) => void;
+  salesmanMap: Record<string, string>;
+  currencySymbol: string;
+  businessId: string | null;
+  canEdit: boolean;
+}) {
+  // Fetch recent bills for this customer
+  const { data: recentBills = [], isLoading: loadingBills } = useQuery({
+    queryKey: ['customer-detail-bills', customer?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bills')
+        .select('id, bill_number, total_amount, status, created_at')
+        .eq('customer_id', customer!.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!customer?.id,
+  });
+
+  // Fetch total stats
+  const { data: stats } = useQuery({
+    queryKey: ['customer-detail-stats', customer?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bills')
+        .select('id, total_amount, status, created_at')
+        .eq('customer_id', customer!.id);
+      if (error) throw error;
+      const bills = data || [];
+      const completed = bills.filter(b => b.status !== 'draft' && b.status !== 'cancelled');
+      const totalSpent = completed.reduce((s, b) => s + Number(b.total_amount || 0), 0);
+      const lastBill = bills[0];
+      return { totalBills: completed.length, totalSpent, lastBillDate: lastBill?.created_at };
+    },
+    enabled: !!customer?.id,
+  });
+
+  if (!customer) return null;
+
+  const assignedName = customer.assigned_salesman_id ? salesmanMap[customer.assigned_salesman_id] : null;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Info className="h-5 w-5 text-primary" /> Customer Details
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* ── Customer Info Card ── */}
+        <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              {customer.store_name && (
+                <div className="flex items-center gap-2">
+                  <Store className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-base font-bold">{customer.store_name}</span>
+                </div>
+              )}
+              <p className={customer.store_name ? "text-sm text-muted-foreground pl-6" : "text-base font-bold"}>
+                {customer.name}
+              </p>
+            </div>
+            {customer.store_type && (
+              <Badge variant="secondary" className="text-xs font-medium" style={{ background: 'var(--spos-accent-lt)', color: 'var(--spos-accent)' }}>
+                {customer.store_type}
+              </Badge>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm pt-1">
+            {customer.phone && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                <span>{customer.phone}</span>
+              </div>
+            )}
+            {customer.email && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="truncate">{customer.email}</span>
+              </div>
+            )}
+            {(customer.location_name || customer.pincode) && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5 flex-shrink-0" />
+                <span>{[customer.location_name, customer.pincode].filter(Boolean).join(', ')}</span>
+              </div>
+            )}
+            {customer.address && (
+              <div className="flex items-start gap-2 text-muted-foreground col-span-2">
+                <MapPin className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                <span>{customer.address}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Salesman assignment */}
+          <div className="flex items-center gap-2 pt-1 border-t border-border mt-2">
+            <UserCheck className={`h-4 w-4 ${assignedName ? 'text-emerald-500' : 'text-muted-foreground/40'}`} />
+            {assignedName ? (
+              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Assigned to {assignedName}</span>
+            ) : (
+              <span className="text-sm text-muted-foreground">No salesman assigned</span>
+            )}
+          </div>
+
+          {customer.notes && (
+            <div className="text-xs text-muted-foreground bg-background rounded-lg p-2 border">
+              <span className="font-semibold">Notes:</span> {customer.notes}
+            </div>
+          )}
+
+          <div className="text-[11px] text-muted-foreground">
+            Added on {format(new Date(customer.created_at), 'dd MMM yyyy, hh:mm a')}
+          </div>
+        </div>
+
+        {/* ── KPI Summary ── */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-xl border p-3 text-center">
+            <p className="text-xl font-black text-primary">{stats?.totalBills ?? '—'}</p>
+            <p className="text-[11px] text-muted-foreground font-medium">Total Orders</p>
+          </div>
+          <div className="rounded-xl border p-3 text-center">
+            <p className="text-xl font-black text-emerald-600">{currencySymbol}{(stats?.totalSpent ?? 0).toLocaleString('en-IN')}</p>
+            <p className="text-[11px] text-muted-foreground font-medium">Total Spent</p>
+          </div>
+          <div className="rounded-xl border p-3 text-center">
+            <p className="text-xl font-black">{stats?.lastBillDate ? format(new Date(stats.lastBillDate), 'dd MMM') : '—'}</p>
+            <p className="text-[11px] text-muted-foreground font-medium">Last Purchase</p>
+          </div>
+        </div>
+
+        {/* ── Recent Purchases ── */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-semibold flex items-center gap-1.5">
+              <ShoppingBag className="h-4 w-4" /> Recent Purchases
+            </h4>
+            {recentBills.length > 0 && (
+              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => onViewBills(customer)}>
+                View All <ChevronRight className="h-3 w-3 ml-0.5" />
+              </Button>
+            )}
+          </div>
+          {loadingBills ? (
+            <div className="space-y-2">
+              {[1,2,3].map(i => <Skeleton key={i} className="h-10 rounded-lg" />)}
+            </div>
+          ) : recentBills.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground text-sm border rounded-lg">
+              <ShoppingBag className="h-8 w-8 mx-auto mb-2 opacity-20" />
+              No purchases yet
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40">
+                    <TableHead className="text-xs py-2">Bill #</TableHead>
+                    <TableHead className="text-xs py-2">Date</TableHead>
+                    <TableHead className="text-xs text-right py-2">Amount</TableHead>
+                    <TableHead className="text-xs py-2">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentBills.map((bill: any) => (
+                    <TableRow key={bill.id}>
+                      <TableCell className="text-xs font-mono py-2">{bill.bill_number}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground py-2">{format(new Date(bill.created_at), 'dd MMM yy, hh:mm a')}</TableCell>
+                      <TableCell className="text-xs text-right font-semibold py-2">{currencySymbol}{Number(bill.total_amount).toLocaleString('en-IN')}</TableCell>
+                      <TableCell className="py-2">
+                        <Badge variant={bill.status === 'completed' ? 'default' : bill.status === 'draft' ? 'secondary' : 'outline'} className="text-[10px]">
+                          {bill.status}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -948,8 +1208,20 @@ export default function Customers() {
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+
+        {/* ── Action Buttons ── */}
+        <div className="flex gap-2 pt-1">
+          <Button variant="outline" className="flex-1" onClick={() => onViewBills(customer)}>
+            <FileText className="h-4 w-4 mr-1.5" /> View All Bills
+          </Button>
+          {canEdit && (
+            <Button className="flex-1" onClick={() => onEdit(customer)}>
+              <Pencil className="h-4 w-4 mr-1.5" /> Edit Customer
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
