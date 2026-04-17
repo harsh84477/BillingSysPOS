@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +25,7 @@ import {
   Users,
   Loader2,
   ChevronRight,
+  PackagePlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -55,10 +56,34 @@ export function MobileQuickBilling() {
   const [billLayout] = useState<'grid' | 'list'>(() =>
     (localStorage.getItem('salesman_bill_layout') as 'grid' | 'list') || 'grid'
   );
+  const [askQuantityFirst] = useState<boolean>(() =>
+    localStorage.getItem('salesman_ask_quantity_first') === 'true'
+  );
 
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
   const [quantityDialogProduct, setQuantityDialogProduct] = useState<any>(null);
   const [quantityValue, setQuantityValue] = useState('1');
+
+  // Long-press support for grid view
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFired = useRef(false);
+
+  const handleLongPressStart = useCallback((product: any) => {
+    longPressFired.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressFired.current = true;
+      setQuantityDialogProduct(product);
+      setQuantityValue('1');
+      setQuantityDialogOpen(true);
+    }, 500);
+  }, []);
+
+  const handleLongPressEnd = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
 
   const { data: products = [] as any[], isLoading: productsLoading } = useQuery({
     queryKey: ['products'],
@@ -106,13 +131,19 @@ export function MobileQuickBilling() {
   };
 
   const handleProductClick = (product: any) => {
-    if (billLayout === 'list' || settings?.ask_quantity_first) {
+    if (askQuantityFirst) {
       setQuantityDialogProduct(product);
       setQuantityValue('1');
       setQuantityDialogOpen(true);
     } else {
       addToCart(product);
     }
+  };
+
+  const handleGridProductClick = (product: any) => {
+    // If long-press already fired, do nothing (quantity dialog opened)
+    if (longPressFired.current) return;
+    handleProductClick(product);
   };
 
   const confirmQuantityDialog = () => {
@@ -241,10 +272,15 @@ export function MobileQuickBilling() {
                     <Card
                       key={product.id}
                       className={cn(
-                        "cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-95",
+                        "cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-95 select-none",
                         available <= 0 && "opacity-40 pointer-events-none"
                       )}
-                      onClick={() => handleProductClick(product)}
+                      onClick={() => handleGridProductClick(product)}
+                      onMouseDown={() => handleLongPressStart(product)}
+                      onMouseUp={handleLongPressEnd}
+                      onMouseLeave={handleLongPressEnd}
+                      onTouchStart={() => handleLongPressStart(product)}
+                      onTouchEnd={handleLongPressEnd}
                     >
                       <CardContent className="p-0">
                         <div className="h-24 bg-muted/40 flex items-center justify-center relative">
@@ -418,16 +454,17 @@ export function MobileQuickBilling() {
                     const isLow = available <= product.low_stock_threshold;
                     const inCart = cart.find(i => i.product_id === product.id);
                     return (
-                      <button
+                      <div
                         key={product.id}
                         className={cn(
-                          "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg border border-border/50 bg-card text-left active:scale-[0.98] transition-transform",
+                          "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg border border-border/50 bg-card text-left transition-all",
                           available <= 0 && "opacity-30 pointer-events-none",
                           inCart && "ring-2 ring-primary/40"
                         )}
-                        onClick={() => handleProductClick(product)}
                       >
-                        <div className="h-9 w-9 rounded-lg bg-muted/30 flex items-center justify-center shrink-0 relative">
+                        <div className="h-9 w-9 rounded-lg bg-muted/30 flex items-center justify-center shrink-0 relative cursor-pointer active:scale-95 transition-transform"
+                          onClick={() => handleProductClick(product)}
+                        >
                           <Package className="w-4 h-4 text-muted-foreground/15" />
                           {inCart && (
                             <span className="absolute -top-1 -left-1 bg-primary text-primary-foreground text-[8px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center">
@@ -435,14 +472,36 @@ export function MobileQuickBilling() {
                             </span>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleProductClick(product)}>
                           <p className="text-[11px] font-medium leading-tight line-clamp-1">{product.name}</p>
                           <p className={cn("text-[9px] font-medium", isLow ? "text-red-500" : "text-muted-foreground/60")}>
-                            {available} left {isLow && available > 0 ? '· LOW' : ''}
+                            ₹{product.selling_price} · {available} left {isLow && available > 0 ? '· LOW' : ''}
                           </p>
                         </div>
-                        <p className="text-primary font-bold text-xs shrink-0">₹{product.selling_price}</p>
-                      </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-[10px] font-bold rounded-md gap-0.5"
+                            onClick={(e) => { e.stopPropagation(); addToCart(product, 1); }}
+                          >
+                            <Plus className="h-3 w-3" /> 1
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-[10px] font-bold rounded-md gap-0.5"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setQuantityDialogProduct(product);
+                              setQuantityValue(String(product.case_quantity || 12));
+                              setQuantityDialogOpen(true);
+                            }}
+                          >
+                            <PackagePlus className="h-3 w-3" /> Case
+                          </Button>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -456,11 +515,16 @@ export function MobileQuickBilling() {
                       <button
                         key={product.id}
                         className={cn(
-                          "relative rounded-xl overflow-hidden bg-card border border-border/50 text-left active:scale-95 transition-transform",
+                          "relative rounded-xl overflow-hidden bg-card border border-border/50 text-left active:scale-95 transition-transform select-none",
                           available <= 0 && "opacity-30 pointer-events-none",
                           inCart && "ring-2 ring-primary/40"
                         )}
-                        onClick={() => handleProductClick(product)}
+                        onClick={() => handleGridProductClick(product)}
+                        onMouseDown={() => handleLongPressStart(product)}
+                        onMouseUp={handleLongPressEnd}
+                        onMouseLeave={handleLongPressEnd}
+                        onTouchStart={() => handleLongPressStart(product)}
+                        onTouchEnd={handleLongPressEnd}
                       >
                         <div className="h-16 bg-muted/30 flex items-center justify-center relative">
                           <Package className="w-6 h-6 text-muted-foreground/10" />
@@ -732,27 +796,36 @@ export function MobileQuickBilling() {
 
       {/* ── Quantity Dialog ── */}
       <Dialog open={quantityDialogOpen} onOpenChange={setQuantityDialogOpen}>
-        <DialogContent className="max-w-[280px] rounded-2xl p-5">
+        <DialogContent className="max-w-[300px] w-[calc(100%-2rem)] mx-auto rounded-2xl p-5">
           <DialogHeader>
             <DialogTitle className="text-center text-sm font-bold">Set Quantity</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2 text-center">
-            <p className="text-xs text-muted-foreground">{quantityDialogProduct?.name}</p>
+            <p className="text-xs text-muted-foreground line-clamp-1">{quantityDialogProduct?.name}</p>
+            <p className="text-primary font-bold text-sm">₹{quantityDialogProduct?.selling_price}</p>
             <Input
               type="number"
               value={quantityValue}
               onChange={(e) => setQuantityValue(e.target.value)}
               className="text-2xl h-14 text-center font-bold rounded-xl"
               autoFocus
+              min={1}
               onKeyDown={(e) => e.key === 'Enter' && confirmQuantityDialog()}
             />
-            <div className="grid grid-cols-3 gap-2">
-              {[1, 5, 10].map(q => (
-                <Button key={q} variant="outline" size="sm" className="rounded-lg" onClick={() => setQuantityValue(q.toString())}>+{q}</Button>
+            <div className="grid grid-cols-4 gap-1.5">
+              {[1, 5, 10, 12].map(q => (
+                <Button key={q} variant="outline" size="sm" className="rounded-lg text-xs font-bold h-8" onClick={() => setQuantityValue(q.toString())}>{q}</Button>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {[24, 48, 100].map(q => (
+                <Button key={q} variant="outline" size="sm" className="rounded-lg text-xs font-bold h-8" onClick={() => setQuantityValue(q.toString())}>{q}</Button>
               ))}
             </div>
           </div>
-          <Button className="w-full h-10 rounded-xl font-bold text-sm" onClick={confirmQuantityDialog}>Add to Cart</Button>
+          <Button className="w-full h-11 rounded-xl font-bold text-sm" onClick={confirmQuantityDialog} disabled={!quantityValue || Number(quantityValue) < 1}>
+            <Plus className="h-4 w-4 mr-1.5" /> Add {quantityValue || 0} to Cart
+          </Button>
         </DialogContent>
       </Dialog>
     </div>
