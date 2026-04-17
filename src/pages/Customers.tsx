@@ -650,7 +650,7 @@ export default function Customers() {
                   <span className="sm:hidden">Add</span>
                 </Button>
               </DialogTrigger>
-            <DialogContent className="max-w-md mx-4">
+            <DialogContent className="max-w-md mx-auto max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingCustomer ? 'Edit Customer' : 'Add Customer'}</DialogTitle>
               </DialogHeader>

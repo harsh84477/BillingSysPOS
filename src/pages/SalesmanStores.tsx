@@ -43,6 +43,7 @@ export default function SalesmanStores() {
   const [newStoreName, setNewStoreName] = useState('');
   const [newCustName, setNewCustName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
+  const [newCustEmail, setNewCustEmail] = useState('');
   const [newCustAddress, setNewCustAddress] = useState('');
   const [newCustStoreType, setNewCustStoreType] = useState('');
   const [newCustLocation, setNewCustLocation] = useState('');
@@ -124,7 +125,7 @@ export default function SalesmanStores() {
           <p className="text-sm text-muted-foreground">{stores.length} store{stores.length !== 1 ? 's' : ''} assigned to you</p>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => { setShowAddCustomer(true); setNewStoreName(''); setNewCustName(''); setNewCustPhone(''); setNewCustAddress(''); setNewCustStoreType(''); setNewCustLocation(''); setNewCustPincode(''); }} className="gap-1">
+          <Button size="sm" onClick={() => { setShowAddCustomer(true); setNewStoreName(''); setNewCustName(''); setNewCustPhone(''); setNewCustEmail(''); setNewCustAddress(''); setNewCustStoreType(''); setNewCustLocation(''); setNewCustPincode(''); }} className="gap-1">
             <Plus className="h-4 w-4" /> Add Customer
           </Button>
           <Button variant="outline" size="sm" onClick={() => navigate('/salesman-billing')} className="gap-1">
@@ -310,7 +311,7 @@ export default function SalesmanStores() {
 
       {/* ─── Add Customer Dialog ─── */}
       <Dialog open={showAddCustomer} onOpenChange={setShowAddCustomer}>
-        <DialogContent className="max-w-md mx-4">
+        <DialogContent className="max-w-md w-[calc(100%-2rem)] mx-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5 text-emerald-500" /> Add Customer
@@ -324,6 +325,7 @@ export default function SalesmanStores() {
               const { data: newCust, error } = await (supabase.from('customers') as any).insert({
                 name: newCustName.trim(),
                 phone: newCustPhone || null,
+                email: newCustEmail.trim() || null,
                 store_name: newStoreName.trim() || null,
                 store_type: newCustStoreType || null,
                 address: newCustAddress || null,
@@ -366,16 +368,20 @@ export default function SalesmanStores() {
                 <Input type="tel" placeholder="10 digit number" value={newCustPhone} onChange={e => setNewCustPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} maxLength={10} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold">Store Type</Label>
-                <Input placeholder="e.g. Kirana" value={newCustStoreType} onChange={e => setNewCustStoreType(e.target.value)} list="store-types-salesman" />
-                <datalist id="store-types-salesman">
-                  <option value="Wholesale Store" />
-                  <option value="General Store" />
-                  <option value="Kirana Store" />
-                  <option value="Medical Store" />
-                  <option value="Retail Store" />
-                </datalist>
+                <Label className="text-xs font-bold">Email</Label>
+                <Input type="email" placeholder="e.g. shop@email.com" value={newCustEmail} onChange={e => setNewCustEmail(e.target.value)} />
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Store Type</Label>
+              <Input placeholder="e.g. Kirana" value={newCustStoreType} onChange={e => setNewCustStoreType(e.target.value)} list="store-types-salesman" />
+              <datalist id="store-types-salesman">
+                <option value="Wholesale Store" />
+                <option value="General Store" />
+                <option value="Kirana Store" />
+                <option value="Medical Store" />
+                <option value="Retail Store" />
+              </datalist>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-bold">Address</Label>
