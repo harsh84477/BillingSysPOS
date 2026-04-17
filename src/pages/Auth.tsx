@@ -100,15 +100,16 @@ export default function Auth() {
   const [selectedRole, setSelectedRole] = useState<SelectedRole>(null);
   const [joinCode, setJoinCode] = useState('');
   const [joinCodeVerified, setJoinCodeVerified] = useState(false);
-  const { signIn, signUp, signInWithGoogle, user, loading } = useAuth();
+  const { signIn, signUp, signInWithGoogle, user, loading, userRole } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect to dashboard once authenticated (handles OAuth callback returning to this page)
+  // Redirect to appropriate dashboard once authenticated
   React.useEffect(() => {
     if (!loading && user) {
-      navigate('/dashboard', { replace: true });
+      const target = userRole === 'salesman' ? '/salesman-dashboard' : '/dashboard';
+      navigate(target, { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, userRole, navigate]);
 
   const handleRoleSelect = (role: SelectedRole) => {
     setSelectedRole(role);

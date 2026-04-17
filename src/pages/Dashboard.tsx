@@ -115,6 +115,14 @@ function KPICard({
 export default function Dashboard() {
   const { user, isSuperAdmin, isSalesman, userRole, isAdmin, isManager, businessId } = useAuth();
   const navigate = useNavigate();
+
+  // Salesmen should never see the owner dashboard
+  React.useEffect(() => {
+    if (isSalesman) {
+      navigate('/salesman-dashboard', { replace: true });
+    }
+  }, [isSalesman, navigate]);
+
   const [selectedDraftBillId, setSelectedDraftBillId] = useState<string | null>(null);
   const { profitSummary, isSummaryLoading } = useExpenseTracking(businessId);
 

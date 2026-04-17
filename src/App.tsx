@@ -31,7 +31,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AppLayout from "@/components/layout/AppLayout";
@@ -225,6 +225,13 @@ class ErrorBoundary extends React.Component<
   }
 }
 
+// Role-aware home redirect
+function HomeRedirect() {
+  const { userRole } = useAuth();
+  const target = userRole === 'salesman' ? '/salesman-dashboard' : '/dashboard';
+  return <Navigate to={target} replace />;
+}
+
 const App = () => (
   <ErrorBoundary>
   <PersistQueryClientProvider
@@ -261,7 +268,7 @@ const App = () => (
                   </ProtectedRoute>
                 }
               >
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/" element={<HomeRedirect />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/billing" element={<Billing />} />
                 <Route path="/bills-history" element={<BillsHistory />} />
