@@ -47,6 +47,8 @@ import {
     FileText,
     Clock,
     AlertCircle,
+    Pencil,
+    Save,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -56,6 +58,8 @@ interface DraftBillModalProps {
     billId: string | null;
     open: boolean;
     onClose: () => void;
+    /** 'draft' = owner/manager full draft view, 'edit-order' = salesman edit pending order */
+    mode?: 'draft' | 'edit-order';
 }
 
 interface DraftItem {
@@ -68,12 +72,13 @@ interface DraftItem {
     total_price: number;
 }
 
-export default function DraftBillModal({ billId, open, onClose }: DraftBillModalProps) {
+export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }: DraftBillModalProps) {
     const { user, isAdmin, isManager, isSalesman, businessId } = useAuth();
     const { data: settings } = useBusinessSettings();
     const queryClient = useQueryClient();
     const currencySymbol = settings?.currency_symbol || '₹';
     const canFinalize = isAdmin || isManager;
+    const isEditOrderMode = mode === 'edit-order';
 
     const [items, setItems] = useState<DraftItem[]>([]);
     const [customerId, setCustomerId] = useState<string | null>(null);
@@ -464,32 +469,41 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                     {/* Header */}
                     <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 border-b space-y-1.5">
                         <DialogTitle className="flex items-center gap-2 text-lg">
-                            <FileText className="h-5 w-5 text-primary" />
-                            Draft Order
+                            {isEditOrderMode ? (
+                                <Pencil className="h-5 w-5 text-primary" />
+                            ) : (
+                                <FileText className="h-5 w-5 text-primary" />
+                            )}
+                            {isEditOrderMode ? 'Edit Order' : 'Draft Order'}
                             {billData?.bill_number && (
                                 <Badge variant="outline" className="ml-2 font-mono text-xs">
                                     {billData.bill_number}
                                 </Badge>
                             )}
                             {isDraft && (
-                                <Badge className="ml-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px]">
-                                    DRAFT
+                                <Badge className={cn(
+                                    "ml-1 text-[10px]",
+                                    isEditOrderMode
+                                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                )}>
+                                    {isEditOrderMode ? 'PENDING' : 'DRAFT'}
                                 </Badge>
                             )}
                         </DialogTitle>
                         {billData && (
                             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                                {billData.salesman_name && (
+                                {billData.customers?.name && (
                                     <span className="flex items-center gap-1">
-                                        <User className="h-3 w-3" /> {billData.salesman_name}
+                                        <User className="h-3 w-3" /> {billData.customers.name}
                                     </span>
                                 )}
                                 <span className="flex items-center gap-1">
-                                    <Clock className="h-3 w-3" /> {format(new Date(billData.created_at), 'dd/MM/yyyy HH:mm')}
+                                    <Clock className="h-3 w-3" /> {format(new Date(billData.created_at), 'dd MMM yyyy, hh:mm a')}
                                 </span>
-                                {billData.customers?.name && (
+                                {!isEditOrderMode && billData.salesman_name && (
                                     <span className="flex items-center gap-1">
-                                        <User className="h-3 w-3" /> Customer: {billData.customers.name}
+                                        <User className="h-3 w-3" /> {billData.salesman_name}
                                     </span>
                                 )}
                             </div>
@@ -502,8 +516,8 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                         </div>
                     ) : (
                         <>
-                            {/* Customer selector — always visible at top */}
-                            {canFinalize && (
+                            {/* Customer selector — admin/manager get full dropdown, salesman sees read-only */}
+                            {canFinalize && !isEditOrderMode && (
                                 <div className="px-4 sm:px-6 pt-3 pb-1">
                                     <Label className="text-xs text-muted-foreground mb-1 block">Customer</Label>
                                     <Select
@@ -709,8 +723,8 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                                     </div>
                                 </div>
 
-                                {/* Discount input (admin/manager only) */}
-                                {canFinalize && (
+                                {/* Discount input (admin/manager only, not in edit-order mode) */}
+                                {canFinalize && !isEditOrderMode && (
                                     <div className="flex items-center gap-2">
                                         <Label className="text-xs whitespace-nowrap">Discount:</Label>
                                         <Input
@@ -791,66 +805,89 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                                 )}
 
                                 {/* Action buttons */}
-                                <div className="flex flex-wrap gap-2">
-                                    {/* Cancel Draft */}
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                                        onClick={() => setConfirmCancel(true)}
-                                        disabled={isBusy}
-                                    >
-                                        <XCircle className="h-3.5 w-3.5 mr-1" />
-                                        Cancel Draft
-                                    </Button>
-
-                                    <div className="flex-1" />
-
-                                    {/* Save Changes */}
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => updateDraftMutation.mutate()}
-                                        disabled={isBusy || items.length === 0}
-                                    >
-                                        Save Changes
-                                    </Button>
-
-                                    {/* Finalize (admin/manager only) */}
-                                    {canFinalize && !confirmFinalize && (
+                                {isEditOrderMode ? (
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="flex-1"
+                                            onClick={onClose}
+                                            disabled={isBusy}
+                                        >
+                                            Cancel
+                                        </Button>
                                         <Button
                                             size="sm"
-                                            className="bg-green-600 hover:bg-green-700 text-white"
-                                            onClick={() => setConfirmFinalize(true)}
+                                            className="flex-1 gap-1.5"
+                                            onClick={() => updateDraftMutation.mutate()}
                                             disabled={isBusy || items.length === 0}
                                         >
-                                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                                            Finalize Bill
+                                            <Save className="h-3.5 w-3.5" />
+                                            {updateDraftMutation.isPending ? 'Saving...' : 'Save Changes'}
                                         </Button>
-                                    )}
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-wrap gap-2">
+                                        {/* Cancel Draft */}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                                            onClick={() => setConfirmCancel(true)}
+                                            disabled={isBusy}
+                                        >
+                                            <XCircle className="h-3.5 w-3.5 mr-1" />
+                                            Cancel Draft
+                                        </Button>
 
-                                    {canFinalize && confirmFinalize && (
-                                        <>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => setConfirmFinalize(false)}
-                                                disabled={isBusy}
-                                            >
-                                                Back
-                                            </Button>
+                                        <div className="flex-1" />
+
+                                        {/* Save Changes */}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => updateDraftMutation.mutate()}
+                                            disabled={isBusy || items.length === 0}
+                                        >
+                                            Save Changes
+                                        </Button>
+
+                                        {/* Finalize (admin/manager only) */}
+                                        {canFinalize && !confirmFinalize && (
                                             <Button
                                                 size="sm"
                                                 className="bg-green-600 hover:bg-green-700 text-white"
-                                                onClick={() => finalizeDraftMutation.mutate()}
+                                                onClick={() => setConfirmFinalize(true)}
                                                 disabled={isBusy || items.length === 0}
                                             >
                                                 <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                                                {finalizeDraftMutation.isPending ? 'Finalizing...' : 'Confirm & Finalize'}
+                                                Finalize Bill
                                             </Button>
-                                        </>
-                                    )}
-                                </div>
+                                        )}
+
+                                        {canFinalize && confirmFinalize && (
+                                            <>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setConfirmFinalize(false)}
+                                                    disabled={isBusy}
+                                                >
+                                                    Back
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                                    onClick={() => finalizeDraftMutation.mutate()}
+                                                    disabled={isBusy || items.length === 0}
+                                                >
+                                                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                                                    {finalizeDraftMutation.isPending ? 'Finalizing...' : 'Confirm & Finalize'}
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </>
                     )}
@@ -863,10 +900,10 @@ export default function DraftBillModal({ billId, open, onClose }: DraftBillModal
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
                             <AlertCircle className="h-5 w-5 text-destructive" />
-                            Cancel Draft Order?
+                            Cancel {isEditOrderMode ? 'Order' : 'Draft Order'}?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will cancel the draft and restore all reserved stock. This action cannot be undone.
+                            This will cancel the {isEditOrderMode ? 'order' : 'draft'} and restore all reserved stock. This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
