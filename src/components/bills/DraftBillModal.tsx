@@ -248,6 +248,18 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
         setItems(prev => prev.filter((_, i) => i !== index));
     };
 
+    // Set item price with cost-price warning
+    const setItemPrice = (index: number, newPrice: number) => {
+        setItems(prev => prev.map((item, i) => {
+            if (i !== index) return item;
+            const price = Math.max(0, newPrice);
+            if (price > 0 && price < item.cost_price) {
+                toast.warning(`Price ₹${price.toFixed(2)} is below cost price ₹${item.cost_price.toFixed(2)} for ${item.product_name}`, { duration: 4000 });
+            }
+            return { ...item, unit_price: price, total_price: price * item.quantity };
+        }));
+    };
+
     // Add product
     const addProduct = (product: any) => {
         const existingIndex = items.findIndex(i => i.product_id === product.id);
@@ -566,12 +578,27 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
                                                             <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
                                                             <div className="min-w-0">
                                                                 <span className="text-xs sm:text-sm font-medium truncate block">{item.product_name}</span>
-                                                                <span className="text-[10px] text-muted-foreground sm:hidden">{currencySymbol}{item.unit_price.toFixed(2)}</span>
+                                                                <div className="sm:hidden flex items-center gap-0.5">
+                                                                    <span className="text-[10px] text-muted-foreground">{currencySymbol}</span>
+                                                                    <Input
+                                                                        type="number"
+                                                                        value={item.unit_price}
+                                                                        onChange={(e) => setItemPrice(index, Number(e.target.value) || 0)}
+                                                                        className="h-5 w-14 text-[10px] text-muted-foreground px-0.5 border-dashed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                                        disabled={isBusy}
+                                                                    />
+                                                                </div>
                                                             </div>
                                                         </div>
 
-                                                        <div className="hidden sm:block sm:col-span-2 text-right text-sm text-muted-foreground">
-                                                            {currencySymbol}{item.unit_price.toFixed(2)}
+                                                        <div className="hidden sm:block sm:col-span-2 text-right">
+                                                            <Input
+                                                                type="number"
+                                                                value={item.unit_price}
+                                                                onChange={(e) => setItemPrice(index, Number(e.target.value) || 0)}
+                                                                className="h-7 w-full text-right text-sm px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                                disabled={isBusy}
+                                                            />
                                                         </div>
 
                                                         <div className="col-span-4 sm:col-span-4 flex items-center justify-center gap-0.5 sm:gap-1">

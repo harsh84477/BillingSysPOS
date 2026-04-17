@@ -184,6 +184,19 @@ export function MobileQuickBilling() {
     ));
   };
 
+  const updatePrice = (productId: string, newPrice: number) => {
+    const item = cart.find(i => i.product_id === productId);
+    const price = Math.max(0, newPrice);
+    if (item && price > 0 && price < item.cost_price) {
+      toast.warning(`Price ₹${price.toFixed(2)} is below cost price ₹${item.cost_price.toFixed(2)} for ${item.product_name}`, { duration: 4000 });
+    }
+    setCart(cart.map(i =>
+      i.product_id === productId
+        ? { ...i, unit_price: price }
+        : i
+    ));
+  };
+
   // Mutation to generate a new order via RPC (creates bill + bill_items + reserves stock)
   const generateOrderMutation = useMutation({
     mutationFn: async () => {
@@ -346,7 +359,16 @@ export function MobileQuickBilling() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm leading-tight truncate">{item.product_name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">₹{item.unit_price} × {item.quantity} = <span className="text-primary font-semibold">₹{(item.unit_price * item.quantity).toFixed(0)}</span></p>
+                      <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
+                        <span>₹</span>
+                        <Input
+                          type="number"
+                          value={item.unit_price}
+                          onChange={(e) => updatePrice(item.product_id, Number(e.target.value) || 0)}
+                          className="h-5 w-16 text-xs px-1 border-dashed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        />
+                        <span>× {item.quantity} = <span className="text-primary font-semibold">₹{(item.unit_price * item.quantity).toFixed(0)}</span></span>
+                      </div>
                     </div>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground/40 hover:text-destructive" onClick={() => removeFromCart(item.product_id)}>
                       <X className="w-3.5 h-3.5" />
@@ -600,9 +622,16 @@ export function MobileQuickBilling() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm leading-tight truncate">{item.product_name}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            ₹{item.unit_price} × {item.quantity} = <span className="text-primary font-semibold">₹{(item.unit_price * item.quantity).toFixed(0)}</span>
-                          </p>
+                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <span>₹</span>
+                            <Input
+                              type="number"
+                              value={item.unit_price}
+                              onChange={(e) => updatePrice(item.product_id, Number(e.target.value) || 0)}
+                              className="h-5 w-14 text-[11px] px-0.5 border-dashed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            />
+                            <span>× {item.quantity} = <span className="text-primary font-semibold">₹{(item.unit_price * item.quantity).toFixed(0)}</span></span>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="flex items-center gap-1 bg-muted/30 rounded-md px-1 py-0.5">

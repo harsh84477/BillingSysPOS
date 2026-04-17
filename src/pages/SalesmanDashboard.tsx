@@ -12,7 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
 import {
   ShoppingCart, Store, Target, TrendingUp, IndianRupee,
   FileText, MapPin, ArrowRight, Plus, Clock,
@@ -143,10 +142,27 @@ export default function SalesmanDashboard() {
   );
   const monthBillCount = monthBills.filter((b: any) => b.status !== 'draft').length;
 
+  const monthFinalizedAmount = useMemo(() =>
+    monthBills.filter((b: any) => b.status === 'completed').reduce((s: number, b: any) => s + Number(b.total_amount || 0), 0),
+    [monthBills]
+  );
+  const monthPendingAmount = useMemo(() =>
+    monthBills.filter((b: any) => b.status === 'draft').reduce((s: number, b: any) => s + Number(b.total_amount || 0), 0),
+    [monthBills]
+  );
+  const monthFinalizedCount = monthBills.filter((b: any) => b.status === 'completed').length;
+  const monthPendingCount = monthBills.filter((b: any) => b.status === 'draft').length;
+
   const targetAmount = Number(currentTarget?.target_amount || 0);
   const targetBills = Number(currentTarget?.target_bills || 0);
+  const totalAmountForTarget = monthFinalizedAmount + monthPendingAmount;
+  const totalBillsForTarget = monthFinalizedCount + monthPendingCount;
   const targetProgress = targetAmount > 0 ? Math.min(100, (monthSales / targetAmount) * 100) : 0;
   const billsProgress = targetBills > 0 ? Math.min(100, (monthBillCount / targetBills) * 100) : 0;
+  const finalizedAmountPct = targetAmount > 0 ? Math.min(100, (monthFinalizedAmount / targetAmount) * 100) : 0;
+  const pendingAmountPct = targetAmount > 0 ? Math.min(100, (monthPendingAmount / targetAmount) * 100) : 0;
+  const finalizedBillsPct = targetBills > 0 ? Math.min(100, (monthFinalizedCount / targetBills) * 100) : 0;
+  const pendingBillsPct = targetBills > 0 ? Math.min(100, (monthPendingCount / targetBills) * 100) : 0;
 
   const greeting = (() => {
     const h = today.getHours();
@@ -208,27 +224,51 @@ export default function SalesmanDashboard() {
               </span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
+            {/* Amount progress */}
             <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-muted-foreground">Sales Amount</span>
-                <span className="font-semibold">{cs}{monthSales.toLocaleString('en-IN')} / {cs}{targetAmount.toLocaleString('en-IN')}</span>
+              <div className="flex justify-between text-sm mb-1.5">
+                <span className="text-muted-foreground font-medium">Amount</span>
+                <span className="font-semibold">{cs}{totalAmountForTarget.toLocaleString('en-IN')} / {cs}{targetAmount.toLocaleString('en-IN')}</span>
               </div>
-              <Progress value={targetProgress} className="h-3" />
+              <div className="h-3 rounded-full bg-muted overflow-hidden flex">
+                <div className="bg-primary h-full rounded-l-full transition-all duration-500" style={{ width: `${finalizedAmountPct}%` }} />
+                <div className="bg-muted-foreground/30 h-full transition-all duration-500" style={{ width: `${pendingAmountPct}%` }} />
+              </div>
+              <div className="flex gap-4 mt-1.5 text-xs">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-primary inline-block" />
+                  Finalized: {cs}{monthFinalizedAmount.toLocaleString('en-IN')}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/30 inline-block" />
+                  Pending: {cs}{monthPendingAmount.toLocaleString('en-IN')}
+                </span>
+              </div>
             </div>
+            {/* Bills progress */}
             {targetBills > 0 && (
               <div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-muted-foreground">Bills Count</span>
-                  <span className="font-semibold">{monthBillCount} / {targetBills}</span>
+                <div className="flex justify-between text-sm mb-1.5">
+                  <span className="text-muted-foreground font-medium">Bills</span>
+                  <span className="font-semibold">{totalBillsForTarget} / {targetBills}</span>
                 </div>
-                <Progress value={billsProgress} className="h-3" />
+                <div className="h-3 rounded-full bg-muted overflow-hidden flex">
+                  <div className="bg-primary h-full rounded-l-full transition-all duration-500" style={{ width: `${finalizedBillsPct}%` }} />
+                  <div className="bg-muted-foreground/30 h-full transition-all duration-500" style={{ width: `${pendingBillsPct}%` }} />
+                </div>
+                <div className="flex gap-4 mt-1.5 text-xs">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-primary inline-block" />
+                    Finalized: {monthFinalizedCount}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/30 inline-block" />
+                    Pending: {monthPendingCount}
+                  </span>
+                </div>
               </div>
             )}
-            <div className="flex justify-between text-xs text-muted-foreground pt-1">
-              <span>Remaining: {cs}{Math.max(0, targetAmount - monthSales).toLocaleString('en-IN')}</span>
-              <span>{Math.round(targetProgress)}% achieved</span>
-            </div>
           </CardContent>
         </Card>
       )}
