@@ -80,6 +80,7 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
     const canFinalize = isAdmin || isManager;
     const isSalesmanBill = mode === 'edit-order' || mode === 'salesman-order';
     const isEditOrderMode = mode === 'edit-order';
+    const canEditPrice = !isSalesman || (settings?.allow_salesman_price_edit ?? false);
 
     const [items, setItems] = useState<DraftItem[]>([]);
     const [customerId, setCustomerId] = useState<string | null>(null);
@@ -89,6 +90,7 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
     const [showAddProduct, setShowAddProduct] = useState(false);
     const [confirmCancel, setConfirmCancel] = useState(false);
     const [confirmFinalize, setConfirmFinalize] = useState(false);
+    const [costPriceAlert, setCostPriceAlert] = useState<{ productName: string; costPrice: number; newPrice: number; index: number } | null>(null);
 
     // Payment fields for finalization
     const [paymentType, setPaymentType] = useState<'cash' | 'online' | 'split' | 'due'>(
@@ -248,16 +250,29 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
         setItems(prev => prev.filter((_, i) => i !== index));
     };
 
-    // Set item price with cost-price warning
+    // Set item price with cost-price alert
     const setItemPrice = (index: number, newPrice: number) => {
-        setItems(prev => prev.map((item, i) => {
-            if (i !== index) return item;
-            const price = Math.max(0, newPrice);
-            if (price > 0 && price < item.cost_price) {
-                toast.warning(`Price ₹${price.toFixed(2)} is below cost price ₹${item.cost_price.toFixed(2)} for ${item.product_name}`, { duration: 4000 });
-            }
-            return { ...item, unit_price: price, total_price: price * item.quantity };
+        const item = items[index];
+        const price = Math.max(0, newPrice);
+        if (price > 0 && price < item.cost_price) {
+            setCostPriceAlert({ productName: item.product_name, costPrice: item.cost_price, newPrice: price, index });
+            return;
+        }
+        setItems(prev => prev.map((it, i) => {
+            if (i !== index) return it;
+            return { ...it, unit_price: price, total_price: price * it.quantity };
         }));
+    };
+
+    // Confirm price below cost
+    const confirmBelowCostPrice = () => {
+        if (!costPriceAlert) return;
+        const { index, newPrice } = costPriceAlert;
+        setItems(prev => prev.map((it, i) => {
+            if (i !== index) return it;
+            return { ...it, unit_price: newPrice, total_price: newPrice * it.quantity };
+        }));
+        setCostPriceAlert(null);
     };
 
     // Add product
@@ -579,26 +594,36 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
                                                             <div className="min-w-0">
                                                                 <span className="text-xs sm:text-sm font-medium truncate block">{item.product_name}</span>
                                                                 <div className="sm:hidden flex items-center gap-0.5">
-                                                                    <span className="text-[10px] text-muted-foreground">{currencySymbol}</span>
-                                                                    <Input
-                                                                        type="number"
-                                                                        value={item.unit_price}
-                                                                        onChange={(e) => setItemPrice(index, Number(e.target.value) || 0)}
-                                                                        className="h-5 w-14 text-[10px] text-muted-foreground px-0.5 border-dashed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                                                        disabled={isBusy}
-                                                                    />
+                                                                    {canEditPrice ? (
+                                                                        <>
+                                                                            <span className="text-[10px] text-muted-foreground">{currencySymbol}</span>
+                                                                            <Input
+                                                                                type="number"
+                                                                                value={item.unit_price}
+                                                                                onChange={(e) => setItemPrice(index, Number(e.target.value) || 0)}
+                                                                                className="h-5 w-14 text-[10px] text-muted-foreground px-0.5 border-dashed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                                                disabled={isBusy}
+                                                                            />
+                                                                        </>
+                                                                    ) : (
+                                                                        <span className="text-[10px] text-muted-foreground">{currencySymbol}{item.unit_price.toFixed(2)}</span>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
 
                                                         <div className="hidden sm:block sm:col-span-2 text-right">
-                                                            <Input
-                                                                type="number"
-                                                                value={item.unit_price}
-                                                                onChange={(e) => setItemPrice(index, Number(e.target.value) || 0)}
-                                                                className="h-7 w-full text-right text-sm px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                                                disabled={isBusy}
-                                                            />
+                                                            {canEditPrice ? (
+                                                                <Input
+                                                                    type="number"
+                                                                    value={item.unit_price}
+                                                                    onChange={(e) => setItemPrice(index, Number(e.target.value) || 0)}
+                                                                    className="h-7 w-full text-right text-sm px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                                    disabled={isBusy}
+                                                                />
+                                                            ) : (
+                                                                <span className="text-sm text-muted-foreground">{currencySymbol}{item.unit_price.toFixed(2)}</span>
+                                                            )}
                                                         </div>
 
                                                         <div className="col-span-4 sm:col-span-4 flex items-center justify-center gap-0.5 sm:gap-1">
@@ -945,6 +970,31 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
                             disabled={isBusy}
                         >
                             {cancelDraftMutation.isPending ? 'Cancelling...' : 'Yes, Cancel Draft'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Cost price warning */}
+            <AlertDialog open={!!costPriceAlert} onOpenChange={(v) => !v && setCostPriceAlert(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5 text-amber-500" />
+                            Price Below Cost
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-2">
+                            <p>The cost price of <strong>{costPriceAlert?.productName}</strong> is <strong>{currencySymbol}{costPriceAlert?.costPrice?.toFixed(2)}</strong>.</p>
+                            <p>You are trying to set the selling price to <strong>{currencySymbol}{costPriceAlert?.newPrice?.toFixed(2)}</strong>, which is lower than the cost price. You will incur a loss on this product.</p>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-amber-600 text-white hover:bg-amber-700"
+                            onClick={confirmBelowCostPrice}
+                        >
+                            Sell Below Cost
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

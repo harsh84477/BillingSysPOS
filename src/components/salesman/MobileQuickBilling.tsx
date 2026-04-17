@@ -15,6 +15,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Plus,
   Minus,
   Trash2,
@@ -27,6 +37,7 @@ import {
   Loader2,
   ChevronRight,
   PackagePlus,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -40,7 +51,7 @@ interface CartItem {
 }
 
 export function MobileQuickBilling() {
-  const { businessId, user } = useAuth();
+  const { businessId, user, isSalesman } = useAuth();
   const queryClient = useQueryClient();
   const location = useLocation();
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -52,6 +63,8 @@ export function MobileQuickBilling() {
   const [activeView, setActiveView] = useState<'products' | 'cart'>('products');
   const { data: settings } = useBusinessSettings();
   const showStockToSalesman = settings?.share_quantity_to_salesman ?? true;
+  const canEditPrice = !isSalesman || (settings?.allow_salesman_price_edit ?? false);
+  const [costPriceAlert, setCostPriceAlert] = useState<{ productId: string; productName: string; costPrice: number; newPrice: number } | null>(null);
   const [newCustName, setNewCustName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
   const [newCustStoreName, setNewCustStoreName] = useState('');
@@ -188,13 +201,25 @@ export function MobileQuickBilling() {
     const item = cart.find(i => i.product_id === productId);
     const price = Math.max(0, newPrice);
     if (item && price > 0 && price < item.cost_price) {
-      toast.warning(`Price ₹${price.toFixed(2)} is below cost price ₹${item.cost_price.toFixed(2)} for ${item.product_name}`, { duration: 4000 });
+      setCostPriceAlert({ productId, productName: item.product_name, costPrice: item.cost_price, newPrice: price });
+      return;
     }
     setCart(cart.map(i =>
       i.product_id === productId
         ? { ...i, unit_price: price }
         : i
     ));
+  };
+
+  const confirmBelowCostPrice = () => {
+    if (!costPriceAlert) return;
+    const { productId, newPrice } = costPriceAlert;
+    setCart(prev => prev.map(i =>
+      i.product_id === productId
+        ? { ...i, unit_price: newPrice }
+        : i
+    ));
+    setCostPriceAlert(null);
   };
 
   // Mutation to generate a new order via RPC (creates bill + bill_items + reserves stock)
@@ -360,13 +385,19 @@ export function MobileQuickBilling() {
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm leading-tight truncate">{item.product_name}</p>
                       <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-                        <span>₹</span>
-                        <Input
-                          type="number"
-                          value={item.unit_price}
-                          onChange={(e) => updatePrice(item.product_id, Number(e.target.value) || 0)}
-                          className="h-5 w-16 text-xs px-1 border-dashed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        />
+                        {canEditPrice ? (
+                          <>
+                            <span>₹</span>
+                            <Input
+                              type="number"
+                              value={item.unit_price}
+                              onChange={(e) => updatePrice(item.product_id, Number(e.target.value) || 0)}
+                              className="h-5 w-16 text-xs px-1 border-dashed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            />
+                          </>
+                        ) : (
+                          <span>₹{item.unit_price}</span>
+                        )}
                         <span>× {item.quantity} = <span className="text-primary font-semibold">₹{(item.unit_price * item.quantity).toFixed(0)}</span></span>
                       </div>
                     </div>
@@ -623,13 +654,19 @@ export function MobileQuickBilling() {
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm leading-tight truncate">{item.product_name}</p>
                           <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                            <span>₹</span>
-                            <Input
-                              type="number"
-                              value={item.unit_price}
-                              onChange={(e) => updatePrice(item.product_id, Number(e.target.value) || 0)}
-                              className="h-5 w-14 text-[11px] px-0.5 border-dashed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                            />
+                            {canEditPrice ? (
+                              <>
+                                <span>₹</span>
+                                <Input
+                                  type="number"
+                                  value={item.unit_price}
+                                  onChange={(e) => updatePrice(item.product_id, Number(e.target.value) || 0)}
+                                  className="h-5 w-14 text-[11px] px-0.5 border-dashed [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                />
+                              </>
+                            ) : (
+                              <span>₹{item.unit_price}</span>
+                            )}
                             <span>× {item.quantity} = <span className="text-primary font-semibold">₹{(item.unit_price * item.quantity).toFixed(0)}</span></span>
                           </div>
                         </div>
@@ -875,6 +912,31 @@ export function MobileQuickBilling() {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* ── Cost Price Warning Alert ── */}
+      <AlertDialog open={!!costPriceAlert} onOpenChange={(v) => !v && setCostPriceAlert(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              Price Below Cost
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>The cost price of <strong>{costPriceAlert?.productName}</strong> is <strong>₹{costPriceAlert?.costPrice?.toFixed(2)}</strong>.</p>
+              <p>You are trying to set the selling price to <strong>₹{costPriceAlert?.newPrice?.toFixed(2)}</strong>, which is lower than the cost price. You will incur a loss on this product.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-amber-600 text-white hover:bg-amber-700"
+              onClick={confirmBelowCostPrice}
+            >
+              Sell Below Cost
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

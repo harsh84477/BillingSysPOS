@@ -72,8 +72,10 @@ export default function POSTab() {
         <SettingRow label="Ask Quantity First" desc="Open a pop-up to enter quantity instead of auto-adding 1 item when clicking a product"
           right={<Toggle on={settings?.ask_quantity_first ?? false} onChange={(v) => u({ ask_quantity_first: v })} disabled={!isAdmin} />} />
         <SectionLabel text="Salesman Visibility" />
-        <SettingRow label="Share Quantity to Salesman" desc="Show product stock quantity to salesmen in Quick Bill. When off, salesmen see products without stock info." noBorder
+        <SettingRow label="Share Quantity to Salesman" desc="Show product stock quantity to salesmen in Quick Bill. When off, salesmen see products without stock info."
           right={<Toggle on={settings?.share_quantity_to_salesman ?? true} onChange={(v) => u({ share_quantity_to_salesman: v })} disabled={!isAdmin} />} />
+        <SettingRow label="Allow Salesman to Change Price" desc="Let salesmen edit product prices in Quick Bill and Edit Order. When off, only owners and managers can change prices." noBorder
+          right={<Toggle on={settings?.allow_salesman_price_edit ?? false} onChange={(v) => u({ allow_salesman_price_edit: v })} disabled={!isAdmin} />} />
       </SettingsCard>
 
       <SettingsCard title="Payment Methods" subtitle="Configure accepted payment methods and defaults" icon="💳" accent="#8b5cf6">
