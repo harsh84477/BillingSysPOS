@@ -222,10 +222,35 @@ export function MobileQuickBilling() {
     setCostPriceAlert(null);
   };
 
+  // Generate sequential date-based order number: ORD-MMDD0001
+  const generateOrderNumber = async (): Promise<string> => {
+    const today = new Date();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const datePrefix = `ORD-${mm}${dd}`;
+
+    const { data: latestBill } = await supabase
+      .from('bills')
+      .select('bill_number')
+      .like('bill_number', `${datePrefix}%`)
+      .order('bill_number', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let sequence = 1;
+    if (latestBill?.bill_number) {
+      const seqPart = latestBill.bill_number.slice(-4);
+      const parsed = parseInt(seqPart, 10);
+      if (!isNaN(parsed)) sequence = parsed + 1;
+    }
+    return `${datePrefix}${String(sequence).padStart(4, '0')}`;
+  };
+
   // Mutation to generate a new order via RPC (creates bill + bill_items + reserves stock)
   const generateOrderMutation = useMutation({
     mutationFn: async () => {
       if (cart.length === 0) throw new Error('Cart is empty');
+      const billNumber = await generateOrderNumber();
       const salesmanName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Salesman';
       const items = cart.map(item => ({
         product_id: item.product_id,
@@ -237,7 +262,7 @@ export function MobileQuickBilling() {
       }));
       const { data, error } = await (supabase.rpc as any)('create_draft_bill', {
         _business_id: businessId,
-        _bill_number: `ORD-${Date.now().toString().slice(-6)}`,
+        _bill_number: billNumber,
         _customer_id: selectedCustomerId || null,
         _salesman_name: salesmanName,
         _subtotal: subtotal,

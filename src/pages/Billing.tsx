@@ -578,6 +578,26 @@ export default function Billing() {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
 
+    // Salesman orders use ORD prefix to distinguish from regular bills
+    if (isSalesman) {
+      const datePrefix = `ORD-${month}${day}`;
+      const { data: latestBill } = await supabase
+        .from('bills')
+        .select('bill_number')
+        .like('bill_number', `${datePrefix}%`)
+        .order('bill_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let sequence = 1;
+      if (latestBill?.bill_number) {
+        const seqPart = latestBill.bill_number.slice(-4);
+        const parsed = parseInt(seqPart, 10);
+        if (!isNaN(parsed)) sequence = parsed + 1 + retryCount;
+      }
+      return `${datePrefix}${String(sequence).padStart(4, '0')}`;
+    }
+
     // Combine Business Prefix and Personal Collector Code
     // Format: [Business]-[Collector]-[MMDD][Sequence]
     const businessPrefix = settings?.bill_prefix?.trim() || 'INV';
