@@ -321,7 +321,7 @@ export default function SalesmanStores() {
             if (!newCustName.trim()) return;
             setAddingSaving(true);
             try {
-              const { error } = await (supabase.from('customers') as any).insert({
+              const { data: newCust, error } = await (supabase.from('customers') as any).insert({
                 name: newCustName.trim(),
                 phone: newCustPhone || null,
                 store_name: newStoreName.trim() || null,
@@ -331,8 +331,16 @@ export default function SalesmanStores() {
                 pincode: newCustPincode || null,
                 business_id: businessId,
                 assigned_salesman_id: user?.id || null,
-              });
+              }).select('id').single();
               if (error) throw error;
+              // Fallback: also insert into salesman_stores in case DB trigger hasn't run
+              if (newCust?.id && user?.id) {
+                await (supabase as any).from('salesman_stores').upsert({
+                  business_id: businessId,
+                  salesman_id: user.id,
+                  customer_id: newCust.id,
+                }, { onConflict: 'salesman_id,customer_id' });
+              }
               queryClient.invalidateQueries({ queryKey: ['customers'] });
               queryClient.invalidateQueries({ queryKey: ['salesman-stores-full'] });
               queryClient.invalidateQueries({ queryKey: ['salesman-stores'] });

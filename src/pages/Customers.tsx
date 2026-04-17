@@ -258,12 +258,24 @@ export default function Customers() {
         if (isSalesman && user?.id) {
           insertData.assigned_salesman_id = user.id;
         }
-        const { error } = await (supabase.from('customers') as any).insert([insertData]);
+        const { data: newCust, error } = await (supabase.from('customers') as any).insert([insertData]).select('id').single();
         if (error) throw error;
+        // Auto-add to salesman_stores so it shows in salesman's dashboard
+        if (isSalesman && user?.id && newCust?.id) {
+          await (supabase as any).from('salesman_stores').upsert({
+            business_id: businessId,
+            salesman_id: user.id,
+            customer_id: newCust.id,
+          }, { onConflict: 'salesman_id,customer_id' });
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      if (isSalesman) {
+        queryClient.invalidateQueries({ queryKey: ['salesman-stores'] });
+        queryClient.invalidateQueries({ queryKey: ['salesman-stores-full'] });
+      }
       setIsDialogOpen(false);
       setEditingCustomer(null);
       toast.success(editingCustomer ? 'Customer updated' : 'Customer created');

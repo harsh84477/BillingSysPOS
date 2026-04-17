@@ -707,7 +707,17 @@ export function MobileQuickBilling() {
                     assigned_salesman_id: user?.id || null,
                   }).select().single();
                   if (error) throw error;
+                  // Auto-add to salesman_stores so it shows in salesman's dashboard
+                  if (newCust?.id && user?.id) {
+                    await (supabase as any).from('salesman_stores').upsert({
+                      business_id: businessId,
+                      salesman_id: user.id,
+                      customer_id: newCust.id,
+                    }, { onConflict: 'salesman_id,customer_id' });
+                  }
                   queryClient.invalidateQueries({ queryKey: ['customers'] });
+                  queryClient.invalidateQueries({ queryKey: ['salesman-stores'] });
+                  queryClient.invalidateQueries({ queryKey: ['salesman-stores-full'] });
                   setSelectedCustomerId(newCust.id);
                   toast.success(`Customer "${newCust.name}" added!`);
                   setShowAddCustomerModal(false);
