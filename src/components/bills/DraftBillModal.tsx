@@ -58,8 +58,8 @@ interface DraftBillModalProps {
     billId: string | null;
     open: boolean;
     onClose: () => void;
-    /** 'draft' = owner/manager full draft view, 'edit-order' = salesman edit pending order */
-    mode?: 'draft' | 'edit-order';
+    /** 'draft' = owner/manager full draft view, 'edit-order' = salesman edit pending order, 'salesman-order' = owner reviewing salesman order */
+    mode?: 'draft' | 'edit-order' | 'salesman-order';
 }
 
 interface DraftItem {
@@ -78,6 +78,7 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
     const queryClient = useQueryClient();
     const currencySymbol = settings?.currency_symbol || '₹';
     const canFinalize = isAdmin || isManager;
+    const isSalesmanBill = mode === 'edit-order' || mode === 'salesman-order';
     const isEditOrderMode = mode === 'edit-order';
 
     const [items, setItems] = useState<DraftItem[]>([]);
@@ -469,12 +470,12 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
                     {/* Header */}
                     <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 border-b space-y-1.5">
                         <DialogTitle className="flex items-center gap-2 text-lg">
-                            {isEditOrderMode ? (
+                            {isSalesmanBill ? (
                                 <Pencil className="h-5 w-5 text-primary" />
                             ) : (
                                 <FileText className="h-5 w-5 text-primary" />
                             )}
-                            {isEditOrderMode ? 'Edit Order' : 'Draft Order'}
+                            {isSalesmanBill ? 'Edit Order' : 'Draft Order'}
                             {billData?.bill_number && (
                                 <Badge variant="outline" className="ml-2 font-mono text-xs">
                                     {billData.bill_number}
@@ -483,11 +484,11 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
                             {isDraft && (
                                 <Badge className={cn(
                                     "ml-1 text-[10px]",
-                                    isEditOrderMode
+                                    isSalesmanBill
                                         ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                                         : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                                 )}>
-                                    {isEditOrderMode ? 'PENDING' : 'DRAFT'}
+                                    {isSalesmanBill ? 'PENDING' : 'DRAFT'}
                                 </Badge>
                             )}
                         </DialogTitle>
@@ -501,7 +502,7 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
                                 <span className="flex items-center gap-1">
                                     <Clock className="h-3 w-3" /> {format(new Date(billData.created_at), 'dd MMM yyyy, hh:mm a')}
                                 </span>
-                                {!isEditOrderMode && billData.salesman_name && (
+                                {!isSalesmanBill && billData.salesman_name && (
                                     <span className="flex items-center gap-1">
                                         <User className="h-3 w-3" /> {billData.salesman_name}
                                     </span>
@@ -548,33 +549,36 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
                                     ) : (
                                         <div className="space-y-1">
                                             {/* Table header */}
-                                            <div className="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-2 py-1 sticky top-0 bg-background z-10 border-b mb-1">
-                                                <div className="col-span-5">Product</div>
-                                                <div className="col-span-2 text-right">Price</div>
-                                                <div className="col-span-3 text-center">Qty</div>
-                                                <div className="col-span-2 text-right">Total</div>
+                                            <div className="grid grid-cols-12 gap-1.5 sm:gap-2 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-2 py-1 sticky top-0 bg-background z-10 border-b mb-1">
+                                                <div className="col-span-5 sm:col-span-4">Product</div>
+                                                <div className="hidden sm:block sm:col-span-2 text-right">Price</div>
+                                                <div className="col-span-4 sm:col-span-4 text-center">Qty</div>
+                                                <div className="col-span-3 sm:col-span-2 text-right">Total</div>
                                             </div>
 
                                             <div className="space-y-1 pr-1">
                                                 {items.map((item, index) => (
                                                     <div
                                                         key={item.product_id + index}
-                                                        className="grid grid-cols-12 gap-2 items-center px-2 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
+                                                        className="grid grid-cols-12 gap-1.5 sm:gap-2 items-center px-2 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
                                                     >
-                                                        <div className="col-span-5 flex items-center gap-2 min-w-0">
-                                                            <Package className="h-4 w-4 text-primary shrink-0" />
-                                                            <span className="text-sm font-medium truncate">{item.product_name}</span>
+                                                        <div className="col-span-5 sm:col-span-4 flex items-center gap-1.5 min-w-0">
+                                                            <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary shrink-0" />
+                                                            <div className="min-w-0">
+                                                                <span className="text-xs sm:text-sm font-medium truncate block">{item.product_name}</span>
+                                                                <span className="text-[10px] text-muted-foreground sm:hidden">{currencySymbol}{item.unit_price.toFixed(2)}</span>
+                                                            </div>
                                                         </div>
 
-                                                        <div className="col-span-2 text-right text-sm text-muted-foreground">
+                                                        <div className="hidden sm:block sm:col-span-2 text-right text-sm text-muted-foreground">
                                                             {currencySymbol}{item.unit_price.toFixed(2)}
                                                         </div>
 
-                                                        <div className="col-span-3 flex items-center justify-center gap-1">
+                                                        <div className="col-span-4 sm:col-span-4 flex items-center justify-center gap-0.5 sm:gap-1">
                                                             <Button
-                                                                variant="ghost"
+                                                                variant="outline"
                                                                 size="icon"
-                                                                className="h-6 w-6"
+                                                                className="h-6 w-6 sm:h-7 sm:w-7 shrink-0 rounded-full"
                                                                 onClick={() => updateQuantity(index, -1)}
                                                                 disabled={item.quantity <= 1 || isBusy}
                                                             >
@@ -584,13 +588,13 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
                                                                 type="number"
                                                                 value={item.quantity}
                                                                 onChange={(e) => setExactQuantity(index, parseInt(e.target.value) || 1)}
-                                                                className="h-7 w-12 text-center text-sm font-bold px-1 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                                className="h-7 w-10 sm:w-14 text-center text-sm font-bold px-0.5 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                                                 disabled={isBusy}
                                                             />
                                                             <Button
-                                                                variant="ghost"
+                                                                variant="outline"
                                                                 size="icon"
-                                                                className="h-6 w-6"
+                                                                className="h-6 w-6 sm:h-7 sm:w-7 shrink-0 rounded-full"
                                                                 onClick={() => updateQuantity(index, 1)}
                                                                 disabled={isBusy}
                                                             >
@@ -598,14 +602,14 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
                                                             </Button>
                                                         </div>
 
-                                                        <div className="col-span-2 flex items-center justify-end gap-1">
-                                                            <span className="text-sm font-semibold">
+                                                        <div className="col-span-3 sm:col-span-2 flex items-center justify-end gap-0.5">
+                                                            <span className="text-xs sm:text-sm font-semibold truncate">
                                                                 {currencySymbol}{(item.unit_price * item.quantity).toFixed(2)}
                                                             </span>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive"
+                                                                className="h-5 w-5 sm:h-6 sm:w-6 opacity-0 group-hover:opacity-100 text-destructive shrink-0"
                                                                 onClick={() => removeItem(index)}
                                                                 disabled={isBusy}
                                                             >
@@ -900,10 +904,10 @@ export default function DraftBillModal({ billId, open, onClose, mode = 'draft' }
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-2">
                             <AlertCircle className="h-5 w-5 text-destructive" />
-                            Cancel {isEditOrderMode ? 'Order' : 'Draft Order'}?
+                            Cancel {isSalesmanBill ? 'Order' : 'Draft Order'}?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                            This will cancel the {isEditOrderMode ? 'order' : 'draft'} and restore all reserved stock. This action cannot be undone.
+                            This will cancel the {isSalesmanBill ? 'order' : 'draft'} and restore all reserved stock. This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

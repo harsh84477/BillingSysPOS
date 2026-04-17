@@ -432,6 +432,7 @@ export default function SalesmanOrders() {
         <DraftBillModal
           billId={selectedBillId}
           open={!!selectedBillId}
+          mode="salesman-order"
           onClose={() => {
             setSelectedBillId(null);
             queryClient.invalidateQueries({ queryKey: ['salesman-orders-all'] });
