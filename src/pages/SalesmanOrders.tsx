@@ -51,7 +51,7 @@ export default function SalesmanOrders() {
         .from('user_roles')
         .select('user_id, role, created_at')
         .eq('business_id', businessId!)
-        .eq('role', 'salesman');
+        .eq('role', 'salesman' as any);
       if (error) throw error;
       if (!roles || roles.length === 0) return [];
       const userIds = roles.map((r: any) => r.user_id);

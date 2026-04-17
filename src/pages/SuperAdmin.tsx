@@ -44,13 +44,13 @@ export default function SuperAdmin() {
 
     const renderTab = () => {
         switch (activeTab) {
-            case 'dashboard': return <DashboardTab />;
+            case 'dashboard': return <DashboardTab onNavigate={setActiveTab} />;
             case 'businesses': return <BusinessTab plans={plans} />;
             case 'subscriptions': return <SubscriptionTab />;
             case 'users': return <UsersTab />;
             case 'plans': return <PlansTab />;
             case 'logs': return <LogsTab />;
-            default: return <DashboardTab />;
+            default: return <DashboardTab onNavigate={setActiveTab} />;
         }
     };
 

@@ -81,7 +81,7 @@ export default function SalesmanStores() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('bills')
-        .select('id, bill_number, total_amount, status, payment_status, created_at, salesman_name')
+        .select('id, bill_number, total_amount, status, created_at')
         .eq('business_id', businessId)
         .eq('customer_id', selectedStoreId!)
         .order('created_at', { ascending: false });
@@ -92,9 +92,9 @@ export default function SalesmanStores() {
   });
 
   // ─── Filter options from data ───
-  const storeTypes = useMemo(() => [...new Set(stores.map((s: any) => s.store_type).filter(Boolean))], [stores]);
-  const areas = useMemo(() => [...new Set(stores.map((s: any) => s.location_name).filter(Boolean))], [stores]);
-  const pincodes = useMemo(() => [...new Set(stores.map((s: any) => s.pincode).filter(Boolean))], [stores]);
+  const storeTypes = useMemo(() => [...new Set(stores.map((s: any) => s.store_type).filter(Boolean))] as string[], [stores]);
+  const areas = useMemo(() => [...new Set(stores.map((s: any) => s.location_name).filter(Boolean))] as string[], [stores]);
+  const pincodes = useMemo(() => [...new Set(stores.map((s: any) => s.pincode).filter(Boolean))] as string[], [stores]);
 
   // ─── Filtered stores ───
   const filteredStores = useMemo(() => {

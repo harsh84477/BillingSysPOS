@@ -24,7 +24,7 @@ interface Props {
 }
 
 export default function SuperAdminLayout({ activeTab, onTabChange, children }: Props) {
-    const { superAdminLogout } = useAuth();
+    const { superAdminLogout, customAdminName } = useAuth();
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -74,8 +74,14 @@ export default function SuperAdminLayout({ activeTab, onTabChange, children }: P
 
                 </nav>
 
-                {/* Logout */}
-                <div className="p-3 border-t border-border">
+                {/* Admin Name + Logout */}
+                <div className="p-3 border-t border-border space-y-2">
+                    {customAdminName && (
+                        <div className="px-3 py-1.5">
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Logged in as</p>
+                            <p className="text-xs font-bold truncate">{customAdminName}</p>
+                        </div>
+                    )}
                     <button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-400/70 hover:text-red-400 hover:bg-red-500/10 transition-all"
@@ -89,7 +95,7 @@ export default function SuperAdminLayout({ activeTab, onTabChange, children }: P
             {/* ── Main Area ── */}
             <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
                 {/* Top bar */}
-                <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-border bg-card px-6">
+                <header className="flex h-14 flex-shrink-0 items-center justify-between border-b border-border bg-card px-4 sm:px-6">
                     <div className="flex items-center gap-3">
                         {/* Mobile brand */}
                         <div className="lg:hidden h-7 w-7 rounded bg-primary flex items-center justify-center">
@@ -103,16 +109,39 @@ export default function SuperAdminLayout({ activeTab, onTabChange, children }: P
 
                     <div className="flex items-center gap-2">
                         <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-                        <span className="text-muted-foreground text-xs font-mono hidden sm:block">System Administrator</span>
+                        <span className="text-muted-foreground text-xs font-mono hidden sm:block">{customAdminName || 'System Administrator'}</span>
+                        <button onClick={handleLogout} className="lg:hidden ml-2 text-red-400 hover:text-red-500">
+                            <LogOut className="h-4 w-4" />
+                        </button>
                     </div>
                 </header>
 
                 {/* Scrollable content */}
-                <main className="flex-1 overflow-y-auto bg-muted/30 p-6 lg:p-8">
+                <main className="flex-1 overflow-y-auto bg-muted/30 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8">
                     <div className="max-w-7xl mx-auto">
                         {children}
                     </div>
                 </main>
+
+                {/* Mobile Bottom Nav */}
+                <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border flex justify-around py-1.5 px-1 z-50">
+                    {navItems.slice(0, 5).map((item) => {
+                        const active = activeTab === item.id;
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => onTabChange(item.id)}
+                                className={cn(
+                                    'flex flex-col items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-medium transition-colors min-w-0',
+                                    active ? 'text-primary' : 'text-muted-foreground'
+                                )}
+                            >
+                                <item.icon className="h-4 w-4" />
+                                <span className="truncate">{item.label.split(' ')[0]}</span>
+                            </button>
+                        );
+                    })}
+                </nav>
             </div>
         </div>
     );

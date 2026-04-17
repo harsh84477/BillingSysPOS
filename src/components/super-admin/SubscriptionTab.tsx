@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SubscriptionTab() {
-    const { user } = useAuth();
+    const { customAdminId } = useAuth();
     const queryClient = useQueryClient();
     const [statusFilter, setStatusFilter] = useState('all');
 
@@ -36,7 +36,7 @@ export default function SubscriptionTab() {
             });
             if (error) throw error;
             await (supabase.rpc as any)('log_admin_action', {
-                p_admin_id: user?.id || 'super-admin',
+                p_admin_id: customAdminId || 'unknown',
                 p_action: vars.status === 'expired' ? 'cancel_subscription' : 'extend_subscription',
                 p_target_id: vars.bizId,
                 p_target_type: 'business',
@@ -66,7 +66,8 @@ export default function SubscriptionTab() {
         return <Badge variant="secondary" className="text-[10px]">{s.status}</Badge>;
     };
 
-    const totalRevenue = subscriptions.reduce((acc, s) => acc + Number(s.plan_price || 0), 0);
+    const activeSubs = subscriptions.filter(s => s.status === 'active');
+    const totalMRR = activeSubs.reduce((acc, s) => acc + Number(s.plan_price || 0), 0);
 
     return (
         <div className="space-y-4">
@@ -75,8 +76,8 @@ export default function SubscriptionTab() {
                 <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                     <DollarSign className="h-6 w-6 text-emerald-500 shrink-0" />
                     <div className="flex-1">
-                        <p className="text-sm font-bold">Total MRR Estimate</p>
-                        <p className="text-2xl font-extrabold">₹{totalRevenue.toLocaleString('en-IN')}</p>
+                        <p className="text-sm font-bold">Monthly Recurring Revenue (Active Only)</p>
+                        <p className="text-2xl font-extrabold">₹{totalMRR.toLocaleString('en-IN')}</p>
                     </div>
                     <div className="sm:text-right">
                         <p className="text-sm text-muted-foreground">{subscriptions.length} subscriptions</p>

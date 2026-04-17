@@ -9,11 +9,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
     Building2, CreditCard, Users, Package, FileText, Calendar,
-    DollarSign, AlertCircle, ChevronRight, Shield, ShieldAlert, Loader2
+    DollarSign, AlertCircle, ChevronRight, Shield, ShieldAlert, Loader2, Trash2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface Props {
     businessId: string;
@@ -23,8 +24,9 @@ interface Props {
 }
 
 export default function BusinessProfile({ businessId, business, plans, onBack }: Props) {
-    const { user } = useAuth();
+    const { customAdminId } = useAuth();
     const queryClient = useQueryClient();
+    const [deleting, setDeleting] = useState(false);
 
     const { data: summary } = useQuery({
         queryKey: ['business-summary', businessId],
@@ -72,7 +74,7 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
             });
             if (error) throw error;
             await (supabase.rpc as any)('log_admin_action', {
-                p_admin_id: user?.id || 'super-admin',
+                p_admin_id: customAdminId || 'unknown',
                 p_action: vars.status === 'expired' ? 'cancel_subscription' : 'assign_subscription',
                 p_target_id: businessId,
                 p_target_type: 'business',
@@ -93,7 +95,7 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
             const { error } = await (supabase.rpc as any)(fn, { p_user_id: userId });
             if (error) throw error;
             await (supabase.rpc as any)('log_admin_action', {
-                p_admin_id: user?.id || 'super-admin',
+                p_admin_id: customAdminId || 'unknown',
                 p_action: block ? 'block_user' : 'unblock_user',
                 p_target_id: userId,
                 p_target_type: 'user',
@@ -125,6 +127,29 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
         return d.toISOString();
     };
 
+    const handleDeleteBusiness = async () => {
+        setDeleting(true);
+        try {
+            const { error } = await (supabase.rpc as any)('delete_business_cascade', { p_business_id: businessId });
+            if (error) throw error;
+            await (supabase.rpc as any)('log_admin_action', {
+                p_admin_id: customAdminId || 'unknown',
+                p_action: 'delete_business',
+                p_target_id: businessId,
+                p_target_type: 'business',
+                p_details: { business_name: business?.business_name },
+            });
+            toast.success(`Deleted "${business?.business_name}"`);
+            queryClient.invalidateQueries({ queryKey: ['super-admin-all-businesses'] });
+            queryClient.invalidateQueries({ queryKey: ['super-admin-dashboard-stats'] });
+            onBack();
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to delete');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             {/* Back + Header */}
@@ -138,7 +163,30 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                         📞 {business?.mobile_number} · joined {business?.created_at ? format(new Date(business.created_at), 'MMM dd, yyyy') : '—'}
                     </p>
                 </div>
-                {sub ? getStatusBadge(sub.status) : <Badge variant="outline">No Subscription</Badge>}
+                <div className="flex items-center gap-2">
+                    {sub ? getStatusBadge(sub.status) : <Badge variant="outline">No Subscription</Badge>}
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8 text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50">
+                                <Trash2 className="h-3.5 w-3.5" /> Delete
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Delete "{business?.business_name}"?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete the business and ALL its data including bills, products, customers, subscriptions. This cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction className="bg-red-600 hover:bg-red-700" disabled={deleting} onClick={handleDeleteBusiness}>
+                                    {deleting ? 'Deleting...' : 'Delete Everything'}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
             </div>
 
             {/* Summary Cards */}

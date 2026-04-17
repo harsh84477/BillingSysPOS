@@ -64,6 +64,8 @@ interface AuthContextType {
   refreshSubscription: () => Promise<void>;
   superAdminLogin: (username: string, password: string) => Promise<{ error: string | null }>;
   superAdminLogout: () => void;
+  customAdminId: string | null;
+  customAdminName: string | null;
   isAdmin: boolean;
   isManager: boolean;
   isCashier: boolean;
@@ -88,6 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isCustomAdmin, setIsCustomAdmin] = useState(false);
+  const [customAdminId, setCustomAdminId] = useState<string | null>(localStorage.getItem('pos_custom_admin_id'));
+  const [customAdminName, setCustomAdminName] = useState<string | null>(localStorage.getItem('pos_custom_admin_name'));
   const [needsBusinessSetup, setNeedsBusinessSetup] = useState(false);
 
   const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
@@ -323,6 +327,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUserRole(null);
       setIsSuperAdmin(false);
       setIsCustomAdmin(false);
+      setCustomAdminId(null);
+      setCustomAdminName(null);
       setBusinessId(null);
       setBusinessInfo(null);
       setSubscription(null);
@@ -456,8 +462,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSubscription(null);
     setIsSuperAdmin(false);
     setIsCustomAdmin(false);
+    setCustomAdminId(null);
+    setCustomAdminName(null);
     setNeedsBusinessSetup(false);
     localStorage.removeItem('pos_custom_admin');
+    localStorage.removeItem('pos_custom_admin_id');
+    localStorage.removeItem('pos_custom_admin_name');
     setBusinessId(null);
     setUserRole(null);
     setBusinessInfo(null);
@@ -466,7 +476,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const superAdminLogout = () => {
     setIsCustomAdmin(false);
+    setCustomAdminId(null);
+    setCustomAdminName(null);
     localStorage.removeItem('pos_custom_admin');
+    localStorage.removeItem('pos_custom_admin_id');
+    localStorage.removeItem('pos_custom_admin_name');
   };
 
   const superAdminLogin = async (username: string, password: string): Promise<{ error: string | null }> => {
@@ -481,7 +495,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = data as any;
       if (result.success) {
         setIsCustomAdmin(true);
+        setCustomAdminId(result.admin_id || null);
+        setCustomAdminName(result.display_name || null);
         localStorage.setItem('pos_custom_admin', 'true');
+        if (result.admin_id) localStorage.setItem('pos_custom_admin_id', result.admin_id);
+        if (result.display_name) localStorage.setItem('pos_custom_admin_name', result.display_name);
         return { error: null };
       } else {
         return { error: result.error || 'Invalid credentials' };
@@ -531,6 +549,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     superAdminLogin,
     superAdminLogout,
+    customAdminId,
+    customAdminName,
     joinBusiness,
     refreshBusinessInfo,
     refreshSubscription,
