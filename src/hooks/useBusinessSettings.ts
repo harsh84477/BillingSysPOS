@@ -108,6 +108,7 @@ export interface BusinessSettings {
   enable_payment_online?: boolean;
   enable_payment_split?: boolean;
   enable_payment_due?: boolean;
+  share_quantity_to_salesman?: boolean;
   // Print Settings — Regular Printer
   print_regular_layout?: string;
   print_regular_default?: boolean;

@@ -1,5 +1,6 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessSettings } from '@/hooks/useBusinessSettings';
@@ -41,6 +42,7 @@ interface CartItem {
 export function MobileQuickBilling() {
   const { businessId, user } = useAuth();
   const queryClient = useQueryClient();
+  const location = useLocation();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -49,6 +51,7 @@ export function MobileQuickBilling() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'products' | 'cart'>('products');
   const { data: settings } = useBusinessSettings();
+  const showStockToSalesman = settings?.share_quantity_to_salesman ?? true;
   const [newCustName, setNewCustName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
   const [newCustStoreName, setNewCustStoreName] = useState('');
@@ -59,6 +62,16 @@ export function MobileQuickBilling() {
   const [askQuantityFirst] = useState<boolean>(() =>
     localStorage.getItem('salesman_ask_quantity_first') === 'true'
   );
+
+  // Auto-select customer from navigation state (Take Order from Stores page)
+  useEffect(() => {
+    const state = location.state as { customerId?: string; customerName?: string } | null;
+    if (state?.customerId) {
+      setSelectedCustomerId(state.customerId);
+      // Clear the state so it doesn't persist on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
   const [quantityDialogProduct, setQuantityDialogProduct] = useState<any>(null);
@@ -273,7 +286,7 @@ export function MobileQuickBilling() {
                       key={product.id}
                       className={cn(
                         "cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all active:scale-95 select-none",
-                        available <= 0 && "opacity-40 pointer-events-none"
+                        showStockToSalesman && available <= 0 && "opacity-40 pointer-events-none"
                       )}
                       onClick={() => handleGridProductClick(product)}
                       onMouseDown={() => handleLongPressStart(product)}
@@ -285,7 +298,7 @@ export function MobileQuickBilling() {
                       <CardContent className="p-0">
                         <div className="h-24 bg-muted/40 flex items-center justify-center relative">
                           <Package className="w-8 h-8 text-muted-foreground/15" />
-                          {isLow && available > 0 && (
+                          {showStockToSalesman && isLow && available > 0 && (
                             <Badge className="absolute top-1.5 right-1.5 bg-amber-500 text-white text-[8px] px-1 py-0 h-4 border-none">Low</Badge>
                           )}
                         </div>
@@ -293,9 +306,11 @@ export function MobileQuickBilling() {
                           <p className="font-semibold text-xs line-clamp-2 leading-tight mb-1">{product.name}</p>
                           <div className="flex items-center justify-between">
                             <span className="text-primary font-bold text-sm">₹{product.selling_price}</span>
-                            <span className={cn("text-[10px] font-medium", isLow ? "text-red-500" : "text-muted-foreground")}>
-                              {available} left
-                            </span>
+                            {showStockToSalesman && (
+                              <span className={cn("text-[10px] font-medium", isLow ? "text-red-500" : "text-muted-foreground")}>
+                                {available} left
+                              </span>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -458,7 +473,7 @@ export function MobileQuickBilling() {
                         key={product.id}
                         className={cn(
                           "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg border border-border/50 bg-card text-left transition-all",
-                          available <= 0 && "opacity-30 pointer-events-none",
+                          showStockToSalesman && available <= 0 && "opacity-30 pointer-events-none",
                           inCart && "ring-2 ring-primary/40"
                         )}
                       >
@@ -474,8 +489,8 @@ export function MobileQuickBilling() {
                         </div>
                         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleProductClick(product)}>
                           <p className="text-[11px] font-medium leading-tight line-clamp-1">{product.name}</p>
-                          <p className={cn("text-[9px] font-medium", isLow ? "text-red-500" : "text-muted-foreground/60")}>
-                            ₹{product.selling_price} · {available} left {isLow && available > 0 ? '· LOW' : ''}
+                          <p className={cn("text-[9px] font-medium", showStockToSalesman && isLow ? "text-red-500" : "text-muted-foreground/60")}>
+                            ₹{product.selling_price}{showStockToSalesman ? ` · ${available} left${isLow && available > 0 ? ' · LOW' : ''}` : ''}
                           </p>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
@@ -516,7 +531,7 @@ export function MobileQuickBilling() {
                         key={product.id}
                         className={cn(
                           "relative rounded-xl overflow-hidden bg-card border border-border/50 text-left active:scale-95 transition-transform select-none",
-                          available <= 0 && "opacity-30 pointer-events-none",
+                          showStockToSalesman && available <= 0 && "opacity-30 pointer-events-none",
                           inCart && "ring-2 ring-primary/40"
                         )}
                         onClick={() => handleGridProductClick(product)}
@@ -528,7 +543,7 @@ export function MobileQuickBilling() {
                       >
                         <div className="h-16 bg-muted/30 flex items-center justify-center relative">
                           <Package className="w-6 h-6 text-muted-foreground/10" />
-                          {isLow && available > 0 && (
+                          {showStockToSalesman && isLow && available > 0 && (
                             <span className="absolute top-1 right-1 bg-amber-500 text-white text-[7px] font-bold px-1 rounded">LOW</span>
                           )}
                           {inCart && (
@@ -540,6 +555,9 @@ export function MobileQuickBilling() {
                         <div className="p-1.5">
                           <p className="text-[10px] font-medium leading-tight line-clamp-2 min-h-[24px]">{product.name}</p>
                           <p className="text-primary font-bold text-xs mt-0.5">₹{product.selling_price}</p>
+                          {showStockToSalesman && (
+                            <p className={cn("text-[8px] font-medium", isLow ? "text-red-500" : "text-muted-foreground/60")}>{available} left</p>
+                          )}
                         </div>
                       </button>
                     );

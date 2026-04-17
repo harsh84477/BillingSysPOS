@@ -119,10 +119,15 @@ export default function SalesmanStores() {
   return (
     <div className="space-y-4 p-1">
       {/* ─── Header ─── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold flex items-center gap-2"><Store className="h-5 w-5" /> My Stores</h1>
-          <p className="text-sm text-muted-foreground">{stores.length} store{stores.length !== 1 ? 's' : ''} assigned to you</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Store className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold">My Stores</h1>
+            <p className="text-sm text-muted-foreground">{stores.length} store{stores.length !== 1 ? 's' : ''} assigned to you</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button size="sm" onClick={() => { setShowAddCustomer(true); setNewStoreName(''); setNewCustName(''); setNewCustPhone(''); setNewCustEmail(''); setNewCustAddress(''); setNewCustStoreType(''); setNewCustLocation(''); setNewCustPincode(''); }} className="gap-1">
@@ -135,37 +140,39 @@ export default function SalesmanStores() {
       </div>
 
       {/* ─── Search + Filters ─── */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
+      <div className="space-y-2">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search store name or phone..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
-        <Select value={filterType} onValueChange={setFilterType}>
-          <SelectTrigger className="w-[160px]"><Filter className="h-3 w-3 mr-1" /><SelectValue placeholder="Store Type" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            {storeTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterArea} onValueChange={setFilterArea}>
-          <SelectTrigger className="w-[160px]"><MapPin className="h-3 w-3 mr-1" /><SelectValue placeholder="Area" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Areas</SelectItem>
-            {areas.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterPincode} onValueChange={setFilterPincode}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Pincode" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Pincodes</SelectItem>
-            {pincodes.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={() => { setFilterType('all'); setFilterArea('all'); setFilterPincode('all'); }} className="gap-1">
-            <X className="h-3 w-3" /> Clear
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-[140px] h-9 text-xs"><Filter className="h-3 w-3 mr-1" /><SelectValue placeholder="All Types" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              {storeTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterArea} onValueChange={setFilterArea}>
+            <SelectTrigger className="w-[140px] h-9 text-xs"><MapPin className="h-3 w-3 mr-1" /><SelectValue placeholder="All Areas" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Areas</SelectItem>
+              {areas.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterPincode} onValueChange={setFilterPincode}>
+            <SelectTrigger className="w-[140px] h-9 text-xs"><SelectValue placeholder="All Pincodes" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Pincodes</SelectItem>
+              {pincodes.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={() => { setFilterType('all'); setFilterArea('all'); setFilterPincode('all'); }} className="gap-1 h-9">
+              <X className="h-3 w-3" /> Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* ─── Stores Grid ─── */}
@@ -181,10 +188,9 @@ export default function SalesmanStores() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredStores.map((store: any) => (
             <Card key={store.customer_id}
-              className="cursor-pointer hover:shadow-md transition-all hover:border-primary/30"
-              onClick={() => setSearchParams({ store: store.customer_id })}>
+              className="hover:shadow-md transition-all hover:border-primary/30">
               <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-start justify-between mb-2 cursor-pointer" onClick={() => setSearchParams({ store: store.customer_id })}>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-sm truncate">{store.name}</h3>
                     {store.store_name && (
@@ -198,11 +204,23 @@ export default function SalesmanStores() {
                   </div>
                   {store.store_type && <Badge variant="outline" className="text-[10px] flex-shrink-0 ml-2">{store.store_type}</Badge>}
                 </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-3">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1 cursor-pointer" onClick={() => setSearchParams({ store: store.customer_id })}>
                   {store.location_name && (
                     <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{store.location_name}</span>
                   )}
                   {store.pincode && <span>{store.pincode}</span>}
+                </div>
+                <div className="mt-3 pt-3 border-t border-border">
+                  <Button
+                    size="sm"
+                    className="w-full gap-1.5 h-8 text-xs font-semibold"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/salesman-billing', { state: { customerId: store.customer_id, customerName: store.name } });
+                    }}
+                  >
+                    <ShoppingCart className="h-3.5 w-3.5" /> Take Order
+                  </Button>
                 </div>
               </CardContent>
             </Card>

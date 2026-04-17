@@ -69,8 +69,11 @@ export default function POSTab() {
 
       <SettingsCard title="Product Selection" subtitle="Manage how products are added to the cart" icon="👆" accent="#3b82f6">
         <SectionLabel text="Click Behavior" />
-        <SettingRow label="Ask Quantity First" desc="Open a pop-up to enter quantity instead of auto-adding 1 item when clicking a product" noBorder
+        <SettingRow label="Ask Quantity First" desc="Open a pop-up to enter quantity instead of auto-adding 1 item when clicking a product"
           right={<Toggle on={settings?.ask_quantity_first ?? false} onChange={(v) => u({ ask_quantity_first: v })} disabled={!isAdmin} />} />
+        <SectionLabel text="Salesman Visibility" />
+        <SettingRow label="Share Quantity to Salesman" desc="Show product stock quantity to salesmen in Quick Bill. When off, salesmen see products without stock info." noBorder
+          right={<Toggle on={settings?.share_quantity_to_salesman ?? true} onChange={(v) => u({ share_quantity_to_salesman: v })} disabled={!isAdmin} />} />
       </SettingsCard>
 
       <SettingsCard title="Payment Methods" subtitle="Configure accepted payment methods and defaults" icon="💳" accent="#8b5cf6">
