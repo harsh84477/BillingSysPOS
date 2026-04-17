@@ -38,7 +38,7 @@ export default function SalesmanOrders() {
   const [selectedSalesman, setSelectedSalesman] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange>('all');
+  const [dateRange, setDateRange] = useState<DateRange>('today');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [showAll, setShowAll] = useState(false);
   const today = new Date();
@@ -274,7 +274,7 @@ export default function SalesmanOrders() {
                   "cursor-pointer transition-all hover:shadow-md",
                   selectedSalesman === s.user_id && "ring-2 ring-primary border-primary"
                 )}
-                onClick={() => { setSelectedSalesman(s.user_id); setSearchTerm(''); setDateRange('all'); setStatusFilter('all'); setShowAll(false); }}
+                onClick={() => { setSelectedSalesman(s.user_id); setSearchTerm(''); setDateRange('today'); setStatusFilter('all'); setShowAll(false); }}
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
