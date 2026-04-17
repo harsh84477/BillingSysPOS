@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -230,99 +229,105 @@ export default function SalesmanStores() {
 
       {/* ─── Store Detail Dialog ─── */}
       <Dialog open={!!selectedStoreId} onOpenChange={(open) => { if (!open) setSearchParams({}); }}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg w-[calc(100%-1.5rem)] mx-auto max-h-[85vh] p-0 gap-0 overflow-hidden rounded-2xl">
           {selectedStore && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Store className="h-5 w-5" /> {selectedStore.name}
-                  {selectedStore.store_type && <Badge variant="outline" className="ml-2">{selectedStore.store_type}</Badge>}
-                </DialogTitle>
-              </DialogHeader>
-
-              {/* Store info */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                {selectedStore.phone && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-4 w-4" /> {selectedStore.phone}
-                  </div>
-                )}
-                {selectedStore.location_name && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <MapPin className="h-4 w-4" /> {selectedStore.location_name}
-                  </div>
-                )}
-                {selectedStore.pincode && (
-                  <div className="text-muted-foreground">Pincode: {selectedStore.pincode}</div>
-                )}
+            <div className="flex flex-col max-h-[85vh]">
+              {/* Header */}
+              <div className="px-4 pt-4 pb-3 border-b bg-muted/30">
+                <DialogHeader className="space-y-1">
+                  <DialogTitle className="text-base font-bold flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Store className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="truncate block">{selectedStore.name}</span>
+                      {selectedStore.store_name && (
+                        <span className="text-xs font-normal text-muted-foreground block truncate">🏪 {selectedStore.store_name}</span>
+                      )}
+                    </div>
+                    {selectedStore.store_type && <Badge variant="outline" className="text-[10px] shrink-0">{selectedStore.store_type}</Badge>}
+                  </DialogTitle>
+                </DialogHeader>
+                {/* Contact info row */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+                  {selectedStore.phone && (
+                    <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {selectedStore.phone}</span>
+                  )}
+                  {selectedStore.location_name && (
+                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {selectedStore.location_name}</span>
+                  )}
+                  {selectedStore.pincode && <span>📮 {selectedStore.pincode}</span>}
+                </div>
                 {selectedStore.address && (
-                  <div className="col-span-2 text-muted-foreground">{selectedStore.address}</div>
+                  <p className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{selectedStore.address}</p>
                 )}
               </div>
 
               {/* Quick stats */}
-              <div className="grid grid-cols-3 gap-3 my-2">
-                <Card><CardContent className="p-3 text-center">
-                  <p className="text-lg font-bold">{storeBills.length}</p>
-                  <p className="text-[11px] text-muted-foreground">Total Orders</p>
-                </CardContent></Card>
-                <Card><CardContent className="p-3 text-center">
-                  <p className="text-lg font-bold">{cs}{storeTotalOrders.toLocaleString('en-IN')}</p>
-                  <p className="text-[11px] text-muted-foreground">Lifetime Value</p>
-                </CardContent></Card>
-                <Card><CardContent className="p-3 text-center">
-                  <p className="text-lg font-bold">{storeLastOrder ? format(new Date(storeLastOrder.created_at), 'dd MMM') : '—'}</p>
-                  <p className="text-[11px] text-muted-foreground">Last Order</p>
-                </CardContent></Card>
+              <div className="grid grid-cols-3 gap-2 px-4 py-3 border-b">
+                <div className="text-center">
+                  <p className="text-lg font-bold leading-tight">{storeBills.length}</p>
+                  <p className="text-[10px] text-muted-foreground">Orders</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-bold leading-tight text-primary">{cs}{storeTotalOrders.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                  <p className="text-[10px] text-muted-foreground">Total Value</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-bold leading-tight">{storeLastOrder ? format(new Date(storeLastOrder.created_at), 'dd MMM') : '—'}</p>
+                  <p className="text-[10px] text-muted-foreground">Last Order</p>
+                </div>
               </div>
 
-              {/* Orders table */}
-              <div>
-                <h4 className="text-sm font-semibold mb-2 flex items-center gap-2"><FileText className="h-4 w-4" /> Order History</h4>
+              {/* Order History - scrollable */}
+              <div className="flex-1 overflow-y-auto px-4 py-3 min-h-0">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                  <FileText className="h-3 w-3" /> Order History
+                </h4>
                 {loadingBills ? (
-                  <Skeleton className="h-24" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                  </div>
                 ) : storeBills.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">No orders yet for this store.</p>
+                  <p className="text-xs text-muted-foreground text-center py-8">No orders yet for this store.</p>
                 ) : (
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs">Bill #</TableHead>
-                          <TableHead className="text-xs">Date</TableHead>
-                          <TableHead className="text-xs text-right">Amount</TableHead>
-                          <TableHead className="text-xs">Status</TableHead>
-                          <TableHead className="text-xs">Payment</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {storeBills.map((bill: any) => (
-                          <TableRow key={bill.id}>
-                            <TableCell className="text-xs font-mono">{bill.bill_number}</TableCell>
-                            <TableCell className="text-xs">{format(new Date(bill.created_at), 'dd MMM yy')}</TableCell>
-                            <TableCell className="text-xs text-right font-semibold">{cs}{Number(bill.total_amount).toLocaleString('en-IN')}</TableCell>
-                            <TableCell>
-                              <Badge variant={bill.status === 'completed' ? 'default' : bill.status === 'draft' ? 'secondary' : 'outline'} className="text-[10px]">
-                                {bill.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={bill.payment_status === 'paid' ? 'default' : 'outline'} className="text-[10px]">
-                                {bill.payment_status || '—'}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                  <div className="space-y-1.5">
+                    {storeBills.map((bill: any) => (
+                      <div key={bill.id} className="flex items-center justify-between py-2 px-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold">{bill.bill_number}</p>
+                          <p className="text-[10px] text-muted-foreground">{format(new Date(bill.created_at), 'dd MMM yyyy, hh:mm a')}</p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <span className="text-xs font-bold text-primary">{cs}{Number(bill.total_amount).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[9px] px-1.5",
+                              bill.status === 'completed' ? "bg-green-50 text-green-700 border-green-200" :
+                              bill.status === 'draft' ? "bg-amber-50 text-amber-700 border-amber-200" : ""
+                            )}
+                          >
+                            {bill.status === 'completed' ? 'Done' : bill.status === 'draft' ? 'Pending' : bill.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
 
-              <Button onClick={() => navigate('/salesman-billing')} className="w-full gap-2 mt-2">
-                <ShoppingCart className="h-4 w-4" /> Create New Order for {selectedStore.name}
-              </Button>
-            </>
+              {/* Footer CTA */}
+              <div className="px-4 py-3 border-t bg-muted/20">
+                <Button
+                  onClick={() => navigate('/salesman-billing', { state: { customerId: selectedStore.customer_id, customerName: selectedStore.name } })}
+                  className="w-full gap-2 h-10 font-semibold text-sm"
+                >
+                  <ShoppingCart className="h-4 w-4" /> Take Order
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

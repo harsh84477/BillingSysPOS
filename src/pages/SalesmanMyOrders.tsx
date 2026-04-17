@@ -15,19 +15,24 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
   Search, ShoppingCart, Clock, Check, Package, Filter,
-  IndianRupee, TrendingUp, Loader2, Pencil
+  IndianRupee, TrendingUp, Loader2, Pencil, ChevronDown, CalendarDays,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfDay, startOfWeek, startOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
 import DraftBillModal from '@/components/bills/DraftBillModal';
 
 type StatusFilter = 'all' | 'draft' | 'completed';
+type DateRange = 'today' | 'week' | 'month' | 'all';
+
+const INITIAL_DISPLAY_COUNT = 10;
 
 export default function SalesmanMyOrders() {
   const { businessId, user } = useAuth();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [dateRange, setDateRange] = useState<DateRange>('today');
+  const [showAll, setShowAll] = useState(false);
   const [selectedBillId, setSelectedBillId] = useState<string | null>(null);
 
   const { data: orders = [], isLoading } = useQuery({
@@ -47,18 +52,31 @@ export default function SalesmanMyOrders() {
   });
 
   const filtered = useMemo(() => {
+    const now = new Date();
+    let cutoff: Date | null = null;
+    if (dateRange === 'today') cutoff = startOfDay(now);
+    else if (dateRange === 'week') cutoff = startOfWeek(now, { weekStartsOn: 1 });
+    else if (dateRange === 'month') cutoff = startOfMonth(now);
+
     return orders
+      .filter((o: any) => {
+        if (cutoff && new Date(o.created_at) < cutoff) return false;
+        return true;
+      })
       .filter((o: any) => statusFilter === 'all' || o.status === statusFilter)
       .filter((o: any) =>
         o.bill_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (o.customers?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
-  }, [orders, statusFilter, searchTerm]);
+  }, [orders, statusFilter, searchTerm, dateRange]);
 
-  const pendingCount = orders.filter((o: any) => o.status === 'draft').length;
-  const finalizedCount = orders.filter((o: any) => o.status === 'completed').length;
-  const pendingAmount = orders.filter((o: any) => o.status === 'draft').reduce((s: number, o: any) => s + Number(o.total_amount), 0);
-  const finalizedAmount = orders.filter((o: any) => o.status === 'completed').reduce((s: number, o: any) => s + Number(o.total_amount), 0);
+  const pendingCount = filtered.filter((o: any) => o.status === 'draft').length;
+  const finalizedCount = filtered.filter((o: any) => o.status === 'completed').length;
+  const pendingAmount = filtered.filter((o: any) => o.status === 'draft').reduce((s: number, o: any) => s + Number(o.total_amount), 0);
+  const finalizedAmount = filtered.filter((o: any) => o.status === 'completed').reduce((s: number, o: any) => s + Number(o.total_amount), 0);
+
+  const displayedOrders = showAll ? filtered : filtered.slice(0, INITIAL_DISPLAY_COUNT);
+  const hasMore = filtered.length > INITIAL_DISPLAY_COUNT;
 
   return (
     <div className="flex flex-col gap-4">
@@ -75,7 +93,7 @@ export default function SalesmanMyOrders() {
               <ShoppingCart className="h-4 w-4 text-blue-500" />
             </div>
             <div>
-              <p className="text-lg font-bold leading-tight">{orders.length}</p>
+              <p className="text-lg font-bold leading-tight">{filtered.length}</p>
               <p className="text-[10px] text-muted-foreground">Total Orders</p>
             </div>
           </CardContent>
@@ -113,6 +131,27 @@ export default function SalesmanMyOrders() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Date Range Filter */}
+      <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+        {([
+          { key: 'today', label: 'Today' },
+          { key: 'week', label: 'This Week' },
+          { key: 'month', label: 'This Month' },
+          { key: 'all', label: 'All Time' },
+        ] as { key: DateRange; label: string }[]).map(({ key, label }) => (
+          <Button
+            key={key}
+            size="sm"
+            variant={dateRange === key ? 'default' : 'outline'}
+            className={cn("h-8 text-xs px-3 shrink-0 gap-1.5", dateRange === key && "shadow-sm")}
+            onClick={() => { setDateRange(key); setShowAll(false); }}
+          >
+            {key === 'today' && <CalendarDays className="h-3 w-3" />}
+            {label}
+          </Button>
+        ))}
       </div>
 
       {/* Filters */}
@@ -160,7 +199,7 @@ export default function SalesmanMyOrders() {
         <>
           {/* Mobile cards */}
           <div className="space-y-2 sm:hidden">
-            {filtered.map((order: any) => (
+            {displayedOrders.map((order: any) => (
               <Card key={order.id}>
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between mb-1.5">
@@ -212,7 +251,7 @@ export default function SalesmanMyOrders() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filtered.map((order: any) => (
+                    {displayedOrders.map((order: any) => (
                       <TableRow key={order.id}>
                         <TableCell className="text-xs font-medium">{order.bill_number}</TableCell>
                         <TableCell className="text-xs">
@@ -256,6 +295,21 @@ export default function SalesmanMyOrders() {
               </div>
             </CardContent>
           </Card>
+
+          {/* See More button */}
+          {hasMore && !showAll && (
+            <div className="flex justify-center pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs h-9 px-6"
+                onClick={() => setShowAll(true)}
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+                See All Orders ({filtered.length - INITIAL_DISPLAY_COUNT} more)
+              </Button>
+            </div>
+          )}
         </>
       )}
 
