@@ -21,11 +21,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Users, Target, Store, TrendingUp, IndianRupee, Search,
   Plus, Trash2, Calendar, UserCheck, ShoppingCart, FileText,
-  ChevronRight, Eye,
+  ChevronRight, Eye, Download,
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { exportStyledExcel } from '@/lib/exportToExcel';
+import type { ExcelTableDef, ExcelSummaryDef } from '@/lib/exportToExcel';
 
 export default function SalesmanControl() {
   const { businessId } = useAuth();
@@ -96,10 +98,9 @@ export default function SalesmanControl() {
       if (salesmanIds.length === 0) return [];
       const { data, error } = await supabase
         .from('bills')
-        .select('id, total_amount, status, created_by, created_at, customer_id')
+        .select('id, bill_number, total_amount, status, created_by, created_at, customer_id, salesman_name, customers(name)')
         .eq('business_id', businessId)
-        .in('created_by', salesmanIds)
-        .neq('status', 'draft');
+        .in('created_by', salesmanIds);
       if (error) throw error;
       return data || [];
     },
@@ -272,12 +273,104 @@ export default function SalesmanControl() {
   const totalMonthSales = enrichedSalesmen.reduce((s: number, sm: any) => s + sm.monthSales, 0);
   const totalMonthBills = enrichedSalesmen.reduce((s: number, sm: any) => s + sm.monthBills, 0);
 
+  // ─── Export salesman orders to Excel ───
+  const handleExportOrders = () => {
+    if (allBills.length === 0) {
+      toast.error('No salesman orders to export');
+      return;
+    }
+
+    const salesmanMap = Object.fromEntries(
+      enrichedSalesmen.map((s: any) => [s.user_id, s.name || s.email || 'Salesman'])
+    );
+
+    const rows = allBills
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .map((b: any) => ({
+        billNumber: b.bill_number || '—',
+        salesman: salesmanMap[b.created_by] || b.salesman_name || 'Unknown',
+        customer: (b.customers as any)?.name || 'Walk-in',
+        amount: Number(b.total_amount || 0),
+        status: b.status === 'completed' ? 'Finalized' : b.status === 'draft' ? 'Pending' : b.status,
+        date: b.created_at ? format(new Date(b.created_at), 'dd MMM yyyy') : '',
+        time: b.created_at ? format(new Date(b.created_at), 'hh:mm a') : '',
+      }));
+
+    const fmtNum = (v: unknown) => v == null ? '' : Number(Number(v).toFixed(2));
+
+    const columns = [
+      { key: 'billNumber', header: 'Order #' },
+      { key: 'salesman', header: 'Salesman' },
+      { key: 'customer', header: 'Customer' },
+      { key: 'amount', header: 'Amount', format: fmtNum },
+      { key: 'status', header: 'Status' },
+      { key: 'date', header: 'Date' },
+      { key: 'time', header: 'Time' },
+    ];
+
+    const pendingOrders = rows.filter(r => r.status === 'Pending');
+    const finalizedOrders = rows.filter(r => r.status === 'Finalized');
+    const totalAmount = rows.reduce((s, r) => s + r.amount, 0);
+    const pendingAmount = pendingOrders.reduce((s, r) => s + r.amount, 0);
+    const finalizedAmount = finalizedOrders.reduce((s, r) => s + r.amount, 0);
+
+    // Per-salesman breakdown
+    const perSalesman = enrichedSalesmen.map((s: any) => ({
+      salesman: s.name || s.email || 'Salesman',
+      totalOrders: s.totalBills,
+      monthOrders: s.monthBills,
+      monthSales: s.monthSales,
+      storesAssigned: s.storeCount,
+      targetProgress: s.currentTarget
+        ? `${s.targetPct.toFixed(0)}% (${cs}${s.monthSales.toLocaleString('en-IN')} / ${cs}${Number(s.currentTarget.target_amount).toLocaleString('en-IN')})`
+        : 'No target',
+    }));
+
+    const summaryColumns = [
+      { key: 'salesman', header: 'Salesman' },
+      { key: 'totalOrders', header: 'All-Time Orders' },
+      { key: 'monthOrders', header: 'This Month Orders' },
+      { key: 'monthSales', header: 'This Month Sales', format: fmtNum },
+      { key: 'storesAssigned', header: 'Stores Assigned' },
+      { key: 'targetProgress', header: 'Target Progress' },
+    ];
+
+    const summary: ExcelSummaryDef = {
+      title: `Salesman Orders Report — ${format(today, 'dd MMM yyyy')}`,
+      items: [
+        { label: 'Total Salesmen', value: salesmen.length },
+        { label: 'Total Orders', value: rows.length },
+        { label: 'Pending Orders', value: pendingOrders.length },
+        { label: 'Finalized Orders', value: finalizedOrders.length },
+        { label: 'Total Amount', value: totalAmount.toFixed(2) },
+        { label: 'Pending Amount', value: pendingAmount.toFixed(2) },
+        { label: 'Finalized Amount', value: finalizedAmount.toFixed(2) },
+        { label: 'Stores Assigned', value: allAssignments.length },
+      ],
+    };
+
+    const tables: ExcelTableDef[] = [
+      { title: 'All Salesman Orders', titleColor: '1F4E79', data: rows, columns },
+      { title: 'Salesman Performance Summary', titleColor: '2E7D32', data: perSalesman, columns: summaryColumns },
+    ];
+
+    exportStyledExcel(tables, summary, `salesman-orders-${format(today, 'yyyy-MM-dd')}`);
+    toast.success('Salesman orders exported!');
+  };
+
   return (
     <div className="space-y-5 p-1">
       {/* ─── Header ─── */}
-      <div>
-        <h1 className="text-xl font-bold flex items-center gap-2"><Users className="h-5 w-5" /> Salesman Control</h1>
-        <p className="text-sm text-muted-foreground">Manage salesmen, set targets, assign stores, track performance</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold flex items-center gap-2"><Users className="h-5 w-5" /> Salesman Control</h1>
+          <p className="text-sm text-muted-foreground">Manage salesmen, set targets, assign stores, track performance</p>
+        </div>
+        {salesmen.length > 0 && (
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs shrink-0" onClick={handleExportOrders}>
+            <Download className="h-3.5 w-3.5" /> Export Orders
+          </Button>
+        )}
       </div>
 
       {/* ─── Overview KPIs ─── */}

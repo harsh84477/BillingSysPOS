@@ -349,6 +349,31 @@ export default function Dashboard() {
     enabled: !!businessId,
   });
 
+  // Fetch salesman-generated orders (today + this month)
+  const { data: salesmanOrderStats, isLoading: loadingSalesmanOrders } = useQuery({
+    queryKey: ['salesmanOrderStats', businessId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bills')
+        .select('id, total_amount, status, created_at, bill_number')
+        .eq('business_id', businessId)
+        .like('bill_number', 'ORD-%');
+      if (error) throw error;
+      const bills = (data || []) as any[];
+      const todayBills = bills.filter((b: any) => new Date(b.created_at) >= startOfToday);
+      const monthBills = bills.filter((b: any) => new Date(b.created_at) >= startOfThisMonth);
+      return {
+        todayOrders: todayBills.length,
+        todayAmount: todayBills.reduce((s: number, b: any) => s + Number(b.total_amount || 0), 0),
+        todayPending: todayBills.filter((b: any) => b.status === 'draft').length,
+        monthOrders: monthBills.length,
+        monthAmount: monthBills.reduce((s: number, b: any) => s + Number(b.total_amount || 0), 0),
+        monthPending: monthBills.filter((b: any) => b.status === 'draft').length,
+      };
+    },
+    enabled: !!businessId,
+  });
+
   // Fetch pending bills
   const { data: pendingBills, isLoading: loadingPending } = useQuery({
     queryKey: ['pendingBills'],
@@ -755,6 +780,27 @@ export default function Dashboard() {
       const totalDueCollected = dueCollectionRows.reduce((s, r) => s + r.collectedAmount, 0);
       const totalDueProfit = dueCollectionRows.reduce((s, r) => s + r.profit, 0);
 
+      // Fetch salesman orders for selected date
+      const { data: salesmanOrders } = await supabase
+        .from('bills')
+        .select('id, bill_number, total_amount, status, created_at, salesman_name, customers(name)')
+        .eq('business_id', businessId)
+        .like('bill_number', 'ORD-%')
+        .gte('created_at', selectedDayStart.toISOString())
+        .lte('created_at', selectedDayEnd.toISOString());
+
+      const smOrderRows = (salesmanOrders || []).map((b: any) => ({
+        billNumber: b.bill_number || '',
+        salesman: b.salesman_name || 'Salesman',
+        customer: b.customers?.name || 'Walk-in',
+        amount: Number(b.total_amount || 0),
+        status: b.status === 'completed' ? 'Finalized' : b.status === 'draft' ? 'Pending' : b.status,
+        time: b.created_at ? format(new Date(b.created_at), 'hh:mm a') : '',
+      }));
+
+      const smTotal = smOrderRows.reduce((s: number, r: any) => s + r.amount, 0);
+      const smPending = smOrderRows.filter((r: any) => r.status === 'Pending').length;
+
       const summary: ExcelSummaryDef = {
         title: `Daily Summary — ${dayLabel}`,
         items: [
@@ -769,8 +815,20 @@ export default function Dashboard() {
           { label: 'Total Profit', value: totalProfit.toFixed(2) },
           { label: 'Due Collections Received', value: totalDueCollected.toFixed(2) },
           { label: 'Profit from Due Collections', value: totalDueProfit.toFixed(2) },
+          { label: 'Salesman Orders', value: smOrderRows.length },
+          { label: 'Salesman Orders Pending', value: smPending },
+          { label: 'Salesman Orders Amount', value: smTotal.toFixed(2) },
         ],
       };
+
+      const smOrderColumns = [
+        { key: 'billNumber', header: 'Order #' },
+        { key: 'salesman', header: 'Salesman' },
+        { key: 'customer', header: 'Customer' },
+        { key: 'amount', header: 'Amount', format: fmtNum },
+        { key: 'status', header: 'Status' },
+        { key: 'time', header: 'Time' },
+      ];
 
       const tables: ExcelTableDef[] = [
         { title: "Today's Sales", titleColor: '1F4E79', data: salesRows, columns: salesColumns },
@@ -780,7 +838,11 @@ export default function Dashboard() {
         tables.push({ title: 'Due Collections Received', titleColor: 'D35400', data: dueCollectionRows, columns: dueColumns });
       }
 
-      if (salesRows.length === 0 && dueCollectionRows.length === 0) {
+      if (smOrderRows.length > 0) {
+        tables.push({ title: 'Salesman Orders', titleColor: '2E7D32', data: smOrderRows, columns: smOrderColumns });
+      }
+
+      if (salesRows.length === 0 && dueCollectionRows.length === 0 && smOrderRows.length === 0) {
         toast.error(`No data to export for ${dayLabel}`);
         return;
       }
@@ -974,6 +1036,28 @@ export default function Dashboard() {
       const totDueAmount = dayRows.reduce((s, r) => s + r.dueAmount, 0);
       const totProfit = dayRows.reduce((s, r) => s + r.dayProfit, 0);
 
+      // Fetch salesman orders for this month
+      const { data: monthSalesmanOrders } = await supabase
+        .from('bills')
+        .select('id, bill_number, total_amount, status, created_at, salesman_name, customers(name)')
+        .eq('business_id', businessId)
+        .like('bill_number', 'ORD-%')
+        .gte('created_at', monthStart.toISOString())
+        .lte('created_at', monthEnd.toISOString());
+
+      const smRows = (monthSalesmanOrders || []).map((b: any) => ({
+        billNumber: b.bill_number || '',
+        salesman: b.salesman_name || 'Salesman',
+        customer: b.customers?.name || 'Walk-in',
+        amount: Number(b.total_amount || 0),
+        status: b.status === 'completed' ? 'Finalized' : b.status === 'draft' ? 'Pending' : b.status,
+        date: b.created_at ? format(new Date(b.created_at), 'dd MMM yyyy') : '',
+        time: b.created_at ? format(new Date(b.created_at), 'hh:mm a') : '',
+      }));
+
+      const smTot = smRows.reduce((s: number, r: any) => s + r.amount, 0);
+      const smPend = smRows.filter((r: any) => r.status === 'Pending').length;
+
       const monthlySummary: ExcelSummaryDef = {
         title: `Monthly Summary — ${monthLabel}`,
         items: [
@@ -992,12 +1076,29 @@ export default function Dashboard() {
           { label: 'Total Collection', value: totTotalCollection.toFixed(2) },
           { label: 'Due Bills Cleared', value: totDueCleared },
           { label: 'Due Amount Pending', value: totDueAmount.toFixed(2) },
+          { label: 'Salesman Orders', value: smRows.length },
+          { label: 'Salesman Orders Pending', value: smPend },
+          { label: 'Salesman Orders Amount', value: smTot.toFixed(2) },
         ],
       };
+
+      const smOrderColumns = [
+        { key: 'billNumber', header: 'Order #' },
+        { key: 'salesman', header: 'Salesman' },
+        { key: 'customer', header: 'Customer' },
+        { key: 'amount', header: 'Amount', format: fmtN },
+        { key: 'status', header: 'Status' },
+        { key: 'date', header: 'Date' },
+        { key: 'time', header: 'Time' },
+      ];
 
       const monthlyTables: ExcelTableDef[] = [
         { title: 'Day-Wise Performance', titleColor: '1F4E79', data: dayRows, columns: dayColumns },
       ];
+
+      if (smRows.length > 0) {
+        monthlyTables.push({ title: 'Salesman Orders', titleColor: '2E7D32', data: smRows, columns: smOrderColumns });
+      }
 
       exportStyledExcel(monthlyTables, monthlySummary, `monthly-performance-${downloadMonth}`);
       toast.success(`${monthLabel} data exported`);
@@ -1102,6 +1203,7 @@ export default function Dashboard() {
         <KPICard title="Today's Due Bills" value={todayStats?.dueBillsList?.length || 0} icon={AlertTriangle} description="Bills created today but not fully paid" isLoading={loadingTodayStats} color="amber" index={5} onClick={() => setActiveModalData({ type: 'dueBills', title: 'Today\'s Due Bills', data: todayStats?.dueBillsList || [] })} />
         <KPICard title="Today's Due Collection" value={`${currencySymbol}${(todayPayments?.dueCollectionSum || 0).toFixed(2)}`} icon={CreditCard} description="Payments received today from due invoices" isLoading={loadingTodayPayments} color="amber" index={6} onClick={() => setActiveModalData({ type: 'dueCollections', title: 'Today\'s Due Collection', data: todayPayments?.dueCollectionList || [] })} />
         <KPICard title="Today's Total Due Amount" value={`${currencySymbol}${(todayStats?.dueAmount || 0).toFixed(2)}`} icon={AlertTriangle} description="Remaining amount from today's due bills" isLoading={loadingTodayStats} color="red" index={7} onClick={() => setActiveModalData({ type: 'dueBills', title: 'Today\'s Due Bills', data: todayStats?.dueBillsList || [] })} />
+        <KPICard title="Salesman Orders (Today)" value={`${salesmanOrderStats?.todayOrders || 0} (${salesmanOrderStats?.todayPending || 0} pending)`} icon={Users} description={`${currencySymbol}${(salesmanOrderStats?.todayAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })} total`} isLoading={loadingSalesmanOrders} color="blue" index={8} onClick={() => navigate('/salesman-orders')} />
       </div>
 
       {/* ── Monthly Performance ── */}
@@ -1134,6 +1236,7 @@ export default function Dashboard() {
         <KPICard title="Monthly Due Bills" value={monthlyStats?.dueBillsList?.length || 0} icon={AlertTriangle} description="Unpaid bills from this month" isLoading={loadingMonthlyStats} color="amber" index={3} onClick={() => setActiveModalData({ type: 'dueBills', title: 'Monthly Due Bills', data: monthlyStats?.dueBillsList || [] })} />
         <KPICard title="Monthly Due Collection" value={`${currencySymbol}${(monthlyPayments?.dueCollectionSum || 0).toFixed(2)}`} icon={CreditCard} description="Payments collected this month from due bills" isLoading={loadingMonthlyPayments} color="amber" index={4} onClick={() => setActiveModalData({ type: 'dueCollections', title: 'Monthly Due Collection', data: monthlyPayments?.dueCollectionList || [] })} />
         <KPICard title="Monthly Total Due Amount" value={`${currencySymbol}${(monthlyStats?.dueAmount || 0).toFixed(2)}`} icon={AlertTriangle} description="Remaining amount from this month's due bills" isLoading={loadingMonthlyStats} color="red" index={5} onClick={() => setActiveModalData({ type: 'dueBills', title: 'Monthly Due Bills', data: monthlyStats?.dueBillsList || [] })} />
+        <KPICard title="Salesman Orders (Month)" value={`${salesmanOrderStats?.monthOrders || 0} (${salesmanOrderStats?.monthPending || 0} pending)`} icon={Users} description={`${currencySymbol}${(salesmanOrderStats?.monthAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })} total`} isLoading={loadingSalesmanOrders} color="blue" index={6} onClick={() => navigate('/salesman-orders')} />
       </div>
 
       {/* ── Overall Operations ── */}
