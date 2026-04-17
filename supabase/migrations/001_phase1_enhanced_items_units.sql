@@ -1,6 +1,6 @@
 -- ============================================================
 -- Phase 1: Enhanced Items, Units & Conversion
--- Run this migration on your Supabase SQL Editor
+-- Run this migration on your Supabase SQL Editor asdfghjkl;
 -- ============================================================
 
 -- 1A. Enhanced Product Fields
