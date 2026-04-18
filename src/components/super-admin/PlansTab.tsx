@@ -21,6 +21,11 @@ interface Plan {
     features: string[];
     max_users: number;
     max_products: number;
+    max_bills_per_day: number;
+    max_items_per_day: number;
+    support: string;
+    history_limit_days: number;
+    can_export: boolean;
     is_active: boolean;
 }
 
@@ -31,6 +36,11 @@ const defaultPlan: Partial<Plan> = {
     features: [],
     max_users: 5,
     max_products: 100,
+    max_bills_per_day: 120,
+    max_items_per_day: 120,
+    support: 'None',
+    history_limit_days: 1,
+    can_export: false,
     is_active: true,
 };
 
@@ -61,6 +71,11 @@ export default function PlansTab() {
                 features: plan.features,
                 max_users: plan.max_users,
                 max_products: plan.max_products,
+                max_bills_per_day: plan.max_bills_per_day,
+                max_items_per_day: plan.max_items_per_day,
+                support: plan.support,
+                history_limit_days: plan.history_limit_days,
+                can_export: plan.can_export,
                 is_active: plan.is_active,
             };
             if (editing) {
@@ -264,9 +279,57 @@ export default function PlansTab() {
                                         <SelectItem value="6_months">6 Months</SelectItem>
                                         <SelectItem value="yearly">Yearly</SelectItem>
                                         <SelectItem value="lifetime">Lifetime</SelectItem>
+                                        <SelectItem value="trial">Trial</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label>Bills per Day</Label>
+                                <Input
+                                    type="number"
+                                    value={form.max_bills_per_day || ''}
+                                    onChange={e => setForm(f => ({ ...f, max_bills_per_day: Number(e.target.value) }))}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Items per Day</Label>
+                                <Input
+                                    type="number"
+                                    value={form.max_items_per_day || ''}
+                                    onChange={e => setForm(f => ({ ...f, max_items_per_day: Number(e.target.value) }))}
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label>Support Level</Label>
+                                <Select value={form.support || 'None'} onValueChange={v => setForm(f => ({ ...f, support: v }))}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="None">None</SelectItem>
+                                        <SelectItem value="Standard">Standard</SelectItem>
+                                        <SelectItem value="24/7 Priority">24/7 Priority</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Bill History Retention (days)</Label>
+                                <Input
+                                    type="number"
+                                    value={form.history_limit_days ?? ''}
+                                    onChange={e => setForm(f => ({ ...f, history_limit_days: Number(e.target.value) }))}
+                                    placeholder="-1 for unlimited"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <Label>Exports Unlocked</Label>
+                            <Switch
+                                checked={form.can_export ?? false}
+                                onCheckedChange={v => setForm(f => ({ ...f, can_export: v }))}
+                            />
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
