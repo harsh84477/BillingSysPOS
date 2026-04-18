@@ -29,6 +29,7 @@ import PrintSettingsTab from '@/components/settings/PrintSettingsTab';
 import POSTab from '@/components/settings/tabs/POSTab';
 import AppThemeTab from '@/components/settings/tabs/AppThemeTab';
 import LoyaltyTab from '@/components/settings/tabs/LoyaltyTab';
+import SubscriptionManagement from '@/components/settings/SubscriptionManagement';
 
 const TABS = [
   { id: 'business', label: 'Business', icon: '🏢' },
@@ -86,7 +87,7 @@ export default function Settings() {
               {activeTab === 'billing' && <BillingTab />}
               {activeTab === 'categories' && <CategoriesTab />}
               {activeTab === 'staff' && isAdmin && <StaffTab />}
-              {activeTab === 'subscription' && <(require('@/components/settings/SubscriptionManagement').default) />}
+              {activeTab === 'subscription' && <SubscriptionManagement />}
               {activeTab === 'pos' && <POSTab />}
               {activeTab === 'appearance' && <AppThemeTab />}
               {activeTab === 'loyalty' && <LoyaltyTab />}
