@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Search, Building2, Globe, Eye, MapPin, Phone, Mail, Trash2, CreditCard } from 'lucide-react';
+import { Search, Building2, Globe, Eye, MapPin, Phone, Mail, Trash2, CreditCard, Filter } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -23,18 +24,35 @@ export default function BusinessTab({ plans }: Props) {
     const [selectedBiz, setSelectedBiz] = useState<any>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [subscribingId, setSubscribingId] = useState<string | null>(null);
+    const [statusFilter, setStatusFilter] = useState('all');
     const queryClient = useQueryClient();
     const { customAdminId } = useAuth();
 
+    // Fetch ALL businesses from the main businesses table
     const { data: businesses = [], isLoading } = useQuery({
         queryKey: ['super-admin-all-businesses'],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('business_settings')
-                .select('*')
-                .order('created_at', { ascending: false });
-            if (error) throw error;
-            return data || [];
+            const [{ data: bizData, error: bizErr }, { data: settingsData, error: setErr }] = await Promise.all([
+                supabase.from('businesses').select('*').order('created_at', { ascending: false }),
+                supabase.from('business_settings').select('*'),
+            ]);
+            if (bizErr) throw bizErr;
+
+            // Merge settings into businesses
+            const settingsMap: Record<string, any> = {};
+            (settingsData || []).forEach((s: any) => { settingsMap[s.business_id] = s; });
+
+            return (bizData || []).map((b: any) => {
+                const s = settingsMap[b.id] || {};
+                return {
+                    ...b,
+                    business_name: s.business_name || b.business_name,
+                    address: s.address || '',
+                    phone: s.phone || b.mobile_number || '',
+                    email: s.email || '',
+                    business_id: b.id,
+                };
+            });
         },
     });
 
@@ -52,11 +70,21 @@ export default function BusinessTab({ plans }: Props) {
         },
     });
 
-    const filtered = businesses.filter(b =>
-        b.business_name?.toLowerCase().includes(search.toLowerCase()) ||
-        b.email?.toLowerCase().includes(search.toLowerCase()) ||
-        b.phone?.includes(search)
-    );
+    const filtered = businesses.filter(b => {
+        const matchSearch =
+            b.business_name?.toLowerCase().includes(search.toLowerCase()) ||
+            b.email?.toLowerCase().includes(search.toLowerCase()) ||
+            b.phone?.includes(search);
+        const bizId = b.business_id || b.id;
+        const sub = (subsMap as Record<string, any>)[bizId];
+        const matchStatus =
+            statusFilter === 'all' ||
+            (statusFilter === 'active' && sub?.status === 'active') ||
+            (statusFilter === 'trialing' && sub?.status === 'trialing') ||
+            (statusFilter === 'expired' && sub?.status === 'expired') ||
+            (statusFilter === 'no-plan' && !sub);
+        return matchSearch && matchStatus;
+    });
 
     const handleDelete = async (bizId: string, bizName: string) => {
         setDeletingId(bizId);
@@ -141,6 +169,18 @@ export default function BusinessTab({ plans }: Props) {
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-40">
+                        <SelectValue placeholder="All Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="trialing">Trial</SelectItem>
+                        <SelectItem value="expired">Expired</SelectItem>
+                        <SelectItem value="no-plan">No Plan</SelectItem>
+                    </SelectContent>
+                </Select>
                 <Badge variant="outline" className="self-center text-xs shrink-0">
                     {filtered.length} business{filtered.length !== 1 ? 'es' : ''}
                 </Badge>

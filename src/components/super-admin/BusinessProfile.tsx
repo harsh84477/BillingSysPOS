@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,14 +7,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
     Building2, CreditCard, Users, Package, FileText, Calendar,
-    DollarSign, AlertCircle, ChevronRight, Shield, ShieldAlert, Loader2, Trash2
+    DollarSign, AlertCircle, ChevronRight, Shield, ShieldAlert, Loader2, Trash2,
+    Download, Search, ArrowLeft, CalendarDays, Filter
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import * as XLSX from 'xlsx';
 
 interface Props {
     businessId: string;
@@ -27,6 +31,9 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
     const { customAdminId } = useAuth();
     const queryClient = useQueryClient();
     const [deleting, setDeleting] = useState(false);
+    const [billDateFilter, setBillDateFilter] = useState('all');
+    const [customMonth, setCustomMonth] = useState('');
+    const [inventorySearch, setInventorySearch] = useState('');
 
     const { data: summary } = useQuery({
         queryKey: ['business-summary', businessId],
@@ -155,12 +162,13 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
             {/* Back + Header */}
             <div className="flex items-start justify-between gap-4">
                 <div>
-                    <button onClick={onBack} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mb-2">
-                        ← All Businesses
-                    </button>
+                    <Button variant="ghost" size="sm" onClick={onBack} className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground mb-2 -ml-2">
+                        <ArrowLeft className="h-3.5 w-3.5" /> All Businesses
+                    </Button>
                     <h2 className="text-2xl font-black tracking-tight">{business?.business_name}</h2>
                     <p className="text-sm text-muted-foreground mt-1">
-                        📞 {business?.mobile_number} · joined {business?.created_at ? format(new Date(business.created_at), 'MMM dd, yyyy') : '—'}
+                        {business?.mobile_number && <span>📞 {business.mobile_number} · </span>}
+                        joined {business?.created_at ? format(new Date(business.created_at), 'MMM dd, yyyy') : '—'}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -288,91 +296,26 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
 
                 {/* Bills */}
                 <TabsContent value="bills" className="animate-in fade-in">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Transaction History</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            {loadingBills ? (
-                                <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin" /></div>
-                            ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="bg-muted/40">
-                                            <TableHead>Bill #</TableHead>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead>Amount</TableHead>
-                                            <TableHead>Status</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {bills.slice(0, 20).map((b: any) => (
-                                            <TableRow key={b.id}>
-                                                <TableCell className="font-bold text-sm">{b.bill_number}</TableCell>
-                                                <TableCell className="text-xs text-muted-foreground">{format(new Date(b.created_at), 'MMM dd, HH:mm')}</TableCell>
-                                                <TableCell className="font-bold">₹{b.total_amount}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant={b.status === 'completed' ? 'secondary' : 'outline'} className="text-[10px] capitalize">{b.status}</Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {bills.length === 0 && (
-                                            <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No bills found.</TableCell></TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            )}
-                        </CardContent>
-                        {bills.length > 20 && (
-                            <CardFooter className="justify-center py-2">
-                                <p className="text-xs text-muted-foreground">Showing 20 of {bills.length} bills</p>
-                            </CardFooter>
-                        )}
-                    </Card>
+                    <BillsSection
+                        bills={bills}
+                        loadingBills={loadingBills}
+                        billDateFilter={billDateFilter}
+                        setBillDateFilter={setBillDateFilter}
+                        customMonth={customMonth}
+                        setCustomMonth={setCustomMonth}
+                        businessName={business?.business_name}
+                    />
                 </TabsContent>
 
                 {/* Inventory */}
                 <TabsContent value="inventory" className="animate-in fade-in">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Product Inventory</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            {loadingProducts ? (
-                                <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin" /></div>
-                            ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="bg-muted/40">
-                                            <TableHead>Product</TableHead>
-                                            <TableHead>Selling Price</TableHead>
-                                            <TableHead>Cost</TableHead>
-                                            <TableHead>Stock</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {products.map((p: any) => (
-                                            <TableRow key={p.id}>
-                                                <TableCell>
-                                                    <p className="font-semibold text-sm">{p.name}</p>
-                                                </TableCell>
-                                                <TableCell className="font-bold text-primary">₹{p.selling_price}</TableCell>
-                                                <TableCell className="text-sm text-muted-foreground">₹{p.cost_price}</TableCell>
-                                                <TableCell>
-                                                    <span className={cn('text-sm font-bold', p.stock_quantity <= p.low_stock_threshold ? 'text-destructive' : 'text-foreground')}>
-                                                        {p.stock_quantity}
-                                                    </span>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {products.length === 0 && (
-                                            <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No products.</TableCell></TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            )}
-                        </CardContent>
-                    </Card>
+                    <InventorySection
+                        products={products}
+                        loadingProducts={loadingProducts}
+                        inventorySearch={inventorySearch}
+                        setInventorySearch={setInventorySearch}
+                        businessName={business?.business_name}
+                    />
                 </TabsContent>
 
                 {/* Team / Users */}
@@ -433,5 +376,346 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                 </TabsContent>
             </Tabs>
         </div>
+    );
+}
+
+/* ── Bills Section with Date Filters & Download ── */
+function BillsSection({ bills, loadingBills, billDateFilter, setBillDateFilter, customMonth, setCustomMonth, businessName }: {
+    bills: any[];
+    loadingBills: boolean;
+    billDateFilter: string;
+    setBillDateFilter: (v: string) => void;
+    customMonth: string;
+    setCustomMonth: (v: string) => void;
+    businessName: string;
+}) {
+    const filteredBills = useMemo(() => {
+        if (billDateFilter === 'all') return bills;
+
+        const now = new Date();
+        let start: Date, end: Date;
+
+        switch (billDateFilter) {
+            case 'today':
+                start = startOfDay(now);
+                end = endOfDay(now);
+                break;
+            case 'this-week':
+                start = startOfWeek(now, { weekStartsOn: 1 });
+                end = endOfWeek(now, { weekStartsOn: 1 });
+                break;
+            case 'this-month':
+                start = startOfMonth(now);
+                end = endOfMonth(now);
+                break;
+            case 'last-month':
+                start = startOfMonth(subMonths(now, 1));
+                end = endOfMonth(subMonths(now, 1));
+                break;
+            case 'custom':
+                if (!customMonth) return bills;
+                const [year, month] = customMonth.split('-').map(Number);
+                start = new Date(year, month - 1, 1);
+                end = endOfMonth(start);
+                break;
+            default:
+                return bills;
+        }
+
+        return bills.filter(b => {
+            const d = new Date(b.created_at);
+            return isWithinInterval(d, { start, end });
+        });
+    }, [bills, billDateFilter, customMonth]);
+
+    const totalRevenue = filteredBills.reduce((sum: number, b: any) => sum + Number(b.total_amount || 0), 0);
+    const completedCount = filteredBills.filter((b: any) => b.status === 'completed').length;
+
+    const handleDownloadBills = () => {
+        if (filteredBills.length === 0) { toast.error('No bills to download'); return; }
+        const rows = filteredBills.map((b: any) => ({
+            'Bill #': b.bill_number,
+            'Date': b.created_at ? format(new Date(b.created_at), 'yyyy-MM-dd HH:mm') : '',
+            'Amount (₹)': Number(b.total_amount || 0),
+            'Status': b.status,
+            'Payment': b.payment_type || '',
+            'Customer': b.customer_name || 'Walk-in',
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [{ wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 20 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Bills');
+        const filterLabel = billDateFilter === 'all' ? 'all' : billDateFilter === 'custom' ? customMonth : billDateFilter;
+        XLSX.writeFile(wb, `${businessName || 'business'}_bills_${filterLabel}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+        toast.success(`Downloaded ${filteredBills.length} bills`);
+    };
+
+    const dateButtons = [
+        { value: 'all', label: 'All Time' },
+        { value: 'today', label: 'Today' },
+        { value: 'this-week', label: 'This Week' },
+        { value: 'this-month', label: 'This Month' },
+        { value: 'last-month', label: 'Last Month' },
+        { value: 'custom', label: 'Select Month' },
+    ];
+
+    return (
+        <Card>
+            <CardHeader className="pb-3">
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" />
+                            Transaction History
+                        </CardTitle>
+                        <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={handleDownloadBills}>
+                            <Download className="h-3.5 w-3.5" />
+                            Download Excel
+                        </Button>
+                    </div>
+
+                    {/* Date Filter Buttons */}
+                    <div className="flex flex-wrap gap-1.5">
+                        {dateButtons.map(btn => (
+                            <button
+                                key={btn.value}
+                                onClick={() => setBillDateFilter(btn.value)}
+                                className={cn(
+                                    'px-3 py-1.5 rounded-lg text-xs font-medium transition-all border',
+                                    billDateFilter === btn.value
+                                        ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                                        : 'bg-card text-muted-foreground border-border hover:bg-muted/50'
+                                )}
+                            >
+                                {btn.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Custom Month Picker */}
+                    {billDateFilter === 'custom' && (
+                        <Input
+                            type="month"
+                            value={customMonth}
+                            onChange={(e) => setCustomMonth(e.target.value)}
+                            className="w-full sm:w-48"
+                        />
+                    )}
+
+                    {/* Summary Stats */}
+                    <div className="flex items-center gap-4 text-xs">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/50">
+                            <FileText className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-muted-foreground">Bills:</span>
+                            <span className="font-bold">{filteredBills.length}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50">
+                            <DollarSign className="h-3 w-3 text-emerald-600" />
+                            <span className="text-emerald-600">Revenue:</span>
+                            <span className="font-bold text-emerald-700">₹{totalRevenue.toLocaleString('en-IN')}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50">
+                            <span className="text-blue-600">Completed:</span>
+                            <span className="font-bold text-blue-700">{completedCount}</span>
+                        </div>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="p-0">
+                {loadingBills ? (
+                    <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                ) : filteredBills.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                        <FileText className="h-10 w-10 opacity-10 mb-3" />
+                        <p className="font-semibold text-foreground text-sm">No bills found</p>
+                        <p className="text-xs mt-1">Try selecting a different date range.</p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/40">
+                                    <TableHead>Bill #</TableHead>
+                                    <TableHead>Date & Time</TableHead>
+                                    <TableHead>Customer</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                    <TableHead>Payment</TableHead>
+                                    <TableHead>Status</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredBills.map((b: any) => (
+                                    <TableRow key={b.id} className="hover:bg-muted/30">
+                                        <TableCell className="font-bold text-sm">{b.bill_number}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">
+                                            {format(new Date(b.created_at), 'MMM dd, yyyy')}<br/>
+                                            <span className="text-[10px]">{format(new Date(b.created_at), 'hh:mm a')}</span>
+                                        </TableCell>
+                                        <TableCell className="text-xs">{b.customer_name || 'Walk-in'}</TableCell>
+                                        <TableCell className="font-bold">₹{Number(b.total_amount).toLocaleString('en-IN')}</TableCell>
+                                        <TableCell>
+                                            {b.payment_type && (
+                                                <Badge variant="outline" className="text-[10px] capitalize">{b.payment_type}</Badge>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                className={cn('text-[10px] capitalize',
+                                                    b.status === 'completed' ? 'bg-green-100 text-green-700 hover:bg-green-100' :
+                                                    b.status === 'draft' ? 'bg-amber-100 text-amber-700 hover:bg-amber-100' :
+                                                    'bg-muted text-muted-foreground'
+                                                )}
+                                            >
+                                                {b.status}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+/* ── Inventory Section with Search & Download ── */
+function InventorySection({ products, loadingProducts, inventorySearch, setInventorySearch, businessName }: {
+    products: any[];
+    loadingProducts: boolean;
+    inventorySearch: string;
+    setInventorySearch: (v: string) => void;
+    businessName: string;
+}) {
+    const filteredProducts = useMemo(() => {
+        if (!inventorySearch) return products;
+        return products.filter((p: any) =>
+            p.name?.toLowerCase().includes(inventorySearch.toLowerCase())
+        );
+    }, [products, inventorySearch]);
+
+    const totalValue = filteredProducts.reduce((sum: number, p: any) => sum + (Number(p.selling_price || 0) * Number(p.stock_quantity || 0)), 0);
+    const lowStockCount = filteredProducts.filter((p: any) => p.stock_quantity <= (p.low_stock_threshold || 0)).length;
+
+    const handleDownloadInventory = () => {
+        if (filteredProducts.length === 0) { toast.error('No products to download'); return; }
+        const rows = filteredProducts.map((p: any) => ({
+            'Product Name': p.name,
+            'Category': p.category || '',
+            'Selling Price (₹)': Number(p.selling_price || 0),
+            'Cost Price (₹)': Number(p.cost_price || 0),
+            'MRP (₹)': Number(p.mrp_price || 0),
+            'Stock': Number(p.stock_quantity || 0),
+            'Low Stock Threshold': Number(p.low_stock_threshold || 0),
+            'Stock Value (₹)': Number(p.selling_price || 0) * Number(p.stock_quantity || 0),
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [{ wch: 30 }, { wch: 15 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 8 }, { wch: 16 }, { wch: 14 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+        XLSX.writeFile(wb, `${businessName || 'business'}_inventory_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+        toast.success(`Downloaded ${filteredProducts.length} products`);
+    };
+
+    return (
+        <Card>
+            <CardHeader className="pb-3">
+                <div className="flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-base flex items-center gap-2">
+                            <Package className="h-4 w-4 text-primary" />
+                            Product Inventory
+                        </CardTitle>
+                        <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={handleDownloadInventory}>
+                            <Download className="h-3.5 w-3.5" />
+                            Download Excel
+                        </Button>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search products..."
+                                className="pl-9"
+                                value={inventorySearch}
+                                onChange={(e) => setInventorySearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Summary Stats */}
+                    <div className="flex items-center gap-4 text-xs">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/50">
+                            <Package className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-muted-foreground">Products:</span>
+                            <span className="font-bold">{filteredProducts.length}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50">
+                            <DollarSign className="h-3 w-3 text-emerald-600" />
+                            <span className="text-emerald-600">Stock Value:</span>
+                            <span className="font-bold text-emerald-700">₹{totalValue.toLocaleString('en-IN')}</span>
+                        </div>
+                        {lowStockCount > 0 && (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50">
+                                <AlertCircle className="h-3 w-3 text-red-600" />
+                                <span className="text-red-600">Low Stock:</span>
+                                <span className="font-bold text-red-700">{lowStockCount}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent className="p-0">
+                {loadingProducts ? (
+                    <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                ) : filteredProducts.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                        <Package className="h-10 w-10 opacity-10 mb-3" />
+                        <p className="font-semibold text-foreground text-sm">No products found</p>
+                        <p className="text-xs mt-1">{inventorySearch ? 'Try a different search.' : 'No products added yet.'}</p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="bg-muted/40">
+                                    <TableHead>Product</TableHead>
+                                    <TableHead>Selling Price</TableHead>
+                                    <TableHead>Cost Price</TableHead>
+                                    <TableHead>Stock</TableHead>
+                                    <TableHead>Stock Value</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredProducts.map((p: any) => {
+                                    const isLow = p.stock_quantity <= (p.low_stock_threshold || 0);
+                                    return (
+                                        <TableRow key={p.id} className="hover:bg-muted/30">
+                                            <TableCell>
+                                                <p className="font-semibold text-sm">{p.name}</p>
+                                                {p.category && <p className="text-[10px] text-muted-foreground">{p.category}</p>}
+                                            </TableCell>
+                                            <TableCell className="font-bold text-primary">₹{Number(p.selling_price).toLocaleString('en-IN')}</TableCell>
+                                            <TableCell className="text-sm text-muted-foreground">₹{Number(p.cost_price).toLocaleString('en-IN')}</TableCell>
+                                            <TableCell>
+                                                <span className={cn('text-sm font-bold', isLow ? 'text-destructive' : 'text-foreground')}>
+                                                    {p.stock_quantity}
+                                                </span>
+                                                {isLow && <Badge variant="destructive" className="ml-2 text-[9px]">LOW</Badge>}
+                                            </TableCell>
+                                            <TableCell className="font-medium text-sm">
+                                                ₹{(Number(p.selling_price || 0) * Number(p.stock_quantity || 0)).toLocaleString('en-IN')}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
     );
 }
