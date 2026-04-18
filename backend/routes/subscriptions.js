@@ -65,10 +65,10 @@ router.get('/my-subscription/:businessId', async (req, res) => {
     const subscription = subs[0];
 
     // Fetch features
-    const [features] = await db.query('SELECT feature_key, feature_value FROM plan_features WHERE plan_id = ?', [subscription.plan_id]);
+    const [features] = await db.query('SELECT feature_key, value FROM plan_features WHERE plan_id = ?', [subscription.plan_id]);
     
     const formattedFeatures = features.reduce((acc, curr) => {
-      acc[curr.feature_key] = curr.feature_value;
+      acc[curr.feature_key] = curr.value;
       return acc;
     }, {});
 

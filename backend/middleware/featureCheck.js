@@ -37,7 +37,7 @@ const requireFeature = (featureKey, customCheck = null) => {
       const planId = subs[0].plan_id;
 
       const [features] = await db.query(
-        'SELECT feature_value FROM plan_features WHERE plan_id = ? AND feature_key = ? LIMIT 1',
+        'SELECT value FROM plan_features WHERE plan_id = ? AND feature_key = ? LIMIT 1',
         [planId, featureKey]
       );
 
@@ -45,7 +45,7 @@ const requireFeature = (featureKey, customCheck = null) => {
         return res.status(403).json({ error: `Feature [${featureKey}] not defined for your plan.` });
       }
 
-      const value = features[0].feature_value;
+      const value = features[0].value;
 
       // Handle boolean flags like 'exports_enabled' = 'true'/'false'
       if (value === 'false') {

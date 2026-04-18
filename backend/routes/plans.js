@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
     const formattedPlans = plans.map(plan => {
       const planFeaturesArr = features.filter(f => f.plan_id === plan.id);
       const planFeaturesMap = planFeaturesArr.reduce((acc, curr) => {
-        acc[curr.feature_key] = curr.feature_value;
+        acc[curr.feature_key] = curr.value;
         return acc;
       }, {});
       
@@ -38,7 +38,7 @@ router.post('/', async (req, res) => {
     if (features && Object.keys(features).length > 0) {
       const featureRows = Object.entries(features).map(([key, value]) => [planId, key, String(value)]);
       await db.query(
-        'INSERT INTO plan_features (plan_id, feature_key, feature_value) VALUES ?',
+        'INSERT INTO plan_features (plan_id, feature_key, value) VALUES ?',
         [featureRows]
       );
     }
@@ -68,7 +68,7 @@ router.put('/:id', async (req, res) => {
       if (Object.keys(features).length > 0) {
         const featureRows = Object.entries(features).map(([key, value]) => [id, key, String(value)]);
         await db.query(
-          'INSERT INTO plan_features (plan_id, feature_key, feature_value) VALUES ?',
+          'INSERT INTO plan_features (plan_id, feature_key, value) VALUES ?',
           [featureRows]
         );
       }
