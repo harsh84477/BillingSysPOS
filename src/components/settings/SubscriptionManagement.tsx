@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function SubscriptionManagement() {
     const { isAdmin } = useAuth();
-    const { subscription, planName, isTrial, isActive, isExpired, historyLimitDays, canExport } = useSubscription();
+    const { subscription, planName, isTrial, isActive, isExpired, isFreeLifetime, historyLimitDays, canExport, maxBillsPerDay, maxItemsPerDay, status } = useSubscription();
 
     // Fetch available plans
     const { data: plans = [] } = useQuery({
@@ -43,51 +43,57 @@ export default function SubscriptionManagement() {
     };
 
     return (
-        <div className="space-y-6">
-            {/* Current Subscription Status */}
+        <div className="space-y-8">
+            {/* Current Subscription Summary */}
             <Card className="overflow-hidden border-2 border-primary/10">
                 <CardHeader className="bg-muted/30 pb-4">
                     <div className="flex items-center justify-between">
                         <div className="space-y-1">
                             <CardTitle className="flex items-center gap-2 text-xl">
                                 <CreditCard className="h-5 w-5 text-primary" />
-                                Current Plan: {planName}
+                                Current Plan: {(() => {
+                                    if (isTrial) return 'Free Trial';
+                                    if (isFreeLifetime) return 'Lifetime';
+                                    if (subscription?.plan?.name) return subscription.plan.name;
+                                    if (status === 'active') return 'Active Plan';
+                                    return 'None';
+                                })()}
                             </CardTitle>
                             <CardDescription>Your business subscription status and details</CardDescription>
                         </div>
                         <Badge className={getStatusColor(subscription?.status || 'trialing')}>
-                            {subscription?.status?.toUpperCase() || 'FREE TRIAL'}
+                            {isTrial ? 'TRIALING' : isFreeLifetime ? 'LIFETIME' : (subscription?.status?.toUpperCase() || 'NONE')}
                         </Badge>
                     </div>
                 </CardHeader>
                 <CardContent className="pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <div className="space-y-2">
-                            <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <p className="text-xs font-medium text-muted-foreground flex items-center gap-2">
                                 <Clock className="h-4 w-4" />
                                 Period Status
                             </p>
                             <p className="text-sm">
                                 {isTrial ? (
                                     <>Trial ends on <strong>{subscription?.trial_end ? format(new Date(subscription.trial_end), 'MMM dd, yyyy HH:mm') : 'N/A'}</strong></>
+                                ) : isFreeLifetime ? (
+                                    <>Never expires</>
                                 ) : (
                                     <>Valid until <strong>{subscription?.current_period_end ? format(new Date(subscription.current_period_end), 'MMM dd, yyyy HH:mm') : 'N/A'}</strong></>
                                 )}
                             </p>
                         </div>
-
                         <div className="space-y-2">
-                            <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <p className="text-xs font-medium text-muted-foreground flex items-center gap-2">
                                 <Sparkles className="h-4 w-4" />
                                 History Limit
                             </p>
                             <p className="text-sm">
-                                {historyLimitDays === -1 ? 'Unlimited History' : `${historyLimitDays} Days Retention`}
+                                {historyLimitDays === -1 ? 'Unlimited History' : `${historyLimitDays} Day${historyLimitDays > 1 ? 's' : ''} Retention`}
                             </p>
                         </div>
-
                         <div className="space-y-2">
-                            <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                            <p className="text-xs font-medium text-muted-foreground flex items-center gap-2">
                                 <Check className="h-4 w-4" />
                                 Advanced Features
                             </p>
@@ -95,12 +101,21 @@ export default function SubscriptionManagement() {
                                 {canExport ? (
                                     <span className="text-green-600 font-medium">Exports Unlocked</span>
                                 ) : (
-                                    <span className="text-muted-foreground">Exports Locked</span>
+                                    <span className="text-red-600 font-medium">Exports Locked</span>
                                 )}
                             </p>
                         </div>
+                        <div className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                                <Sparkles className="h-4 w-4" />
+                                Daily Limits
+                            </p>
+                            <p className="text-sm">
+                                {maxBillsPerDay ? `${maxBillsPerDay} bills/day` : 'Unlimited bills'}<br />
+                                {maxItemsPerDay ? `${maxItemsPerDay} items/day` : 'Unlimited items'}
+                            </p>
+                        </div>
                     </div>
-
                     {isExpired && (
                         <div className="mt-6 p-4 bg-red-50 border border-red-100 rounded-lg flex items-start gap-3">
                             <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
@@ -110,6 +125,88 @@ export default function SubscriptionManagement() {
                             </div>
                         </div>
                     )}
+                </CardContent>
+            </Card>
+
+            {/* Plan Comparison Table */}
+            <Card className="overflow-hidden border-2 border-primary/10">
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Compare Plans</CardTitle>
+                    <CardDescription>See what each plan offers and choose the best for your business</CardDescription>
+                </CardHeader>
+                <CardContent className="overflow-x-auto">
+                    <table className="min-w-full text-sm border-collapse">
+                        <thead>
+                            <tr className="bg-muted/40">
+                                <th className="p-2 text-left font-bold">Feature</th>
+                                {plans.concat([{
+                                    id: 'lifetime',
+                                    name: 'Lifetime',
+                                    price: 5000,
+                                    billing_period: 'lifetime',
+                                    features: [
+                                        '250 bills/day',
+                                        '250 items/day',
+                                        '1 day bill history',
+                                        'Exports Locked',
+                                        'Never expires',
+                                    ],
+                                }]).map(plan => (
+                                    <th key={plan.id} className="p-2 text-center font-bold">
+                                        {plan.name}<br />
+                                        <span className="text-xs font-normal">₹{plan.price}{plan.billing_period !== 'lifetime' ? ` / ${plan.billing_period.replace('_', ' ')}` : ''}</span>
+                                    </th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td className="p-2">Bill History</td>
+                                {plans.concat([{
+                                    id: 'lifetime',
+                                    historyLimitDays: 1,
+                                }]).map(plan => (
+                                    <td key={plan.id} className="p-2 text-center">{plan.historyLimitDays === -1 ? 'Unlimited' : `${plan.historyLimitDays || 1} day`}</td>
+                                ))}
+                            </tr>
+                            <tr>
+                                <td className="p-2">Exports</td>
+                                {plans.concat([{
+                                    id: 'lifetime',
+                                    canExport: false,
+                                }]).map(plan => (
+                                    <td key={plan.id} className="p-2 text-center">{plan.canExport ? 'Unlocked' : 'Locked'}</td>
+                                ))}
+                            </tr>
+                            <tr>
+                                <td className="p-2">Bills per day</td>
+                                {plans.concat([{
+                                    id: 'lifetime',
+                                    maxBillsPerDay: 250,
+                                }]).map(plan => (
+                                    <td key={plan.id} className="p-2 text-center">{plan.maxBillsPerDay || 'Unlimited'}</td>
+                                ))}
+                            </tr>
+                            <tr>
+                                <td className="p-2">Items per day</td>
+                                {plans.concat([{
+                                    id: 'lifetime',
+                                    maxItemsPerDay: 250,
+                                }]).map(plan => (
+                                    <td key={plan.id} className="p-2 text-center">{plan.maxItemsPerDay || 'Unlimited'}</td>
+                                ))}
+                            </tr>
+                            <tr>
+                                <td className="p-2">Support</td>
+                                {plans.concat([{
+                                    id: 'lifetime',
+                                    support: 'Standard',
+                                }]).map(plan => (
+                                    <td key={plan.id} className="p-2 text-center">{plan.support || '24/7 Priority'}</td>
+                                ))}
+                            </tr>
+                        </tbody>
+                    </table>
                 </CardContent>
             </Card>
 
