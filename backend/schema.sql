@@ -1,5 +1,5 @@
 CREATE TABLE plans (
-  id INT AUTO_INCREMENT PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   name VARCHAR(50) NOT NULL,
   price DECIMAL(10, 2) NOT NULL,
   duration_days INT NULL, -- NULL for lifetime
@@ -8,7 +8,7 @@ CREATE TABLE plans (
 );
 
 CREATE TABLE plan_features (
-  id INT AUTO_INCREMENT PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   plan_id INT NOT NULL,
   feature_key VARCHAR(50) NOT NULL,
   value VARCHAR(100) NOT NULL,
@@ -16,12 +16,12 @@ CREATE TABLE plan_features (
 );
 
 CREATE TABLE subscriptions (
-  id INT AUTO_INCREMENT PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   business_id VARCHAR(50) NOT NULL, -- Handle UUIDs or INTs
   plan_id INT NOT NULL,
-  start_date DATETIME NOT NULL,
-  end_date DATETIME NULL, -- NULL for lifetime
-  status ENUM('active', 'expired', 'trial') DEFAULT 'active',
+  start_date TIMESTAMP NOT NULL,
+  end_date TIMESTAMP NULL, -- NULL for lifetime
+  status VARCHAR(20) CHECK (status IN ('active', 'expired', 'trial')) DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (plan_id) REFERENCES plans(id)
 );

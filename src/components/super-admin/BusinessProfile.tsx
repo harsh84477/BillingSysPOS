@@ -118,7 +118,17 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
         onError: (err: any) => toast.error(err.message),
     });
 
-    const sub = business?.subscriptions?.[0];
+    const { data: allSubs } = useQuery({
+        queryKey: ['super-admin-subs-map'],
+        queryFn: async () => {
+            const { data, error } = await (supabase.rpc as any)('get_all_subscriptions');
+            if (error) throw error;
+            return data as any[];
+        },
+    });
+
+    const sub = allSubs?.find((s: any) => s.business_id === businessId) || null;
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'active':
@@ -243,10 +253,9 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                                 <div>
                                     <p className="text-[11px] font-bold uppercase text-primary tracking-widest">Current Plan</p>
                                     <h4 className="text-xl font-black mt-1">
-                                        {sub?.plan?.name
-                                            || (sub?.status === 'trialing' ? 'Trial'
-                                            : (sub?.status === 'active' && sub?.current_period_end && new Date(sub.current_period_end).getFullYear() >= 2099 ? 'Lifetime'
-                                            : (sub?.status === 'active' && sub?.current_period_end ? 'Active Plan' : 'None')))}
+                                        {sub?.plan_name
+                                            || (sub?.status === 'active' && sub?.current_period_end && new Date(sub.current_period_end).getFullYear() >= 2099 ? 'Lifetime'
+                                            : (sub?.status === 'active' && sub?.current_period_end ? 'Active Plan' : 'None'))}
                                     </h4>
                                     <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                                         <Calendar className="h-3.5 w-3.5" />
@@ -267,8 +276,8 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                                 {plans.map((plan: any) => (
                                     <Button
                                         key={plan.id}
-                                        variant={sub?.plan?.id === plan.id ? 'secondary' : 'outline'}
-                                        className="h-auto py-3 px-4 justify-between"
+                                        variant={sub?.plan_id === plan.id ? 'secondary' : 'outline'}
+                                        className={cn("h-auto py-3 px-4 justify-between", sub?.plan_id === plan.id ? 'border-primary bg-primary/5' : '')}
                                         disabled={manageSubMutation.isPending}
                                         onClick={() => manageSubMutation.mutate({
                                             planId: plan.id,
@@ -278,32 +287,15 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                                     >
                                         <div className="text-left">
                                             <p className="font-bold text-xs">{plan.name}</p>
-                                            <p className="text-[10px] opacity-70">₹{plan.price} / {plan.billing_period.replace('_', ' ')}</p>
+                                            <p className="text-[10px] opacity-70">
+                                                {plan.price === 0 || plan.name.toLowerCase() === 'freemium' 
+                                                    ? 'Free forever'
+                                                    : `₹${plan.price} / ${plan.billing_period?.replace('_', ' ') || 'billed'}`}
+                                            </p>
                                         </div>
-                                        <ChevronRight className="h-4 w-4 shrink-0" />
+                                        {sub?.plan_id === plan.id ? <Badge variant="default" className="text-[10px]">Current</Badge> : <ChevronRight className="h-4 w-4 shrink-0" />}
                                     </Button>
                                 ))}
-                                {/* Start Trial Button */}
-                                <Button
-                                    variant="outline"
-                                    className="h-auto py-3 px-4 justify-between border-blue-300 text-blue-700"
-                                    disabled={manageSubMutation.isPending || (sub && sub.status === 'trialing')}
-                                    onClick={() => {
-                                        const now = new Date();
-                                        const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
-                                        manageSubMutation.mutate({
-                                            planId: undefined,
-                                            status: 'trialing',
-                                            periodEnd: trialEnd.toISOString(),
-                                        });
-                                    }}
-                                >
-                                    <div className="text-left">
-                                        <p className="font-bold text-xs">Start Trial</p>
-                                        <p className="text-[10px] opacity-70">7 days free</p>
-                                    </div>
-                                    <ChevronRight className="h-4 w-4 shrink-0" />
-                                </Button>
                                 {/* Lifetime Subscription Button */}
                                 <Button
                                     variant="outline"
