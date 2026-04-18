@@ -119,7 +119,11 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
     const sub = business?.subscriptions?.[0];
     const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'active': return <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Active</Badge>;
+            case 'active':
+                if (sub?.current_period_end && new Date(sub.current_period_end).getFullYear() >= 2099) {
+                    return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Lifetime</Badge>;
+                }
+                return <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Active</Badge>;
             case 'trialing': return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">Trial</Badge>;
             case 'expired': return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Expired</Badge>;
             default: return <Badge variant="outline">No Plan</Badge>;
@@ -236,14 +240,20 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                             <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 flex justify-between items-start">
                                 <div>
                                     <p className="text-[11px] font-bold uppercase text-primary tracking-widest">Current Plan</p>
-                                    <h4 className="text-xl font-black mt-1">{sub?.plan?.name || 'None'}</h4>
+                                    <h4 className="text-xl font-black mt-1">
+                                        {sub?.plan?.name ||
+                                            (sub?.status === 'trialing' ? 'Trial' :
+                                                (sub?.status === 'active' && sub?.current_period_end && new Date(sub.current_period_end).getFullYear() >= 2099 ? 'Lifetime' : 'None'))}
+                                    </h4>
                                     <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                                         <Calendar className="h-3.5 w-3.5" />
-                                        {sub?.current_period_end
-                                            ? `Expires: ${format(new Date(sub.current_period_end), 'MMM dd, yyyy HH:mm')}`
-                                            : sub?.trial_end
-                                                ? `Trial ends: ${format(new Date(sub.trial_end), 'MMM dd, yyyy HH:mm')}`
-                                                : 'No active subscription'}
+                                        {sub?.status === 'trialing' && sub?.trial_end ? (
+                                            `Trial ends: ${format(new Date(sub.trial_end), 'MMM dd, yyyy HH:mm')}`
+                                        ) : sub?.status === 'active' && sub?.current_period_end && new Date(sub.current_period_end).getFullYear() >= 2099 ? (
+                                            'Lifetime Subscription'
+                                        ) : sub?.current_period_end ? (
+                                            `Expires: ${format(new Date(sub.current_period_end), 'MMM dd, yyyy HH:mm')}`
+                                        ) : 'No active subscription'}
                                     </p>
                                 </div>
                                 {sub && getStatusBadge(sub.status)}
@@ -270,6 +280,46 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                                         <ChevronRight className="h-4 w-4 shrink-0" />
                                     </Button>
                                 ))}
+                                {/* Start Trial Button */}
+                                <Button
+                                    variant="outline"
+                                    className="h-auto py-3 px-4 justify-between border-blue-300 text-blue-700"
+                                    disabled={manageSubMutation.isPending || (sub && sub.status === 'trialing')}
+                                    onClick={() => {
+                                        const now = new Date();
+                                        const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+                                        manageSubMutation.mutate({
+                                            planId: undefined,
+                                            status: 'trialing',
+                                            periodEnd: trialEnd.toISOString(),
+                                        });
+                                    }}
+                                >
+                                    <div className="text-left">
+                                        <p className="font-bold text-xs">Start Trial</p>
+                                        <p className="text-[10px] opacity-70">7 days free</p>
+                                    </div>
+                                    <ChevronRight className="h-4 w-4 shrink-0" />
+                                </Button>
+                                {/* Lifetime Subscription Button */}
+                                <Button
+                                    variant="outline"
+                                    className="h-auto py-3 px-4 justify-between border-emerald-300 text-emerald-700"
+                                    disabled={manageSubMutation.isPending || (sub && sub.status === 'active' && sub.current_period_end && new Date(sub.current_period_end).getFullYear() >= 2099)}
+                                    onClick={() => {
+                                        manageSubMutation.mutate({
+                                            planId: undefined,
+                                            status: 'active',
+                                            periodEnd: '2099-12-31T23:59:59.000Z',
+                                        });
+                                    }}
+                                >
+                                    <div className="text-left">
+                                        <p className="font-bold text-xs">Lifetime Subscription</p>
+                                        <p className="text-[10px] opacity-70">Never expires</p>
+                                    </div>
+                                    <ChevronRight className="h-4 w-4 shrink-0" />
+                                </Button>
                             </div>
 
                             {sub && (
