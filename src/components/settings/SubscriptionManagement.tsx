@@ -139,22 +139,34 @@ export default function SubscriptionManagement() {
                         <thead>
                             <tr className="bg-muted/40">
                                 <th className="p-2 text-left font-bold">Feature</th>
-                                {plans.concat([{
-                                    id: 'lifetime',
-                                    name: 'Lifetime',
-                                    price: 5000,
-                                    billing_period: 'lifetime',
-                                    features: [
-                                        '250 bills/day',
-                                        '250 items/day',
-                                        '1 day bill history',
-                                        'Exports Locked',
-                                        'Never expires',
-                                    ],
-                                }]).map(plan => (
+                                {/* Paid plans + Lifetime + Freemium */}
+                                {plans.concat([
+                                    {
+                                        id: 'lifetime',
+                                        name: 'Lifetime',
+                                        price: 5000,
+                                        billing_period: 'lifetime',
+                                        historyLimitDays: -1,
+                                        canExport: true,
+                                        maxBillsPerDay: 'Unlimited',
+                                        maxItemsPerDay: 'Unlimited',
+                                        support: '24/7 Priority',
+                                    },
+                                    {
+                                        id: 'freemium',
+                                        name: 'Freemium',
+                                        price: 0,
+                                        billing_period: 'free',
+                                        historyLimitDays: 1,
+                                        canExport: false,
+                                        maxBillsPerDay: 120,
+                                        maxItemsPerDay: 120,
+                                        support: 'None',
+                                    },
+                                ]).map(plan => (
                                     <th key={plan.id} className="p-2 text-center font-bold">
                                         {plan.name}<br />
-                                        <span className="text-xs font-normal">₹{plan.price}{plan.billing_period !== 'lifetime' ? ` / ${plan.billing_period.replace('_', ' ')}` : ''}</span>
+                                        <span className="text-xs font-normal">{plan.price > 0 ? `₹${plan.price}${plan.billing_period !== 'lifetime' && plan.billing_period !== 'free' ? ` / ${plan.billing_period.replace('_', ' ')}` : ''}` : 'Free'}</span>
                                     </th>
                                 ))}
                             </tr>
@@ -162,47 +174,47 @@ export default function SubscriptionManagement() {
                         <tbody>
                             <tr>
                                 <td className="p-2">Bill History</td>
-                                {plans.concat([{
-                                    id: 'lifetime',
-                                    historyLimitDays: 1,
-                                }]).map(plan => (
-                                    <td key={plan.id} className="p-2 text-center">{plan.historyLimitDays === -1 ? 'Unlimited' : `${plan.historyLimitDays || 1} day`}</td>
+                                {plans.concat([
+                                    { id: 'lifetime', historyLimitDays: -1 },
+                                    { id: 'freemium', historyLimitDays: 1 },
+                                ]).map(plan => (
+                                    <td key={plan.id} className="p-2 text-center">{plan.historyLimitDays === -1 ? 'Unlimited' : `${plan.historyLimitDays} day`}</td>
                                 ))}
                             </tr>
                             <tr>
                                 <td className="p-2">Exports</td>
-                                {plans.concat([{
-                                    id: 'lifetime',
-                                    canExport: false,
-                                }]).map(plan => (
+                                {plans.concat([
+                                    { id: 'lifetime', canExport: true },
+                                    { id: 'freemium', canExport: false },
+                                ]).map(plan => (
                                     <td key={plan.id} className="p-2 text-center">{plan.canExport ? 'Unlocked' : 'Locked'}</td>
                                 ))}
                             </tr>
                             <tr>
                                 <td className="p-2">Bills per day</td>
-                                {plans.concat([{
-                                    id: 'lifetime',
-                                    maxBillsPerDay: 250,
-                                }]).map(plan => (
-                                    <td key={plan.id} className="p-2 text-center">{plan.maxBillsPerDay || 'Unlimited'}</td>
+                                {plans.concat([
+                                    { id: 'lifetime', maxBillsPerDay: 'Unlimited' },
+                                    { id: 'freemium', maxBillsPerDay: 120 },
+                                ]).map(plan => (
+                                    <td key={plan.id} className="p-2 text-center">{plan.maxBillsPerDay}</td>
                                 ))}
                             </tr>
                             <tr>
                                 <td className="p-2">Items per day</td>
-                                {plans.concat([{
-                                    id: 'lifetime',
-                                    maxItemsPerDay: 250,
-                                }]).map(plan => (
-                                    <td key={plan.id} className="p-2 text-center">{plan.maxItemsPerDay || 'Unlimited'}</td>
+                                {plans.concat([
+                                    { id: 'lifetime', maxItemsPerDay: 'Unlimited' },
+                                    { id: 'freemium', maxItemsPerDay: 120 },
+                                ]).map(plan => (
+                                    <td key={plan.id} className="p-2 text-center">{plan.maxItemsPerDay}</td>
                                 ))}
                             </tr>
                             <tr>
                                 <td className="p-2">Support</td>
-                                {plans.concat([{
-                                    id: 'lifetime',
-                                    support: 'Standard',
-                                }]).map(plan => (
-                                    <td key={plan.id} className="p-2 text-center">{plan.support || '24/7 Priority'}</td>
+                                {plans.concat([
+                                    { id: 'lifetime', support: '24/7 Priority' },
+                                    { id: 'freemium', support: 'None' },
+                                ]).map(plan => (
+                                    <td key={plan.id} className="p-2 text-center">{plan.support}</td>
                                 ))}
                             </tr>
                         </tbody>

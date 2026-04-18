@@ -268,57 +268,32 @@ export default function PlansTab() {
                                 </Select>
                             </div>
                         </div>
-                        {form.billing_period === 'lifetime' ? (
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-2">
-                                    <Label>Bills per Day</Label>
-                                    <Input
-                                        type="number"
-                                        value={form.max_bills_per_day || 250}
-                                        onChange={e => setForm(f => ({ ...f, max_bills_per_day: Number(e.target.value) }))}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Items per Day</Label>
-                                    <Input
-                                        type="number"
-                                        value={form.max_items_per_day || 250}
-                                        onChange={e => setForm(f => ({ ...f, max_items_per_day: Number(e.target.value) }))}
-                                    />
-                                </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                                <Label>Bills per Day</Label>
+                                <Input
+                                    type="number"
+                                    value={form.max_bills_per_day || ''}
+                                    onChange={e => setForm(f => ({ ...f, max_bills_per_day: Number(e.target.value) }))}
+                                />
                             </div>
-                        ) : (
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-2">
-                                    <Label>Max Users</Label>
-                                    <Input
-                                        type="number"
-                                        value={form.max_users || ''}
-                                        onChange={e => setForm(f => ({ ...f, max_users: Number(e.target.value) }))}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Max Products</Label>
-                                    <Input
-                                        type="number"
-                                        value={form.max_products || ''}
-                                        onChange={e => setForm(f => ({ ...f, max_products: Number(e.target.value) }))}
-                                    />
-                                </div>
+                            <div className="space-y-2">
+                                <Label>Items per Day</Label>
+                                <Input
+                                    type="number"
+                                    value={form.max_items_per_day || ''}
+                                    onChange={e => setForm(f => ({ ...f, max_items_per_day: Number(e.target.value) }))}
+                                />
                             </div>
-                        )}
+                        </div>
                         <div className="space-y-2">
                             <Label>Features (one per line)</Label>
                             <textarea
                                 className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                placeholder={form.billing_period === 'lifetime' ? "250 bills/day\n250 items/day\n1 day bill history\nExports Locked\nNever expires" : "Unlimited billing\nInventory tracking\nMulti-user support"}
+                                placeholder={"Describe plan features, e.g. Unlimited billing\nInventory tracking\nMulti-user support"}
                                 value={featuresText}
                                 onChange={e => setFeaturesText(e.target.value)}
-                                disabled={form.billing_period === 'lifetime'}
                             />
-                            {form.billing_period === 'lifetime' && (
-                                <div className="text-xs text-muted-foreground mt-1">Lifetime plan features are fixed for compliance.</div>
-                            )}
                         </div>
                         <div className="flex items-center justify-between">
                             <Label>Active</Label>
