@@ -72,10 +72,12 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
     });
 
     const manageSubMutation = useMutation({
-        mutationFn: async (vars: { planId: string; status: string; periodEnd: string }) => {
+        mutationFn: async (vars: { planId?: string; status: string; periodEnd: string }) => {
+            // Always pass null for planId if undefined (for trial/lifetime)
+            const planId = vars.planId ?? null;
             const { error } = await (supabase.rpc as any)('manage_business_subscription', {
                 p_business_id: businessId,
-                p_plan_id: vars.planId,
+                p_plan_id: planId,
                 p_status: vars.status,
                 p_period_end: vars.periodEnd,
             });
@@ -85,7 +87,7 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                 p_action: vars.status === 'expired' ? 'cancel_subscription' : 'assign_subscription',
                 p_target_id: businessId,
                 p_target_type: 'business',
-                p_details: { plan_id: vars.planId, period_end: vars.periodEnd },
+                p_details: { plan_id: planId, period_end: vars.periodEnd },
             });
         },
         onSuccess: () => {
@@ -241,9 +243,10 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                                 <div>
                                     <p className="text-[11px] font-bold uppercase text-primary tracking-widest">Current Plan</p>
                                     <h4 className="text-xl font-black mt-1">
-                                        {sub?.plan?.name ||
-                                            (sub?.status === 'trialing' ? 'Trial' :
-                                                (sub?.status === 'active' && sub?.current_period_end && new Date(sub.current_period_end).getFullYear() >= 2099 ? 'Lifetime' : 'None'))}
+                                        {sub?.plan?.name
+                                            || (sub?.status === 'trialing' ? 'Trial'
+                                            : (sub?.status === 'active' && sub?.current_period_end && new Date(sub.current_period_end).getFullYear() >= 2099 ? 'Lifetime'
+                                            : (sub?.status === 'active' && sub?.current_period_end ? 'Active Plan' : 'None')))}
                                     </h4>
                                     <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                                         <Calendar className="h-3.5 w-3.5" />
