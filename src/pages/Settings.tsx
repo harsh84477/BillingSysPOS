@@ -35,6 +35,7 @@ const TABS = [
   { id: 'billing', label: 'Billing', icon: '💳' },
   { id: 'categories', label: 'Categories', icon: '📁' },
   { id: 'staff', label: 'Staff', icon: '👥' },
+  { id: 'subscription', label: 'Subscription', icon: '💼' },
   { id: 'print', label: 'Print Config', icon: '🖨️' },
   { id: 'pos', label: 'POS', icon: '🖥️' },
   { id: 'appearance', label: 'App Theme', icon: '🎨' },
@@ -85,6 +86,7 @@ export default function Settings() {
               {activeTab === 'billing' && <BillingTab />}
               {activeTab === 'categories' && <CategoriesTab />}
               {activeTab === 'staff' && isAdmin && <StaffTab />}
+              {activeTab === 'subscription' && <(require('@/components/settings/SubscriptionManagement').default) />}
               {activeTab === 'pos' && <POSTab />}
               {activeTab === 'appearance' && <AppThemeTab />}
               {activeTab === 'loyalty' && <LoyaltyTab />}
