@@ -78,8 +78,154 @@ const SuperAdminDashboard: React.FC = () => {
           {activeSection === 'overview' && (
             <div>
               <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 18 }}>Platform Overview</h2>
-              <div style={{ color: '#666', fontSize: 14 }}>Key metrics, recent activity, and platform health at a glance.</div>
-              {/* Add dashboard widgets here */}
+              {/* KPI Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 18 }}>
+                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 18 }}>
+                  <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>Total users</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'monospace' }}>248</div>
+                  <div style={{ fontSize: 12, color: '#3B6D11', marginTop: 4 }}>+14 this month</div>
+                </div>
+                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 18 }}>
+                  <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>Active subs</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'monospace' }}>184</div>
+                  <div style={{ fontSize: 12, color: '#3B6D11', marginTop: 4 }}>+8 this month</div>
+                </div>
+                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 18 }}>
+                  <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>MRR</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'monospace' }}>₹1.8L</div>
+                  <div style={{ fontSize: 12, color: '#3B6D11', marginTop: 4 }}>+22% MoM</div>
+                </div>
+                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 18 }}>
+                  <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>Active trials</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'monospace' }}>31</div>
+                  <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>≤7 days left</div>
+                </div>
+                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 18 }}>
+                  <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', fontWeight: 600, marginBottom: 6 }}>Open tickets</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'monospace' }}>7</div>
+                  <div style={{ fontSize: 12, color: '#A32D2D', marginTop: 4 }}>2 critical</div>
+                </div>
+              </div>
+              {/* Main Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 18 }}>
+                {/* Recent Registrations */}
+                <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 18 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ fontWeight: 600, fontSize: 15 }}>Recent registrations</div>
+                    <button style={{ background: 'none', color: '#4f94ef', border: 'none', fontSize: 13, cursor: 'pointer' }}>All users →</button>
+                  </div>
+                  <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ color: '#888', fontWeight: 600 }}>
+                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Shop</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Plan</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Status</th>
+                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>Joined</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style={{ padding: '6px 8px' }}><div style={{ fontWeight: 600 }}>Ramesh Stores</div><div style={{ fontSize: 11, color: '#888' }}>ramesh@gmail.com</div></td>
+                        <td style={{ padding: '6px 8px' }}><span style={{ background: '#EEEDFE', color: '#534AB7', padding: '2px 10px', borderRadius: 8, fontWeight: 600, fontSize: 12 }}>Pro</span></td>
+                        <td style={{ padding: '6px 8px' }}><span style={{ background: '#EAF3DE', color: '#3B6D11', padding: '2px 10px', borderRadius: 8, fontWeight: 600, fontSize: 12 }}>Active</span></td>
+                        <td style={{ padding: '6px 8px', color: '#888' }}>Apr 18</td>
+                        <td><button style={{ background: '#f6f8fa', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 11, padding: '2px 8px', cursor: 'pointer' }}>View</button></td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '6px 8px' }}><div style={{ fontWeight: 600 }}>Priya Kirana</div><div style={{ fontSize: 11, color: '#888' }}>priya.k@shop.in</div></td>
+                        <td style={{ padding: '6px 8px' }}><span style={{ background: '#E6F1FB', color: '#185FA5', padding: '2px 10px', borderRadius: 8, fontWeight: 600, fontSize: 12 }}>Basic</span></td>
+                        <td style={{ padding: '6px 8px' }}><span style={{ background: '#E6F1FB', color: '#185FA5', padding: '2px 10px', borderRadius: 8, fontWeight: 600, fontSize: 12 }}>Trial</span></td>
+                        <td style={{ padding: '6px 8px', color: '#888' }}>Apr 17</td>
+                        <td><button style={{ background: '#f6f8fa', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 11, padding: '2px 8px', cursor: 'pointer' }}>View</button></td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '6px 8px' }}><div style={{ fontWeight: 600 }}>Mehta Wholesale</div><div style={{ fontSize: 11, color: '#888' }}>mehta@biz.com</div></td>
+                        <td style={{ padding: '6px 8px' }}><span style={{ background: '#EEEDFE', color: '#534AB7', padding: '2px 10px', borderRadius: 8, fontWeight: 600, fontSize: 12 }}>Pro</span></td>
+                        <td style={{ padding: '6px 8px' }}><span style={{ background: '#EAF3DE', color: '#3B6D11', padding: '2px 10px', borderRadius: 8, fontWeight: 600, fontSize: 12 }}>Active</span></td>
+                        <td style={{ padding: '6px 8px', color: '#888' }}>Apr 15</td>
+                        <td><button style={{ background: '#f6f8fa', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 11, padding: '2px 8px', cursor: 'pointer' }}>View</button></td>
+                      </tr>
+                      <tr>
+                        <td style={{ padding: '6px 8px' }}><div style={{ fontWeight: 600 }}>Sunita General</div><div style={{ fontSize: 11, color: '#888' }}>sunita@store.in</div></td>
+                        <td style={{ padding: '6px 8px' }}><span style={{ background: '#F1EFE8', color: '#5F5E5A', padding: '2px 10px', borderRadius: 8, fontWeight: 600, fontSize: 12 }}>Free</span></td>
+                        <td style={{ padding: '6px 8px' }}><span style={{ background: '#FCEBEB', color: '#A32D2D', padding: '2px 10px', borderRadius: 8, fontWeight: 600, fontSize: 12 }}>Suspended</span></td>
+                        <td style={{ padding: '6px 8px', color: '#888' }}>Mar 30</td>
+                        <td><button style={{ background: '#FCEBEB', color: '#A32D2D', border: 'none', borderRadius: 6, fontSize: 11, padding: '2px 8px', cursor: 'pointer' }}>Unsuspend</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                {/* Plan Distribution & Live Activity */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 18 }}>
+                    <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 8 }}>Plan distribution</div>
+                    <div style={{ marginBottom: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <div style={{ minWidth: 50, fontWeight: 600, fontSize: 13 }}>Pro</div>
+                        <div style={{ flex: 1, height: 6, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ width: '54%', height: '100%', background: '#534AB7', borderRadius: 3 }}></div>
+                        </div>
+                        <div style={{ minWidth: 60, color: '#888', fontSize: 12 }}>134 users</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <div style={{ minWidth: 50, fontWeight: 600, fontSize: 13 }}>Basic</div>
+                        <div style={{ flex: 1, height: 6, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ width: '30%', height: '100%', background: '#4f94ef', borderRadius: 3 }}></div>
+                        </div>
+                        <div style={{ minWidth: 60, color: '#888', fontSize: 12 }}>73 users</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <div style={{ minWidth: 50, fontWeight: 600, fontSize: 13 }}>Trial</div>
+                        <div style={{ flex: 1, height: 6, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ width: '13%', height: '100%', background: '#EF9F27', borderRadius: 3 }}></div>
+                        </div>
+                        <div style={{ minWidth: 60, color: '#888', fontSize: 12 }}>31 users</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ minWidth: 50, fontWeight: 600, fontSize: 13 }}>Free</div>
+                        <div style={{ flex: 1, height: 6, background: '#e5e7eb', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ width: '4%', height: '100%', background: '#B4B2A9', borderRadius: 3 }}></div>
+                        </div>
+                        <div style={{ minWidth: 60, color: '#888', fontSize: 12 }}>10 users</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, padding: 18 }}>
+                    <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 8 }}>Live activity</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 4, background: '#e24b4a', marginTop: 5 }}></div>
+                        <div>
+                          <div style={{ fontSize: 13 }}>Sunita General suspended</div>
+                          <div style={{ fontSize: 11, color: '#888' }}>10 min ago · by admin</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 4, background: '#3B6D11', marginTop: 5 }}></div>
+                        <div>
+                          <div style={{ fontSize: 13 }}>Ramesh Stores → Pro plan</div>
+                          <div style={{ fontSize: 11, color: '#888' }}>1 hr ago</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 4, background: '#4f94ef', marginTop: 5 }}></div>
+                        <div>
+                          <div style={{ fontSize: 13 }}>New user: Priya Kirana</div>
+                          <div style={{ fontSize: 11, color: '#888' }}>3 hr ago</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 4, background: '#EF9F27', marginTop: 5 }}></div>
+                        <div>
+                          <div style={{ fontSize: 13 }}>Ticket #041 opened — critical</div>
+                          <div style={{ fontSize: 11, color: '#888' }}>5 hr ago</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           {activeSection === 'users' && (
