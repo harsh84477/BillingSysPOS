@@ -44,8 +44,15 @@ import Products from "./pages/Products";
 import Categories from "./pages/Categories";
 import Customers from "./pages/Customers";
 import Settings from "./pages/Settings";
-import SuperAdmin from "./pages/SuperAdmin";
 import SuperAdminLogin from "./pages/SuperAdminLogin";
+import SuperAdminLayout from "./components/layout/SuperAdminLayout";
+import SuperAdminDashboard from "./pages/super-admin/Dashboard";
+import SuperAdminBusinesses from "./pages/super-admin/Businesses";
+import SuperAdminSubscriptions from "./pages/super-admin/Subscriptions";
+import SuperAdminUsers from "./pages/super-admin/Users";
+import SuperAdminPlans from "./pages/super-admin/Plans";
+import SuperAdminLogs from "./pages/super-admin/Logs";
+import { Outlet } from "react-router-dom";
 import DueBills from "./pages/DueBills";
 import Expenses from "./pages/Expenses";
 import ActivityLogs from "./pages/ActivityLogs";
@@ -297,14 +304,21 @@ const App = () => (
                 <Route path="/salesman-settings" element={<SalesmanSettings />} />
               </Route>
 
-              <Route
-                path="/super-admin"
-                element={
+                <Route path="/super-admin" element={
                   <ProtectedRoute>
-                    <SuperAdmin />
+                    <SuperAdminLayout>
+                      <Outlet />
+                    </SuperAdminLayout>
                   </ProtectedRoute>
-                }
-              />
+                }>
+                  <Route index element={<SuperAdminDashboard />} />
+                  <Route path="dashboard" element={<SuperAdminDashboard />} />
+                  <Route path="businesses" element={<SuperAdminBusinesses />} />
+                  <Route path="subscriptions" element={<SuperAdminSubscriptions />} />
+                  <Route path="users" element={<SuperAdminUsers />} />
+                  <Route path="plans" element={<SuperAdminPlans />} />
+                  <Route path="logs" element={<SuperAdminLogs />} />
+                </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
           </HashRouter>
