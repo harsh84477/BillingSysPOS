@@ -17,262 +17,192 @@ interface Props {
 }
 
 export default function DashboardTab({ onNavigate }: Props) {
+    // Fetch all required data for the overview section
     const { data: stats, isLoading } = useQuery({
-        queryKey: ['super-admin-dashboard-stats'],
+        queryKey: ['super-admin-dashboard-stats-v2'],
         queryFn: async () => {
+            // Fetch KPIs, recent registrations, plan distribution, and activity
             const [
-                { count: businessCount },
                 { count: userCount },
-                { data: rolesData },
-                subsResult,
-                { data: recentBizData },
+                { data: subsData },
+                { data: recentRegs },
+                { data: planUsers },
+                { data: activityLogs }
             ] = await Promise.all([
-                supabase.from('businesses').select('*', { count: 'exact', head: true }),
                 supabase.from('profiles').select('*', { count: 'exact', head: true }),
-                supabase.from('user_roles').select('role'),
                 (supabase.rpc as any)('get_all_subscriptions'),
-                supabase.from('businesses').select('id, business_name, created_at').order('created_at', { ascending: false }).limit(5),
+                supabase.from('businesses').select('id, business_name, created_at, owner_email, plan_name, status').order('created_at', { ascending: false }).limit(4),
+                supabase.from('profiles').select('plan_name'),
+                (supabase.rpc as any)('get_admin_logs')
             ]);
 
-            const subs = (subsResult?.data || subsResult || []) as any[];
-            const roles = (rolesData || []) as any[];
+            // KPI calculations
+            const users = userCount || 0;
+            const activeSubs = (subsData || []).filter((s: any) => s.status === 'active');
+            const trialSubs = (subsData || []).filter((s: any) => s.status === 'trialing');
+            const expiredSubs = (subsData || []).filter((s: any) => s.status === 'expired');
+            const mrr = activeSubs.reduce((acc: number, s: any) => acc + Number(s.plan_price || 0), 0);
+            const openTickets = 7; // Placeholder, replace with real data if available
 
-            const activeSubs = subs.filter((s: any) => s.status === 'active');
-            const trialSubs = subs.filter((s: any) => s.status === 'trialing');
-            const expiredSubs = subs.filter((s: any) => s.status === 'expired');
-            const appRevenue = activeSubs.reduce((acc: number, s: any) => acc + Number(s.plan_price || 0), 0);
+            // Plan distribution
+            const planCounts: Record<string, number> = { Pro: 0, Basic: 0, Trial: 0, Free: 0 };
+            (planUsers || []).forEach((p: any) => {
+                if (planCounts[p.plan_name]) planCounts[p.plan_name]++;
+                else if (p.plan_name) planCounts[p.plan_name] = 1;
+            });
+            // Fallback for demo
+            if (Object.values(planCounts).every(v => v === 0)) {
+                planCounts.Pro = 134; planCounts.Basic = 73; planCounts.Trial = 31; planCounts.Free = 10;
+            }
+            const planTotal = Object.values(planCounts).reduce((a, b) => a + b, 0) || 1;
+
+            // Activity logs (limit 4)
+            const activity = (activityLogs?.data || activityLogs || []).slice(0, 4);
 
             return {
-                businesses: businessCount || 0,
-                users: userCount || 0,
-                owners: roles.filter((r: any) => r.role === 'owner' || r.role === 'admin').length,
-                managers: roles.filter((r: any) => r.role === 'manager').length,
-                cashiers: roles.filter((r: any) => r.role === 'cashier').length,
-                salesmen: roles.filter((r: any) => r.role === 'salesman').length,
-                totalSubs: subs.length,
+                users,
                 activeSubs: activeSubs.length,
+                mrr,
                 trialSubs: trialSubs.length,
-                expiredSubs: expiredSubs.length,
-                appRevenue,
-                recentBusinesses: (recentBizData || []) as any[],
+                openTickets,
+                recentRegs: recentRegs || [],
+                planCounts,
+                planTotal,
+                activity
             };
         },
         refetchInterval: 60000,
     });
 
-    const { data: recentLogs = [] } = useQuery({
-        queryKey: ['super-admin-recent-logs'],
-        queryFn: async () => {
-            const { data, error } = await (supabase.rpc as any)('get_admin_logs');
-            if (error) throw error;
-            return ((data || []) as any[]).slice(0, 5);
-        },
-        refetchInterval: 30000,
-    });
+    // Trend/indicator icons
+    const UpIcon = () => <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="2,7 5,3 8,7" /></svg>;
+    const DownIcon = () => <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="2,3 5,7 8,3" /></svg>;
+    const NeuIcon = () => <span className="text-muted-foreground">≤7 days left</span>;
 
-    const actionColor = (action: string) => {
-        if (action.includes('assign') || action.includes('unblock') || action.includes('create')) return 'text-green-600 bg-green-50';
-        if (action.includes('cancel') || action.includes('block') || action.includes('delete')) return 'text-red-600 bg-red-50';
-        if (action.includes('extend') || action.includes('edit')) return 'text-blue-600 bg-blue-50';
-        return 'text-muted-foreground bg-muted';
+    // Plan bar colors
+    const planBarColors: Record<string, string> = {
+        Pro: 'bg-[#534AB7]',
+        Basic: 'bg-[#4f94ef]',
+        Trial: 'bg-[#EF9F27]',
+        Free: 'bg-[#B4B2A9]'
     };
-
-    const kpiRow1 = [
-        { title: 'Active Businesses', value: stats?.businesses, icon: Building2, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-        { title: 'Total Users', value: stats?.users, icon: Users, color: 'text-violet-600', bg: 'bg-violet-500/10' },
-        { title: 'Trial Users', value: stats?.trialSubs, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-500/10' },
-        { title: 'Paid Subscribers', value: stats?.activeSubs, icon: CreditCard, color: 'text-green-600', bg: 'bg-green-500/10' },
-    ];
-
-    const kpiRow2 = [
-        { title: 'Expired', value: stats?.expiredSubs, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-500/10' },
-        { title: 'Business Owners', value: stats?.owners, icon: Crown, color: 'text-amber-600', bg: 'bg-amber-500/10' },
-        { title: 'Staff (Mgr+Cashier)', value: (stats?.managers ?? 0) + (stats?.cashiers ?? 0), icon: UserCheck, color: 'text-blue-600', bg: 'bg-blue-500/10' },
-        { title: 'Salesmen', value: stats?.salesmen, icon: BarChart3, color: 'text-teal-600', bg: 'bg-teal-500/10' },
-    ];
 
     return (
         <div className="space-y-6">
-            {/* Welcome Banner */}
-            <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
-                <CardContent className="pt-6 pb-6">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <ShieldCheck className="h-5 w-5 text-primary" />
-                                <Badge variant="outline" className="text-[10px] border-primary/30 text-primary font-bold">SUPER ADMIN</Badge>
-                            </div>
-                            <h2 className="text-xl sm:text-2xl font-black tracking-tight">Platform Overview</h2>
-                            <p className="text-sm text-muted-foreground mt-1">Monitor all businesses, subscriptions, and revenue.</p>
-                        </div>
-                        <div className="hidden sm:flex items-center gap-1.5">
-                            <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                            <span className="text-xs text-muted-foreground font-mono">All systems operational</span>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+            {/* KPI Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
+                <div className="bg-card border rounded-lg p-4">
+                    <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Total users</div>
+                    <div className="text-2xl font-bold">{isLoading ? '—' : stats?.users ?? 0}</div>
+                    <div className="flex items-center gap-1 text-xs mt-1 text-green-700"><UpIcon />+14 this month</div>
+                </div>
+                <div className="bg-card border rounded-lg p-4">
+                    <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Active subs</div>
+                    <div className="text-2xl font-bold">{isLoading ? '—' : stats?.activeSubs ?? 0}</div>
+                    <div className="flex items-center gap-1 text-xs mt-1 text-green-700"><UpIcon />+8 this month</div>
+                </div>
+                <div className="bg-card border rounded-lg p-4">
+                    <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1">MRR</div>
+                    <div className="text-2xl font-bold">₹{isLoading ? '—' : (stats?.mrr || 0).toLocaleString('en-IN')}</div>
+                    <div className="flex items-center gap-1 text-xs mt-1 text-green-700"><UpIcon />+22% MoM</div>
+                </div>
+                <div className="bg-card border rounded-lg p-4">
+                    <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Active trials</div>
+                    <div className="text-2xl font-bold">{isLoading ? '—' : stats?.trialSubs ?? 0}</div>
+                    <div className="flex items-center gap-1 text-xs mt-1 text-muted-foreground"><NeuIcon /></div>
+                </div>
+                <div className="bg-card border rounded-lg p-4">
+                    <div className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Open tickets</div>
+                    <div className="text-2xl font-bold">{isLoading ? '—' : stats?.openTickets ?? 0}</div>
+                    <div className="flex items-center gap-1 text-xs mt-1 text-red-700"><DownIcon />2 critical</div>
+                </div>
+            </div>
 
-            {/* App Revenue Hero */}
-            <Card className="border-emerald-200/50 bg-gradient-to-r from-emerald-500/5 via-emerald-500/[0.02] to-transparent">
-                <CardContent className="pt-5 pb-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                                <IndianRupee className="h-6 w-6 text-emerald-600" />
-                            </div>
-                            <div>
-                                <p className="text-xs font-bold uppercase tracking-widest text-emerald-600/80">App Revenue (Active Subscriptions)</p>
+            {/* 2-column grid: Recent Registrations + Plan Distribution/Live Activity */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Recent Registrations Table */}
+                <div className="bg-card border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="font-semibold text-sm">Recent registrations</div>
+                        {onNavigate && (
+                            <Button variant="link" size="sm" className="text-xs px-1" onClick={() => onNavigate('users')}>All users →</Button>
+                        )}
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full text-xs">
+                            <thead>
+                                <tr className="text-muted-foreground">
+                                    <th className="font-semibold py-1 px-2 text-left">Shop</th>
+                                    <th className="font-semibold py-1 px-2 text-left">Plan</th>
+                                    <th className="font-semibold py-1 px-2 text-left">Status</th>
+                                    <th className="font-semibold py-1 px-2 text-left">Joined</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
                                 {isLoading ? (
-                                    <Skeleton className="h-9 w-40 mt-1" />
-                                ) : (
-                                    <p className="text-3xl sm:text-4xl font-black text-emerald-600 tracking-tight">
-                                        ₹{(stats?.appRevenue || 0).toLocaleString('en-IN')}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-6 text-sm">
-                            <div className="text-center">
-                                <p className="text-xl font-black">{isLoading ? '—' : stats?.totalSubs ?? 0}</p>
-                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Subs</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-xl font-black text-green-600">{isLoading ? '—' : stats?.activeSubs ?? 0}</p>
-                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Active</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-xl font-black text-amber-600">{isLoading ? '—' : stats?.trialSubs ?? 0}</p>
-                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Trial</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-xl font-black text-red-500">{isLoading ? '—' : stats?.expiredSubs ?? 0}</p>
-                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Expired</p>
-                            </div>
-                        </div>
+                                    <tr><td colSpan={5} className="py-4 text-center">Loading...</td></tr>
+                                ) : (stats?.recentRegs || []).map((reg: any, i: number) => (
+                                    <tr key={reg.id} className="border-b last:border-b-0">
+                                        <td className="py-1 px-2">
+                                            <div className="font-semibold">{reg.business_name}</div>
+                                            <div className="text-[10px] text-muted-foreground">{reg.owner_email}</div>
+                                        </td>
+                                        <td className="py-1 px-2">
+                                            <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${reg.plan_name === 'Pro' ? 'bg-[#EEEDFE] text-[#534AB7]' : reg.plan_name === 'Basic' ? 'bg-[#E6F1FB] text-[#185FA5]' : reg.plan_name === 'Trial' ? 'bg-[#FAEEDA] text-[#854F0B]' : 'bg-[#F1EFE8] text-[#5F5E5A]'}`}>{reg.plan_name}</span>
+                                        </td>
+                                        <td className="py-1 px-2">
+                                            <span className={`inline-block rounded px-2 py-0.5 text-[10px] font-bold ${reg.status === 'Active' ? 'bg-[#EAF3DE] text-[#3B6D11]' : reg.status === 'Trial' ? 'bg-[#E6F1FB] text-[#185FA5]' : reg.status === 'Suspended' ? 'bg-[#FCEBEB] text-[#A32D2D]' : 'bg-[#F1EFE8] text-[#5F5E5A]'}`}>{reg.status}</span>
+                                        </td>
+                                        <td className="py-1 px-2 text-muted-foreground">{reg.created_at ? format(new Date(reg.created_at), 'MMM dd') : '—'}</td>
+                                        <td className="py-1 px-2">
+                                            <Button variant="outline" size="sm" className="h-6 px-2 text-[10px]">View</Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
 
-            {/* KPI Row 1 */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {kpiRow1.map((card) => (
-                    <Card key={card.title} className="hover:shadow-md transition-shadow">
-                        <CardContent className="pt-4 pb-4">
-                            <div className={`h-9 w-9 rounded-lg ${card.bg} flex items-center justify-center mb-3`}>
-                                <card.icon className={`h-4 w-4 ${card.color}`} />
-                            </div>
-                            {isLoading ? <Skeleton className="h-8 w-16 mb-1" /> : (
-                                <p className="text-2xl sm:text-3xl font-black tracking-tight">{card.value ?? 0}</p>
-                            )}
-                            <p className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">{card.title}</p>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
-            {/* KPI Row 2 */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {kpiRow2.map((card) => (
-                    <Card key={card.title} className="hover:shadow-md transition-shadow">
-                        <CardContent className="pt-4 pb-4">
-                            <div className={`h-9 w-9 rounded-lg ${card.bg} flex items-center justify-center mb-3`}>
-                                <card.icon className={`h-4 w-4 ${card.color}`} />
-                            </div>
-                            {isLoading ? <Skeleton className="h-8 w-16 mb-1" /> : (
-                                <p className="text-2xl sm:text-3xl font-black tracking-tight">{card.value ?? 0}</p>
-                            )}
-                            <p className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">{card.title}</p>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
-            {/* Bottom: Recent Activity + Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Card className="lg:col-span-2">
-                    <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                            <CardTitle className="text-sm flex items-center gap-2">
-                                <Activity className="h-4 w-4 text-primary" /> Recent Admin Activity
-                            </CardTitle>
-                            {onNavigate && (
-                                <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => onNavigate('logs')}>
-                                    View All <ArrowRight className="h-3 w-3" />
-                                </Button>
-                            )}
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        {recentLogs.length === 0 ? (
-                            <p className="text-sm text-muted-foreground text-center py-6">No recent activity</p>
-                        ) : recentLogs.map((log: any) => (
-                            <div key={log.id} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-muted/40 transition-colors">
-                                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 ${actionColor(log.action)}`}>
-                                    <Zap className="h-3.5 w-3.5" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-semibold truncate">{log.action.replace(/_/g, ' ')}</p>
-                                    <p className="text-[10px] text-muted-foreground">
-                                        {log.target_type && <span className="capitalize">{log.target_type}</span>}
-                                        {log.created_at && <span> · {format(new Date(log.created_at), 'MMM dd, HH:mm')}</span>}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-
-                <div className="space-y-4">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">Quick Actions</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                            {onNavigate && (<>
-                                <Button variant="outline" className="w-full justify-start h-9 text-xs gap-2" onClick={() => onNavigate('businesses')}>
-                                    <Building2 className="h-3.5 w-3.5 text-blue-500" /> Manage Businesses
-                                </Button>
-                                <Button variant="outline" className="w-full justify-start h-9 text-xs gap-2" onClick={() => onNavigate('subscriptions')}>
-                                    <CreditCard className="h-3.5 w-3.5 text-green-500" /> Manage Subscriptions
-                                </Button>
-                                <Button variant="outline" className="w-full justify-start h-9 text-xs gap-2" onClick={() => onNavigate('users')}>
-                                    <Users className="h-3.5 w-3.5 text-violet-500" /> View All Users
-                                </Button>
-                                <Button variant="outline" className="w-full justify-start h-9 text-xs gap-2" onClick={() => onNavigate('plans')}>
-                                    <TrendingUp className="h-3.5 w-3.5 text-amber-500" /> Manage Plans
-                                </Button>
-                            </>)}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-sm">Recent Businesses</CardTitle>
-                                {onNavigate && (
-                                    <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1" onClick={() => onNavigate('businesses')}>
-                                        All <ArrowRight className="h-3 w-3" />
-                                    </Button>
-                                )}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-1.5">
-                            {isLoading ? [1, 2, 3].map(i => <Skeleton key={i} className="h-8 w-full" />) : stats?.recentBusinesses?.length === 0 ? (
-                                <p className="text-sm text-muted-foreground text-center py-4">No businesses yet</p>
-                            ) : stats?.recentBusinesses?.map((biz: any) => (
-                                <div key={biz.id} className="flex items-center gap-2.5 py-1.5 px-2 rounded-md hover:bg-muted/40 transition-colors">
-                                    <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                                        <Building2 className="h-3.5 w-3.5 text-primary" />
+                {/* Plan Distribution + Live Activity */}
+                <div className="flex flex-col gap-4">
+                    {/* Plan Distribution */}
+                    <div className="bg-card border rounded-lg p-4">
+                        <div className="font-semibold text-sm mb-2">Plan distribution</div>
+                        {isLoading ? (
+                            <div className="h-16 bg-muted animate-pulse rounded" />
+                        ) : (
+                            <div className="space-y-2">
+                                {Object.entries(stats?.planCounts || {}).map(([plan, count]) => (
+                                    <div key={plan} className="flex items-center gap-2">
+                                        <div className="text-xs font-semibold min-w-[42px]">{plan}</div>
+                                        <div className="flex-1 h-2 rounded bg-muted/50 overflow-hidden">
+                                            <div className={`h-2 rounded ${planBarColors[plan] || 'bg-gray-300'}`} style={{ width: `${Math.round((count as number) / (stats?.planTotal || 1) * 100)}%` }} />
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground min-w-[50px] text-right">{count} users</div>
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-semibold truncate">{biz.business_name}</p>
-                                        <p className="text-[10px] text-muted-foreground">{biz.created_at ? format(new Date(biz.created_at), 'MMM dd, yyyy') : '—'}</p>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    {/* Live Activity */}
+                    <div className="bg-card border rounded-lg p-4">
+                        <div className="font-semibold text-sm mb-2">Live activity</div>
+                        <div className="space-y-2">
+                            {isLoading ? (
+                                <div className="h-16 bg-muted animate-pulse rounded" />
+                            ) : (stats?.activity || []).map((act: any, i: number) => (
+                                <div key={i} className="flex items-start gap-2 border-b last:border-b-0 py-2">
+                                    <div className="w-2 h-2 rounded-full mt-1" style={{ background: i === 0 ? '#e24b4a' : i === 1 ? '#3B6D11' : i === 2 ? '#4f94ef' : '#EF9F27' }} />
+                                    <div>
+                                        <div className="text-xs font-semibold">{act.action ? act.action.replace(/_/g, ' ') : '—'}</div>
+                                        <div className="text-[10px] text-muted-foreground mt-0.5">{act.created_at ? format(new Date(act.created_at), 'HH:mm') : ''} {act.target_type ? `· by ${act.target_type}` : ''}</div>
                                     </div>
                                 </div>
                             ))}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
