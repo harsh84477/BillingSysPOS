@@ -30,7 +30,7 @@ const SuperAdminDashboard: React.FC = () => {
             </div>
             <span style={{ fontWeight: 500, fontSize: 15 }}>Invoice Adda</span>
           </div>
-          <div style={{ marginTop: 8, fontSize: 10, background: 'rgba(226,75,74,.25)', color: '#ef9a9a', padding: '2px 8px', borderRadius: 10, display: 'inline-block' }}>SUPER ADMIN</div>
+          {/* Removed SUPER ADMIN label for cleaner UI */}
         </div>
         <nav style={{ flex: 1, padding: '16px 0' }}>
           {sections.map((sec) => (
@@ -53,10 +53,10 @@ const SuperAdminDashboard: React.FC = () => {
         </nav>
         <div style={{ borderTop: '1px solid rgba(255,255,255,.07)', padding: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#4f94ef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 13 }}>SA</div>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#4f94ef', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 13 }}>AD</div>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 500 }}>Super Admin</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,.4)' }}>Root · All access</div>
+              <div style={{ fontSize: 12, fontWeight: 500 }}>Admin</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,.4)' }}>Full access</div>
             </div>
           </div>
         </div>
@@ -67,7 +67,7 @@ const SuperAdminDashboard: React.FC = () => {
         <header style={{ background: '#fff', borderBottom: '1px solid #e5e7eb', padding: '0 28px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 600 }}>{sections.find(s => s.id === activeSection)?.label || ''}</div>
-            <div style={{ fontSize: 11, color: '#888' }}>Invoice Adda · Super Admin · April 2026</div>
+            <div style={{ fontSize: 11, color: '#888' }}>Invoice Adda · Admin Panel · April 2026</div>
           </div>
           <div>
             <button style={{ background: '#0a1628', color: '#fff', border: 'none', borderRadius: 6, padding: '7px 18px', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>+ Action</button>
