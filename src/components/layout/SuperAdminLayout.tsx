@@ -152,4 +152,5 @@ export default function SuperAdminLayout({ children }: Props) {
             </div>
         </div>
     );
+}
 
