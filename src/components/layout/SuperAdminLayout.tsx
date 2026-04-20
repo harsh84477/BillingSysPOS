@@ -39,23 +39,6 @@ export default function SuperAdminLayout({ children }: Props) {
     return (
         <div className="flex h-screen overflow-hidden bg-background">
             {/* ── Sidebar ── */}
-
-
-    const { superAdminLogout, customAdminName } = useAuth();
-    const navigate = useNavigate();
-    const location = useLocation();
-
-    const handleLogout = () => {
-        superAdminLogout();
-        navigate('/super-admin-login');
-    };
-
-    // Determine active item by matching path
-    const activeItem = navItems.find(n => location.pathname.startsWith(n.path)) || navItems[0];
-
-    return (
-        <div className="flex h-screen overflow-hidden bg-background">
-            {/* ── Sidebar ── */}
             <aside className="hidden lg:flex w-60 flex-col flex-shrink-0 bg-card border-r border-border">
                 {/* Brand */}
                 <div className="flex items-center gap-3 h-16 px-5 border-b border-border">
