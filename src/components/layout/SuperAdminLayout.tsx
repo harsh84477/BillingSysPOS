@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useNavigate, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import {
@@ -9,30 +9,31 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'businesses', label: 'Businesses', icon: Building2 },
-    { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
-    { id: 'users', label: 'Users', icon: Users },
-    { id: 'plans', label: 'Plans', icon: Sparkles },
-    { id: 'logs', label: 'Audit Logs', icon: ScrollText },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/super-admin/dashboard' },
+    { id: 'businesses', label: 'Businesses', icon: Building2, path: '/super-admin/businesses' },
+    { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, path: '/super-admin/subscriptions' },
+    { id: 'users', label: 'Users', icon: Users, path: '/super-admin/users' },
+    { id: 'plans', label: 'Plans', icon: Sparkles, path: '/super-admin/plans' },
+    { id: 'logs', label: 'Audit Logs', icon: ScrollText, path: '/super-admin/logs' },
 ];
 
+
 interface Props {
-    activeTab: string;
-    onTabChange: (tab: string) => void;
     children: React.ReactNode;
 }
 
-export default function SuperAdminLayout({ activeTab, onTabChange, children }: Props) {
+
     const { superAdminLogout, customAdminName } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleLogout = () => {
         superAdminLogout();
         navigate('/super-admin-login');
     };
 
-    const activeItem = navItems.find(n => n.id === activeTab) || navItems[0];
+    // Determine active item by matching path
+    const activeItem = navItems.find(n => location.pathname.startsWith(n.path)) || navItems[0];
 
     return (
         <div className="flex h-screen overflow-hidden bg-background">
@@ -53,25 +54,27 @@ export default function SuperAdminLayout({ activeTab, onTabChange, children }: P
                 <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
                     <p className="text-muted-foreground/50 text-[10px] font-bold uppercase tracking-widest px-3 mb-2">Navigation</p>
                     {navItems.map((item) => {
-                        const active = activeTab === item.id;
+                        const active = location.pathname.startsWith(item.path);
                         return (
-                            <button
+                            <NavLink
                                 key={item.id}
-                                onClick={() => onTabChange(item.id)}
-                                className={cn(
-                                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group',
-                                    active
-                                        ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-                                        : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                                )}
+                                to={item.path}
+                                className={({ isActive }) =>
+                                    cn(
+                                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group',
+                                        isActive || active
+                                            ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                                    )
+                                }
+                                end={item.id === 'dashboard'}
                             >
                                 <item.icon className={cn('h-4 w-4 shrink-0', active ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground')} />
                                 <span className="flex-1 text-left">{item.label}</span>
                                 {active && <ChevronRight className="h-3 w-3 opacity-60" />}
-                            </button>
+                            </NavLink>
                         );
                     })}
-
                 </nav>
 
                 {/* Admin Name + Logout */}
@@ -126,19 +129,22 @@ export default function SuperAdminLayout({ activeTab, onTabChange, children }: P
                 {/* Mobile Bottom Nav */}
                 <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border flex justify-around py-1.5 px-1 z-50">
                     {navItems.slice(0, 5).map((item) => {
-                        const active = activeTab === item.id;
+                        const active = location.pathname.startsWith(item.path);
                         return (
-                            <button
+                            <NavLink
                                 key={item.id}
-                                onClick={() => onTabChange(item.id)}
-                                className={cn(
-                                    'flex flex-col items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-medium transition-colors min-w-0',
-                                    active ? 'text-primary' : 'text-muted-foreground'
-                                )}
+                                to={item.path}
+                                className={({ isActive }) =>
+                                    cn(
+                                        'flex flex-col items-center gap-0.5 px-2 py-1 rounded-md text-[10px] font-medium transition-colors min-w-0',
+                                        isActive || active ? 'text-primary' : 'text-muted-foreground'
+                                    )
+                                }
+                                end={item.id === 'dashboard'}
                             >
                                 <item.icon className="h-4 w-4" />
                                 <span className="truncate">{item.label.split(' ')[0]}</span>
-                            </button>
+                            </NavLink>
                         );
                     })}
                 </nav>
