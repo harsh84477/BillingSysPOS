@@ -52,6 +52,14 @@ import SuperAdminSubscriptions from "./pages/super-admin/Subscriptions";
 import SuperAdminUsers from "./pages/super-admin/Users";
 import SuperAdminPlans from "./pages/super-admin/Plans";
 import SuperAdminLogs from "./pages/super-admin/Logs";
+import SuperAdminAnalytics from "./pages/super-admin/Analytics";
+import SuperAdminTenants from "./pages/super-admin/Tenants";
+import SuperAdminRoles from "./pages/super-admin/Roles";
+import SuperAdminRevenue from "./pages/super-admin/Revenue";
+import SuperAdminSupportTickets from "./pages/super-admin/SupportTickets";
+import SuperAdminAnnouncements from "./pages/super-admin/Announcements";
+import SuperAdminHealth from "./pages/super-admin/Health";
+import SuperAdminSettings from "./pages/super-admin/Settings";
 import { Outlet } from "react-router-dom";
 import DueBills from "./pages/DueBills";
 import Expenses from "./pages/Expenses";
@@ -313,11 +321,19 @@ const App = () => (
                 }>
                   <Route index element={<SuperAdminDashboard />} />
                   <Route path="dashboard" element={<SuperAdminDashboard />} />
+                  <Route path="analytics" element={<SuperAdminAnalytics />} />
+                  <Route path="users" element={<SuperAdminUsers />} />
+                  <Route path="tenants" element={<SuperAdminTenants />} />
+                  <Route path="roles" element={<SuperAdminRoles />} />
                   <Route path="businesses" element={<SuperAdminBusinesses />} />
                   <Route path="subscriptions" element={<SuperAdminSubscriptions />} />
-                  <Route path="users" element={<SuperAdminUsers />} />
+                  <Route path="revenue" element={<SuperAdminRevenue />} />
                   <Route path="plans" element={<SuperAdminPlans />} />
+                  <Route path="support-tickets" element={<SuperAdminSupportTickets />} />
+                  <Route path="announcements" element={<SuperAdminAnnouncements />} />
                   <Route path="logs" element={<SuperAdminLogs />} />
+                  <Route path="health" element={<SuperAdminHealth />} />
+                  <Route path="settings" element={<SuperAdminSettings />} />
                 </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

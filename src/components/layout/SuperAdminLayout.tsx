@@ -8,13 +8,47 @@ import {
     Users, Sparkles, ScrollText, ChevronRight,
 } from 'lucide-react';
 
-const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/super-admin/dashboard' },
-    { id: 'businesses', label: 'Businesses', icon: Building2, path: '/super-admin/businesses' },
-    { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, path: '/super-admin/subscriptions' },
-    { id: 'users', label: 'Users', icon: Users, path: '/super-admin/users' },
-    { id: 'plans', label: 'Plans', icon: Sparkles, path: '/super-admin/plans' },
-    { id: 'logs', label: 'Audit Logs', icon: ScrollText, path: '/super-admin/logs' },
+
+// Sidebar structure with groups, badges, and icons
+const navGroups = [
+    {
+        label: 'Platform',
+        items: [
+            { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '/super-admin/dashboard' },
+            { id: 'analytics', label: 'Analytics', icon: Sparkles, path: '/super-admin/analytics' },
+        ],
+    },
+    {
+        label: 'Users & Tenants',
+        items: [
+            { id: 'users', label: 'All Users', icon: Users, path: '/super-admin/users', badge: 248, badgeType: 'danger' },
+            { id: 'tenants', label: 'Shop Tenants', icon: Building2, path: '/super-admin/tenants' },
+            { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck, path: '/super-admin/roles' },
+        ],
+    },
+    {
+        label: 'Monetisation',
+        items: [
+            { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, path: '/super-admin/subscriptions' },
+            { id: 'revenue', label: 'Revenue', icon: CreditCard, path: '/super-admin/revenue' },
+            { id: 'plans', label: 'Plans & Pricing', icon: Sparkles, path: '/super-admin/plans' },
+        ],
+    },
+    {
+        label: 'Support',
+        items: [
+            { id: 'tickets', label: 'Support Tickets', icon: ScrollText, path: '/super-admin/support-tickets', badge: 7, badgeType: 'warn' },
+            { id: 'announcements', label: 'Announcements', icon: Sparkles, path: '/super-admin/announcements' },
+        ],
+    },
+    {
+        label: 'System',
+        items: [
+            { id: 'logs', label: 'Audit Log', icon: ScrollText, path: '/super-admin/logs' },
+            { id: 'health', label: 'System Health', icon: ShieldCheck, path: '/super-admin/health' },
+            { id: 'settings', label: 'Platform Settings', icon: Sparkles, path: '/super-admin/settings' },
+        ],
+    },
 ];
 
 
@@ -51,32 +85,45 @@ export default function SuperAdminLayout({ children }: Props) {
                     </div>
                 </div>
 
-                {/* Nav */}
-                <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
-                    <p className="text-muted-foreground/50 text-[10px] font-bold uppercase tracking-widest px-3 mb-2">Navigation</p>
-                    {navItems.map((item) => {
-                        const active = location.pathname.startsWith(item.path);
-                        return (
-                            <NavLink
-                                key={item.id}
-                                to={item.path}
-                                className={({ isActive }) =>
-                                    cn(
-                                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group',
-                                        isActive || active
-                                            ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
-                                            : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                                    )
-                                }
-                                end={item.id === 'dashboard'}
-                            >
-                                <item.icon className={cn('h-4 w-4 shrink-0', active ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground')} />
-                                <span className="flex-1 text-left">{item.label}</span>
-                                {active && <ChevronRight className="h-3 w-3 opacity-60" />}
-                            </NavLink>
-                        );
-                    })}
-                </nav>
+
+                                {/* Nav */}
+                                <nav className="flex-1 py-4 px-3 space-y-2 overflow-y-auto">
+                                    {navGroups.map((group, gi) => (
+                                        <div key={gi} className="mb-2">
+                                            <div className="text-muted-foreground/50 text-[10px] font-bold uppercase tracking-widest px-3 mb-1">{group.label}</div>
+                                            {group.items.map((item) => {
+                                                const active = location.pathname.startsWith(item.path);
+                                                return (
+                                                    <NavLink
+                                                        key={item.id}
+                                                        to={item.path}
+                                                        className={({ isActive }) =>
+                                                            cn(
+                                                                'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group',
+                                                                isActive || active
+                                                                    ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/20'
+                                                                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                                                            )
+                                                        }
+                                                    >
+                                                        <item.icon className={cn('h-4 w-4 shrink-0', active ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground')} />
+                                                        <span className="flex-1 text-left">{item.label}</span>
+                                                        {item.badge && (
+                                                            <span className={
+                                                                cn(
+                                                                    'ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full',
+                                                                    item.badgeType === 'danger' ? 'bg-red-500 text-white' :
+                                                                    item.badgeType === 'warn' ? 'bg-yellow-400 text-black' : 'bg-gray-300 text-black'
+                                                                )
+                                                            }>{item.badge}</span>
+                                                        )}
+                                                        {active && <ChevronRight className="h-3 w-3 opacity-60" />}
+                                                    </NavLink>
+                                                );
+                                            })}
+                                        </div>
+                                    ))}
+                                </nav>
 
                 {/* Admin Name + Logout */}
                 <div className="p-3 border-t border-border space-y-2">
