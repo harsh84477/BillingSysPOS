@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 
+
 // Sidebar structure with groups, badges, and icons
 const navGroups = [
     {
@@ -50,6 +51,9 @@ const navGroups = [
         ],
     },
 ];
+
+// Flattened nav items for active item and mobile nav
+const navItems = navGroups.flatMap(group => group.items);
 
 
 
@@ -188,7 +192,7 @@ export default function SuperAdminLayout({ children }: Props) {
                                         isActive || active ? 'text-primary' : 'text-muted-foreground'
                                     )
                                 }
-                                end={item.id === 'dashboard'}
+                                end={item.id === 'overview'}
                             >
                                 <item.icon className="h-4 w-4" />
                                 <span className="truncate">{item.label.split(' ')[0]}</span>
