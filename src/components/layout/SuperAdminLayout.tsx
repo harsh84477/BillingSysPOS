@@ -18,9 +18,27 @@ const navItems = [
 ];
 
 
+
 interface Props {
     children: React.ReactNode;
 }
+
+export default function SuperAdminLayout({ children }: Props) {
+    const { superAdminLogout, customAdminName } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    const handleLogout = () => {
+        superAdminLogout();
+        navigate('/super-admin-login');
+    };
+
+    // Determine active item by matching path
+    const activeItem = navItems.find(n => location.pathname.startsWith(n.path)) || navItems[0];
+
+    return (
+        <div className="flex h-screen overflow-hidden bg-background">
+            {/* ── Sidebar ── */}
 
 
     const { superAdminLogout, customAdminName } = useAuth();
