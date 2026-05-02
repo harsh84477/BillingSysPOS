@@ -1,3 +1,5 @@
 import React from "react";
-const SuperAdminSupportTickets = () => <div>Support Tickets Section (Coming soon)</div>;
+import SupportTicketsTab from "@/components/super-admin/SupportTicketsTab";
+
+const SuperAdminSupportTickets = () => <SupportTicketsTab />;
 export default SuperAdminSupportTickets;

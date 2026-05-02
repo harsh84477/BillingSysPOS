@@ -1,3 +1,5 @@
 import React from "react";
-const SuperAdminRevenue = () => <div>Revenue Section (Coming soon)</div>;
+import RevenueTab from "@/components/super-admin/RevenueTab";
+
+const SuperAdminRevenue = () => <RevenueTab />;
 export default SuperAdminRevenue;

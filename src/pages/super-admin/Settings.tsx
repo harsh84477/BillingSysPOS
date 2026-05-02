@@ -1,3 +1,5 @@
 import React from "react";
-const SuperAdminSettings = () => <div>Platform Settings Section (Coming soon)</div>;
+import PlatformSettingsTab from "@/components/super-admin/PlatformSettingsTab";
+
+const SuperAdminSettings = () => <PlatformSettingsTab />;
 export default SuperAdminSettings;

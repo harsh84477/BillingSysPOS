@@ -1,3 +1,5 @@
 import React from "react";
-const SuperAdminRoles = () => <div>Roles & Permissions Section (Coming soon)</div>;
+import RolesTab from "@/components/super-admin/RolesTab";
+
+const SuperAdminRoles = () => <RolesTab />;
 export default SuperAdminRoles;

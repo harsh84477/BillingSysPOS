@@ -1,3 +1,5 @@
 import React from "react";
-const SuperAdminAnnouncements = () => <div>Announcements Section (Coming soon)</div>;
+import AnnouncementsTab from "@/components/super-admin/AnnouncementsTab";
+
+const SuperAdminAnnouncements = () => <AnnouncementsTab />;
 export default SuperAdminAnnouncements;

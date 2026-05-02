@@ -1,3 +1,5 @@
 import React from "react";
-const SuperAdminTenants = () => <div>Shop Tenants Section (Coming soon)</div>;
+import TenantsTab from "@/components/super-admin/TenantsTab";
+
+const SuperAdminTenants = () => <TenantsTab />;
 export default SuperAdminTenants;

@@ -1,3 +1,5 @@
 import React from "react";
-const SuperAdminHealth = () => <div>System Health Section (Coming soon)</div>;
+import SystemHealthTab from "@/components/super-admin/SystemHealthTab";
+
+const SuperAdminHealth = () => <SystemHealthTab />;
 export default SuperAdminHealth;

@@ -6,6 +6,8 @@ import {
     ShieldCheck, LogOut,
     LayoutDashboard, Building2, CreditCard,
     Users, Sparkles, ScrollText, ChevronRight,
+    BarChart3, IndianRupee, Tag, MessageSquare,
+    Megaphone, Activity, Settings,
 } from 'lucide-react';
 
 
@@ -16,13 +18,13 @@ const navGroups = [
         label: 'Platform',
         items: [
             { id: 'overview', label: 'Overview', icon: LayoutDashboard, path: '/super-admin/dashboard' },
-            { id: 'analytics', label: 'Analytics', icon: Sparkles, path: '/super-admin/analytics' },
+            { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/super-admin/analytics' },
         ],
     },
     {
         label: 'Users & Tenants',
         items: [
-            { id: 'users', label: 'All Users', icon: Users, path: '/super-admin/users', badge: 248, badgeType: 'danger' },
+            { id: 'users', label: 'All Users', icon: Users, path: '/super-admin/users' },
             { id: 'tenants', label: 'Shop Tenants', icon: Building2, path: '/super-admin/tenants' },
             { id: 'roles', label: 'Roles & Permissions', icon: ShieldCheck, path: '/super-admin/roles' },
         ],
@@ -31,23 +33,23 @@ const navGroups = [
         label: 'Monetisation',
         items: [
             { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, path: '/super-admin/subscriptions' },
-            { id: 'revenue', label: 'Revenue', icon: CreditCard, path: '/super-admin/revenue' },
-            { id: 'plans', label: 'Plans & Pricing', icon: Sparkles, path: '/super-admin/plans' },
+            { id: 'revenue', label: 'Revenue', icon: IndianRupee, path: '/super-admin/revenue' },
+            { id: 'plans', label: 'Plans & Pricing', icon: Tag, path: '/super-admin/plans' },
         ],
     },
     {
         label: 'Support',
         items: [
-            { id: 'tickets', label: 'Support Tickets', icon: ScrollText, path: '/super-admin/support-tickets', badge: 7, badgeType: 'warn' },
-            { id: 'announcements', label: 'Announcements', icon: Sparkles, path: '/super-admin/announcements' },
+            { id: 'tickets', label: 'Support Tickets', icon: MessageSquare, path: '/super-admin/support-tickets' },
+            { id: 'announcements', label: 'Announcements', icon: Megaphone, path: '/super-admin/announcements' },
         ],
     },
     {
         label: 'System',
         items: [
             { id: 'logs', label: 'Audit Log', icon: ScrollText, path: '/super-admin/logs' },
-            { id: 'health', label: 'System Health', icon: ShieldCheck, path: '/super-admin/health' },
-            { id: 'settings', label: 'Platform Settings', icon: Sparkles, path: '/super-admin/settings' },
+            { id: 'health', label: 'System Health', icon: Activity, path: '/super-admin/health' },
+            { id: 'settings', label: 'Platform Settings', icon: Settings, path: '/super-admin/settings' },
         ],
     },
 ];
@@ -112,15 +114,6 @@ export default function SuperAdminLayout({ children }: Props) {
                                                     >
                                                         <item.icon className={cn('h-4 w-4 shrink-0', active ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-foreground')} />
                                                         <span className="flex-1 text-left">{item.label}</span>
-                                                        {item.badge && (
-                                                            <span className={
-                                                                cn(
-                                                                    'ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full',
-                                                                    item.badgeType === 'danger' ? 'bg-red-500 text-white' :
-                                                                    item.badgeType === 'warn' ? 'bg-yellow-400 text-black' : 'bg-gray-300 text-black'
-                                                                )
-                                                            }>{item.badge}</span>
-                                                        )}
                                                         {active && <ChevronRight className="h-3 w-3 opacity-60" />}
                                                     </NavLink>
                                                 );
