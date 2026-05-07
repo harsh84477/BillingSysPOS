@@ -1,12 +1,6 @@
 import React from "react";
+import PlansTab from "@/components/super-admin/PlansTab";
 
-const SuperAdminPlans = () => {
-	return (
-		<div>
-			<h1>Super Admin Plans</h1>
-			{/* Add your plans content here */}
-		</div>
-	);
-};
+const SuperAdminPlans = () => <PlansTab />;
 
 export default SuperAdminPlans;
