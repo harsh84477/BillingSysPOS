@@ -1,12 +1,6 @@
 import React from "react";
+import SubscriptionTab from "@/components/super-admin/SubscriptionTab";
 
-const SuperAdminSubscriptions = () => {
-	return (
-		<div>
-			<h1>Super Admin Subscriptions</h1>
-			{/* Add your subscriptions content here */}
-		</div>
-	);
-};
+const SuperAdminSubscriptions = () => <SubscriptionTab />;
 
 export default SuperAdminSubscriptions;
