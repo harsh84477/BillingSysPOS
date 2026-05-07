@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
+
 
 const ACTION_META: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
   assign_subscription: { label: 'Assign Plan', color: 'text-emerald-700', bgColor: 'bg-emerald-100 border-emerald-200', icon: CreditCard },
@@ -76,19 +76,21 @@ export default function LogsTab() {
   }, [logs]);
 
   const handleExport = () => {
-    const rows = filtered.map(l => ({
-      Timestamp: format(new Date(l.created_at), 'yyyy-MM-dd HH:mm:ss'),
-      Action: l.action,
-      'Target Type': l.target_type || '',
-      'Target ID': l.target_id || '',
-      Details: JSON.stringify(l.details || {}),
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [{ wch: 20 }, { wch: 20 }, { wch: 12 }, { wch: 38 }, { wch: 50 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Admin Logs');
-    XLSX.writeFile(wb, `admin_logs_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
-    toast.success('Logs exported');
+    const header = 'Timestamp,Action,Target Type,Target ID,Details';
+    const csvRows = filtered.map(l => {
+      const ts = format(new Date(l.created_at), 'yyyy-MM-dd HH:mm:ss');
+      const details = JSON.stringify(l.details || {}).replace(/"/g, '""');
+      return `"${ts}","${l.action}","${l.target_type || ''}","${l.target_id || ''}","${details}"`;
+    });
+    const csv = [header, ...csvRows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `admin_logs_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Logs exported as CSV');
   };
 
   const getMeta = (action: string) =>
