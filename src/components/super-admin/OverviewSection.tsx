@@ -1,6 +1,6 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, subMonths, endOfMonth, subDays, isWithinInterval } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth, subDays, isWithinInterval } from "date-fns";
 import { Link } from "react-router-dom";
 import * as RechartsPrimitive from "recharts";
 import {
@@ -76,10 +76,17 @@ function useOverviewData() {
       const mrr = activeSubs.reduce((sum: number, s: any) => sum + normalizeMonthly(parseNum(s.plan_price), s.billing_period), 0);
 
       // Last month MRR for growth calc
+      const lastMonthStart = startOfMonth(subMonths(now, 1));
       const lastMonthEnd = endOfMonth(subMonths(now, 1));
       const lastMonthActive = subs.filter((s: any) => {
         const created = new Date(s.created_at || now);
-        return created <= lastMonthEnd && s.status !== "expired";
+        if (created > lastMonthEnd) return false;
+        const endDate = s.current_period_end || s.trial_end;
+        if (endDate) {
+          const ended = new Date(endDate);
+          if (!isNaN(ended.getTime()) && ended < lastMonthStart) return false;
+        } else if (s.status === 'expired') return false;
+        return true;
       });
       const lastMrr = lastMonthActive.reduce((sum: number, s: any) => sum + normalizeMonthly(parseNum(s.plan_price), s.billing_period), 0);
       const mrrGrowth = lastMrr > 0 ? ((mrr - lastMrr) / lastMrr) * 100 : 0;
@@ -101,10 +108,17 @@ function useOverviewData() {
       for (let i = 11; i >= 0; i--) {
         const d = subMonths(now, i);
         const label = format(d, "MMM yy");
-        const monthEnd = endOfMonth(d);
+        const mStart = startOfMonth(d);
+        const mEnd = endOfMonth(d);
         const monthActive = subs.filter((s: any) => {
           const created = new Date(s.created_at || now);
-          return created <= monthEnd && s.status !== "expired";
+          if (created > mEnd) return false;
+          const endDate = s.current_period_end || s.trial_end;
+          if (endDate) {
+            const ended = new Date(endDate);
+            if (!isNaN(ended.getTime()) && ended < mStart) return false;
+          } else if (s.status === 'expired') return false;
+          return true;
         });
         const rev = monthActive.reduce((sum: number, s: any) => sum + normalizeMonthly(parseNum(s.plan_price), s.billing_period), 0);
         revenueByMonth.push({ month: label, revenue: Math.round(rev) });

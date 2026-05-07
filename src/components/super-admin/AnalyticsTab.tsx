@@ -135,12 +135,23 @@ export default function AnalyticsTab() {
     for (let i = months - 1; i >= 0; i--) {
       const d = subMonths(now, i);
       const label = format(d, 'MMM yy');
-      // Estimate: current MRR scaled by active subs growth
-      const monthStart = startOfMonth(d);
-      const monthEnd = endOfMonth(d);
+      const mStart = startOfMonth(d);
+      const mEnd = endOfMonth(d);
+      // A sub was active during this month if:
+      // 1. It was created before the month ended
+      // 2. It hadn't ended before the month started (use current_period_end or trial_end as proxy)
       const monthActiveSubs = subscriptions.filter((s: any) => {
         const created = new Date(s.created_at || now);
-        return created <= monthEnd && s.status !== 'expired';
+        if (created > mEnd) return false;
+        // If subscription has an end date, check it hasn't ended before this month
+        const endDate = s.current_period_end || s.trial_end;
+        if (endDate) {
+          const ended = new Date(endDate);
+          if (!isNaN(ended.getTime()) && ended < mStart) return false;
+        } else if (s.status === 'expired') {
+          return false; // expired with no end date, skip for past months
+        }
+        return true;
       });
       const monthRevenue = monthActiveSubs.reduce((sum: number, s: any) => sum + Number(s.plan_price || 0), 0);
       revenueByMonth.push({ month: label, revenue: monthRevenue });
