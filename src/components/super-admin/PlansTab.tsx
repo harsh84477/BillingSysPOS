@@ -331,24 +331,6 @@ export default function PlansTab() {
                                 onCheckedChange={v => setForm(f => ({ ...f, can_export: v }))}
                             />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
-                                <Label>Bills per Day</Label>
-                                <Input
-                                    type="number"
-                                    value={form.max_bills_per_day || ''}
-                                    onChange={e => setForm(f => ({ ...f, max_bills_per_day: Number(e.target.value) }))}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Items per Day</Label>
-                                <Input
-                                    type="number"
-                                    value={form.max_items_per_day || ''}
-                                    onChange={e => setForm(f => ({ ...f, max_items_per_day: Number(e.target.value) }))}
-                                />
-                            </div>
-                        </div>
                         <div className="space-y-2">
                             <Label>Features (one per line)</Label>
                             <textarea
