@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
   Activity, Database, Wifi, Server, Clock, RefreshCw,
-  CheckCircle2, AlertCircle, HardDrive, Users, Building2,
+  CircleCheck, CircleAlert, HardDrive, Users, Building2,
   FileText, Package, CreditCard, ShoppingCart, Zap, Shield,
   Settings, ScrollText, Layers,
 } from 'lucide-react';
@@ -233,9 +233,9 @@ export default function SystemHealthTab() {
               <div className={cn('h-10 w-10 rounded-xl flex items-center justify-center',
                 systemStatus === 'operational' ? 'bg-emerald-500/10' : systemStatus === 'slow' ? 'bg-amber-500/10' : 'bg-red-500/10'
               )}>
-                {systemStatus === 'operational' ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> :
+                {systemStatus === 'operational' ? <CircleCheck className="h-5 w-5 text-emerald-600" /> :
                  systemStatus === 'slow' ? <Clock className="h-5 w-5 text-amber-600" /> :
-                 <AlertCircle className="h-5 w-5 text-red-600" />}
+                 <CircleAlert className="h-5 w-5 text-red-600" />}
               </div>
             </div>
           </CardContent>

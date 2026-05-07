@@ -11,8 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import {
   ScrollText, ShieldCheck, UserX, CreditCard, Settings, Trash2,
-  Search, RefreshCw, Filter, Clock, AlertTriangle, Download,
-  Building2, XCircle,
+  Search, RefreshCw, Filter, Clock, TriangleAlert, Download,
+  Building2, CircleX,
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 const ACTION_META: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
   assign_subscription: { label: 'Assign Plan', color: 'text-emerald-700', bgColor: 'bg-emerald-100 border-emerald-200', icon: CreditCard },
   extend_subscription: { label: 'Extend Plan', color: 'text-blue-700', bgColor: 'bg-blue-100 border-blue-200', icon: CreditCard },
-  cancel_subscription: { label: 'Cancel Sub', color: 'text-red-700', bgColor: 'bg-red-100 border-red-200', icon: XCircle },
+  cancel_subscription: { label: 'Cancel Sub', color: 'text-red-700', bgColor: 'bg-red-100 border-red-200', icon: CircleX },
   block_user: { label: 'Block User', color: 'text-red-700', bgColor: 'bg-red-100 border-red-200', icon: UserX },
   unblock_user: { label: 'Unblock User', color: 'text-emerald-700', bgColor: 'bg-emerald-100 border-emerald-200', icon: ShieldCheck },
   create_plan: { label: 'Create Plan', color: 'text-violet-700', bgColor: 'bg-violet-100 border-violet-200', icon: Settings },
