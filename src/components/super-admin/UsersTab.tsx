@@ -15,7 +15,6 @@ import {
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import * as XLSX from 'xlsx';
 
 export default function UsersTab() {
     const [search, setSearch] = useState('');
@@ -133,11 +132,21 @@ export default function UsersTab() {
             'Status': u.is_blocked ? 'Blocked' : 'Active',
             'Joined': u.joined_at ? format(new Date(u.joined_at), 'yyyy-MM-dd') : '—',
         }));
-        const ws = XLSX.utils.json_to_sheet(rows);
-        ws['!cols'] = [{ wch: 25 }, { wch: 12 }, { wch: 25 }, { wch: 10 }, { wch: 12 }];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Users');
-        XLSX.writeFile(wb, `platform_users_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+
+        if (rows.length === 0) return;
+
+        // Generate CSV
+        const headers = Object.keys(rows[0]);
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => headers.map(header => `"${String(row[header as keyof typeof row]).replace(/"/g, '""')}"`).join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `platform_users_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+        link.click();
     };
 
     const roleFilterButtons = [
@@ -204,12 +213,12 @@ export default function UsersTab() {
                     </div>
                     <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs" onClick={handleDownloadUsers}>
                         <Download className="h-3.5 w-3.5" />
-                        Excel
+                        Export CSV
                     </Button>
                 </div>
             </div>
 
-            <Card>
+            <Card className="border-slate-200/70 shadow-sm">
                 <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                         <div>
