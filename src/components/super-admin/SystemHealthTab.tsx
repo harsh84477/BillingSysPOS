@@ -35,6 +35,7 @@ export default function SystemHealthTab() {
         { table: 'businesses', label: 'Businesses', icon: Building2, color: 'text-blue-600 bg-blue-500/10' },
         { table: 'profiles', label: 'User Profiles', icon: Users, color: 'text-violet-600 bg-violet-500/10' },
         { table: 'user_roles', label: 'User Roles', icon: Users, color: 'text-indigo-600 bg-indigo-500/10' },
+        { table: 'business_settings', label: 'Settings', icon: Server, color: 'text-slate-600 bg-slate-500/10' },
         { table: 'bills', label: 'Bills', icon: FileText, color: 'text-emerald-600 bg-emerald-500/10' },
         { table: 'bill_items', label: 'Bill Items', icon: ShoppingCart, color: 'text-teal-600 bg-teal-500/10' },
         { table: 'products', label: 'Products', icon: Package, color: 'text-amber-600 bg-amber-500/10' },
@@ -42,6 +43,7 @@ export default function SystemHealthTab() {
         { table: 'customers', label: 'Customers', icon: Users, color: 'text-pink-600 bg-pink-500/10' },
         { table: 'subscriptions', label: 'Subscriptions', icon: CreditCard, color: 'text-cyan-600 bg-cyan-500/10' },
         { table: 'subscription_plans', label: 'Plans', icon: Zap, color: 'text-purple-600 bg-purple-500/10' },
+        { table: 'admin_logs', label: 'Admin Logs', icon: FileText, color: 'text-rose-600 bg-rose-500/10' },
         { table: 'super_admins', label: 'Super Admins', icon: Users, color: 'text-red-600 bg-red-500/10' },
         { table: 'inventory_logs', label: 'Inventory Logs', icon: Database, color: 'text-slate-600 bg-slate-500/10' },
       ];

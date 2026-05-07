@@ -1,12 +1,6 @@
 import React from "react";
+import LogsTab from "@/components/super-admin/LogsTab";
 
-const SuperAdminLogs = () => {
-	return (
-		<div>
-			<h1>Super Admin Logs</h1>
-			{/* Add your logs content here */}
-		</div>
-	);
-};
+const SuperAdminLogs = () => <LogsTab />;
 
 export default SuperAdminLogs;
