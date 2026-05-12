@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import {
     Building2, CreditCard, Users, Package, FileText, Calendar,
     DollarSign, AlertCircle, ChevronRight, Shield, ShieldAlert, Loader2, Trash2,
-    Download, Search, ArrowLeft, CalendarDays, Filter
+    Download, Search, ArrowLeft, CalendarDays, Filter, Activity, ShoppingCart, Boxes
 } from 'lucide-react';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
 import { toast } from 'sonner';
@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import * as XLSX from 'xlsx';
+import BusinessInfoCard from './businesses/BusinessInfoCard';
 
 interface Props {
     businessId: string;
@@ -173,21 +174,38 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
         }
     };
 
+    // Computed metrics
+    const inventoryValue = useMemo(() =>
+        products.reduce((sum: number, p: any) => sum + (Number(p.selling_price || 0) * Number(p.stock_quantity || 0)), 0),
+    [products]);
+    const customerCount = useMemo(() => {
+        const ids = new Set<string>();
+        bills.forEach((b: any) => { if (b.customer_id) ids.add(b.customer_id); });
+        return ids.size;
+    }, [bills]);
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            {/* Back + Header */}
+            {/* Hero Header */}
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <Button variant="ghost" size="sm" onClick={onBack} className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground mb-2 -ml-2">
                         <ArrowLeft className="h-3.5 w-3.5" /> All Businesses
                     </Button>
-                    <h2 className="text-2xl font-black tracking-tight">{business?.business_name}</h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                        {business?.mobile_number && <span>📞 {business.mobile_number} · </span>}
-                        joined {business?.created_at ? format(new Date(business.created_at), 'MMM dd, yyyy') : '—'}
-                    </p>
+                    <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className="text-xl font-black text-primary">{(business?.business_name || '?')[0].toUpperCase()}</span>
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-black tracking-tight">{business?.business_name}</h2>
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                                {business?.mobile_number && <span>📞 {business.mobile_number} · </span>}
+                                joined {business?.created_at ? format(new Date(business.created_at), 'MMM dd, yyyy') : '—'}
+                            </p>
+                        </div>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                     {sub ? getStatusBadge(sub.status) : <Badge variant="outline">No Subscription</Badge>}
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -199,7 +217,7 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                             <AlertDialogHeader>
                                 <AlertDialogTitle>Delete "{business?.business_name}"?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    This will permanently delete the business and ALL its data including bills, products, customers, subscriptions. This cannot be undone.
+                                    This will permanently delete the business and ALL its data. This cannot be undone.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -213,32 +231,43 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                 </div>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Summary Cards (6 KPIs) */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 {[
-                    { label: 'Total Bills', value: summary?.bill_count ?? '—', icon: FileText, color: 'text-blue-500' },
-                    { label: 'Total Revenue', value: summary ? `₹${Number(summary.total_revenue).toLocaleString('en-IN')}` : '—', icon: DollarSign, color: 'text-emerald-500' },
-                    { label: 'Team Members', value: summary?.user_count ?? '—', icon: Users, color: 'text-violet-500' },
-                    { label: 'Products', value: summary?.product_count ?? '—', icon: Package, color: 'text-orange-500' },
+                    { label: 'Total Bills', value: summary?.bill_count ?? '—', icon: FileText, color: 'text-blue-500', bg: 'bg-blue-50' },
+                    { label: 'Total Revenue', value: summary ? `₹${Number(summary.total_revenue).toLocaleString('en-IN')}` : '—', icon: DollarSign, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                    { label: 'Team Members', value: summary?.user_count ?? '—', icon: Users, color: 'text-violet-500', bg: 'bg-violet-50' },
+                    { label: 'Products', value: summary?.product_count ?? '—', icon: Package, color: 'text-orange-500', bg: 'bg-orange-50' },
+                    { label: 'Customers', value: customerCount, icon: ShoppingCart, color: 'text-pink-500', bg: 'bg-pink-50' },
+                    { label: 'Stock Value', value: `₹${inventoryValue.toLocaleString('en-IN')}`, icon: Boxes, color: 'text-cyan-500', bg: 'bg-cyan-50' },
                 ].map(item => (
-                    <Card key={item.label} className="text-center py-1">
-                        <CardContent className="pt-4 pb-3">
-                            <item.icon className={`h-5 w-5 mx-auto mb-1 ${item.color}`} />
-                            <p className="text-xl font-black">{item.value}</p>
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider mt-0.5">{item.label}</p>
+                    <Card key={item.label} className="group hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
+                        <CardContent className="pt-4 pb-3 text-center">
+                            <div className={cn('h-8 w-8 rounded-lg mx-auto mb-1.5 flex items-center justify-center transition-transform group-hover:scale-110', item.bg)}>
+                                <item.icon className={cn('h-4 w-4', item.color)} />
+                            </div>
+                            <p className="text-lg font-black">{item.value}</p>
+                            <p className="text-[9px] text-muted-foreground uppercase tracking-widest mt-0.5">{item.label}</p>
                         </CardContent>
                     </Card>
                 ))}
             </div>
 
             {/* Detail Tabs */}
-            <Tabs defaultValue="subscription" className="space-y-4">
-                <TabsList className="grid grid-cols-4 w-full sm:w-auto sm:inline-flex">
-                    <TabsTrigger value="subscription" className="gap-2"><CreditCard className="h-3.5 w-3.5" />Plan</TabsTrigger>
-                    <TabsTrigger value="bills" className="gap-2"><FileText className="h-3.5 w-3.5" />Bills</TabsTrigger>
-                    <TabsTrigger value="inventory" className="gap-2"><Package className="h-3.5 w-3.5" />Inventory</TabsTrigger>
-                    <TabsTrigger value="users" className="gap-2"><Users className="h-3.5 w-3.5" />Team</TabsTrigger>
+            <Tabs defaultValue="overview" className="space-y-4">
+                <TabsList className="grid grid-cols-3 sm:grid-cols-6 w-full sm:w-auto sm:inline-flex">
+                    <TabsTrigger value="overview" className="gap-1.5 text-xs"><Building2 className="h-3.5 w-3.5" />Overview</TabsTrigger>
+                    <TabsTrigger value="subscription" className="gap-1.5 text-xs"><CreditCard className="h-3.5 w-3.5" />Plan</TabsTrigger>
+                    <TabsTrigger value="bills" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" />Bills</TabsTrigger>
+                    <TabsTrigger value="inventory" className="gap-1.5 text-xs"><Package className="h-3.5 w-3.5" />Inventory</TabsTrigger>
+                    <TabsTrigger value="users" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" />Team</TabsTrigger>
+                    <TabsTrigger value="activity" className="gap-1.5 text-xs"><Activity className="h-3.5 w-3.5" />Activity</TabsTrigger>
                 </TabsList>
+
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="animate-in fade-in space-y-4">
+                    <BusinessInfoCard business={business} settings={business} />
+                </TabsContent>
 
                 {/* Subscription Management */}
                 <TabsContent value="subscription" className="animate-in fade-in">
@@ -416,6 +445,61 @@ export default function BusinessProfile({ businessId, business, plans, onBack }:
                                     </TableBody>
                                 </Table>
                             )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {/* Activity Tab */}
+                <TabsContent value="activity" className="animate-in fade-in">
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-base flex items-center gap-2">
+                                <Activity className="h-4 w-4 text-primary" />Business Activity
+                            </CardTitle>
+                            <CardDescription>Recent actions and events for this business</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-3">
+                                {sub && (
+                                    <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                                        <div className="h-2 w-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+                                        <div>
+                                            <p className="text-sm font-semibold">Subscription: {sub.status === 'active' ? 'Active' : sub.status}</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">Plan: {sub.plan_name || 'None'}</p>
+                                            {sub.current_period_end && (
+                                                <p className="text-[10px] text-muted-foreground">Expires: {format(new Date(sub.current_period_end), 'MMM dd, yyyy')}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                                    <div className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-semibold">Business Registered</p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">{business?.created_at ? format(new Date(business.created_at), 'MMM dd, yyyy HH:mm') : '—'}</p>
+                                    </div>
+                                </div>
+                                {bills.length > 0 && (
+                                    <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                                        <div className="h-2 w-2 rounded-full bg-violet-500 mt-1.5 shrink-0" />
+                                        <div>
+                                            <p className="text-sm font-semibold">Latest Bill: #{bills[0]?.bill_number}</p>
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                                ₹{Number(bills[0]?.total_amount || 0).toLocaleString('en-IN')} · {bills[0]?.created_at ? format(new Date(bills[0].created_at), 'MMM dd, yyyy HH:mm') : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                                    <div className="h-2 w-2 rounded-full bg-amber-500 mt-1.5 shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-semibold">Team Size: {bizUsers.length} members</p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                            {bizUsers.filter((u: any) => u.role === 'owner').length} owner, {bizUsers.filter((u: any) => u.role === 'manager').length} managers, {bizUsers.filter((u: any) => u.role === 'cashier').length} cashiers
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
