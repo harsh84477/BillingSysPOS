@@ -9,16 +9,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import {
   CreditCard, IndianRupee, Users, AlertTriangle, Search,
   PlusCircle, XCircle, Building2, ArrowUpDown, Crown, Clock,
-  CheckCircle2, ShieldX, RefreshCw, Zap,
+  CheckCircle2, ShieldX, RefreshCw, Zap, Settings2,
 } from 'lucide-react';
 import { format, addMonths, addYears } from 'date-fns';
 import { toast } from 'sonner';
+import SubscriptionModal from './plans/SubscriptionModal';
 
 function formatCurrency(v: number) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v);
@@ -42,6 +42,9 @@ export default function SubscriptionTab() {
   const [assignBizId, setAssignBizId] = useState('');
   const [assignPlanId, setAssignPlanId] = useState('');
   const [assignDuration, setAssignDuration] = useState<'1m' | '6m' | '1y'>('1m');
+  // Subscription modal state
+  const [subModalOpen, setSubModalOpen] = useState(false);
+  const [subModalTarget, setSubModalTarget] = useState<Sub | null>(null);
 
   // Data queries
   const { data: subscriptions = [], isLoading } = useQuery({
@@ -143,6 +146,17 @@ export default function SubscriptionTab() {
     const now = new Date();
     const periodEnd = assignDuration === '1y' ? addYears(now, 1) : assignDuration === '6m' ? addMonths(now, 6) : addMonths(now, 1);
     manageSub.mutate({ bizId: assignBizId, planId: assignPlanId, status: 'active', periodEnd: periodEnd.toISOString() });
+  };
+
+  const openSubModal = (s: Sub) => {
+    setSubModalTarget(s);
+    setSubModalOpen(true);
+  };
+
+  const handleSubModalSubmit = (vars: { bizId: string; planId: string; status: string; periodEnd: string }) => {
+    manageSub.mutate(vars);
+    setSubModalOpen(false);
+    setSubModalTarget(null);
   };
 
   if (isLoading) {
@@ -281,19 +295,8 @@ export default function SubscriptionTab() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1.5 justify-end opacity-70 group-hover:opacity-100 transition-opacity">
-                        <Button size="sm" variant="outline" className="h-7 text-xs px-2.5" disabled={manageSub.isPending}
-                          onClick={() => manageSub.mutate({
-                            bizId: s.business_id, planId: s.plan_id || '', status: 'active',
-                            periodEnd: addMonths(new Date(s.current_period_end || new Date()), 1).toISOString(),
-                          })}>
-                          <PlusCircle className="h-3 w-3 mr-1" />+1M
-                        </Button>
-                        <Button size="sm" variant="outline" className="h-7 text-xs px-2.5" disabled={manageSub.isPending}
-                          onClick={() => manageSub.mutate({
-                            bizId: s.business_id, planId: s.plan_id || '', status: 'active',
-                            periodEnd: addYears(new Date(s.current_period_end || new Date()), 1).toISOString(),
-                          })}>
-                          <PlusCircle className="h-3 w-3 mr-1" />+1Y
+                        <Button size="sm" variant="outline" className="h-7 text-xs px-2.5 gap-1" onClick={() => openSubModal(s)}>
+                          <Settings2 className="h-3 w-3" />Subscription
                         </Button>
                         <Button size="sm" variant="destructive" className="h-7 text-xs px-2.5" disabled={manageSub.isPending}
                           onClick={() => manageSub.mutate({
@@ -340,16 +343,9 @@ export default function SubscriptionTab() {
                     <span className="font-bold text-foreground">{s.plan_price ? formatCurrency(Number(s.plan_price)) : '—'}</span>
                   </div>
                   <div className="flex gap-1.5">
-                    <Button size="sm" variant="outline" className="h-7 text-xs px-2 flex-1" disabled={manageSub.isPending}
-                      onClick={() => manageSub.mutate({
-                        bizId: s.business_id, planId: s.plan_id || '', status: 'active',
-                        periodEnd: addMonths(new Date(s.current_period_end || new Date()), 1).toISOString(),
-                      })}>+1M</Button>
-                    <Button size="sm" variant="outline" className="h-7 text-xs px-2 flex-1" disabled={manageSub.isPending}
-                      onClick={() => manageSub.mutate({
-                        bizId: s.business_id, planId: s.plan_id || '', status: 'active',
-                        periodEnd: addYears(new Date(s.current_period_end || new Date()), 1).toISOString(),
-                      })}>+1Y</Button>
+                    <Button size="sm" variant="outline" className="h-7 text-xs px-2 flex-1 gap-1" onClick={() => openSubModal(s)}>
+                      <Settings2 className="h-3 w-3" />Subscription
+                    </Button>
                     <Button size="sm" variant="destructive" className="h-7 text-xs px-2" disabled={manageSub.isPending}
                       onClick={() => manageSub.mutate({
                         bizId: s.business_id, planId: s.plan_id || '', status: 'expired',
@@ -363,64 +359,37 @@ export default function SubscriptionTab() {
         </CardContent>
       </Card>
 
-      {/* Assign Plan Dialog */}
-      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-primary" />Assign Subscription Plan
-            </DialogTitle>
-            <DialogDescription>Select a business and plan to activate a subscription.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold">Business</Label>
-              <Select value={assignBizId} onValueChange={setAssignBizId}>
-                <SelectTrigger><SelectValue placeholder="Select a business..." /></SelectTrigger>
-                <SelectContent>
-                  {allBusinesses.map((b: any) => (
-                    <SelectItem key={b.id} value={b.id}>
-                      <span className="flex items-center gap-2">
-                        <Building2 className="h-3 w-3 text-muted-foreground" />
-                        {b.business_name}
-                        {b.sub_status && <Badge variant="outline" className="text-[9px] ml-1">{b.sub_status}</Badge>}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold">Plan</Label>
-              <Select value={assignPlanId} onValueChange={setAssignPlanId}>
-                <SelectTrigger><SelectValue placeholder="Select a plan..." /></SelectTrigger>
-                <SelectContent>
-                  {plans.map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name} — {formatCurrency(Number(p.price))}/{p.billing_period}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-semibold">Duration</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {([['1m', '1 Month'], ['6m', '6 Months'], ['1y', '1 Year']] as const).map(([key, label]) => (
-                  <Button key={key} variant={assignDuration === key ? 'default' : 'outline'} size="sm" className="text-xs"
-                    onClick={() => setAssignDuration(key)}>{label}</Button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignOpen(false)}>Cancel</Button>
-            <Button onClick={handleAssign} disabled={!assignBizId || !assignPlanId || manageSub.isPending} className="gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5" />Activate
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Assign Plan Dialog — for unsubscribed businesses */}
+      {assignOpen && (
+        <SubscriptionModal
+          open={assignOpen}
+          onOpenChange={setAssignOpen}
+          businessName={allBusinesses.find((b: any) => b.id === assignBizId)?.business_name || 'Select Business'}
+          businessId={assignBizId}
+          currentPlanId={null}
+          currentPlanName={null}
+          currentExpiry={null}
+          plans={plans}
+          isPending={manageSub.isPending}
+          onSubmit={handleSubModalSubmit}
+        />
+      )}
+
+      {/* Subscription Modal — for existing subscriptions */}
+      {subModalTarget && (
+        <SubscriptionModal
+          open={subModalOpen}
+          onOpenChange={(v) => { setSubModalOpen(v); if (!v) setSubModalTarget(null); }}
+          businessName={subModalTarget.business_name}
+          businessId={subModalTarget.business_id}
+          currentPlanId={subModalTarget.plan_id}
+          currentPlanName={subModalTarget.plan_name}
+          currentExpiry={subModalTarget.current_period_end}
+          plans={plans}
+          isPending={manageSub.isPending}
+          onSubmit={handleSubModalSubmit}
+        />
+      )}
     </div>
   );
 }
