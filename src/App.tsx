@@ -164,14 +164,11 @@ function ElectronOAuthCallbackHandler() {
   useEffect(() => {
     const isElectron =
       typeof window !== 'undefined' &&
-      typeof (window as any).process === 'object' &&
-      (window as any).process.type === 'renderer';
+      typeof (window as any).electronAPI !== 'undefined';
 
     if (!isElectron) return;
 
-    const { ipcRenderer } = require('electron');
-
-    const handleOAuthCallback = async (_event: any, url: string) => {
+    const handleOAuthCallback = async (url: string) => {
       if (!url.startsWith('invoiceadda://')) return;
 
       // PKCE flow: ?code=XXXX
@@ -196,9 +193,9 @@ function ElectronOAuthCallbackHandler() {
       }
     };
 
-    ipcRenderer.on('oauth-callback', handleOAuthCallback);
+    const unsubscribe = (window as any).electronAPI.onOAuthCallback(handleOAuthCallback);
     return () => {
-      ipcRenderer.removeListener('oauth-callback', handleOAuthCallback);
+      if (unsubscribe) unsubscribe();
     };
   }, []);
 

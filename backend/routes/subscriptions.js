@@ -1,9 +1,39 @@
 const express = require('express');
 const router = express.Router();
+const { body, param } = require('express-validator');
+const rateLimit = require('express-rate-limit');
 const db = require('../db');
+const { verifyAdminApiKey } = require('../middleware/auth');
+const { validateRequest } = require('../middleware/validation');
+
+// Specific rate limiter for sensitive assignment endpoint (max 15 requests per 15 minutes)
+const assignLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many subscription assignment requests. Please try again later.' }
+});
+
+// Validation rules for subscription assignment
+const assignValidationRules = [
+  body('business_id')
+    .isString()
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('business_id must be a string up to 50 characters'),
+  body('plan_id')
+    .isInt({ min: 1 })
+    .withMessage('plan_id must be a positive integer'),
+  body('is_trial')
+    .optional()
+    .isBoolean()
+    .withMessage('is_trial must be a boolean value')
+];
+
 
 // Admin: Assign a plan to a business
-router.post('/assign', async (req, res) => {
+router.post('/assign', verifyAdminApiKey, assignLimiter, assignValidationRules, validateRequest, async (req, res) => {
   const { business_id, plan_id, is_trial } = req.body;
 
   try {
@@ -41,7 +71,9 @@ router.post('/assign', async (req, res) => {
 });
 
 // Owner: Get active subscription details and features
-router.get('/my-subscription/:businessId', async (req, res) => {
+router.get('/my-subscription/:businessId', [
+  param('businessId').isString().trim().isLength({ min: 1, max: 50 }).withMessage('Invalid business ID')
+], validateRequest, async (req, res) => {
   const { businessId } = req.params;
   
   try {
@@ -91,7 +123,7 @@ router.get('/my-subscription/:businessId', async (req, res) => {
 });
 
 // Admin Dashboard: Subscription Stats
-router.get('/stats', async (req, res) => {
+router.get('/stats', verifyAdminApiKey, async (req, res) => {
   try {
     const [subCounts] = await db.query('SELECT status, COUNT(*) as count FROM subscriptions GROUP BY status');
     const [revenue] = await db.query(`

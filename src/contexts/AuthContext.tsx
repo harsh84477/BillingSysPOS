@@ -336,10 +336,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsManagerFullAccess(false);
     }
 
-    // Check for custom admin session if not already a super admin
+    // Re-validate custom admin session server-side (never trust localStorage alone)
     const customAdmin = localStorage.getItem('pos_custom_admin');
+    const customAdminExpiry = localStorage.getItem('pos_custom_admin_expiry');
+    const storedAdminId = localStorage.getItem('pos_custom_admin_id');
+
+    if (storedAdminId && (supabase as any).rest) {
+      (supabase as any).rest.headers['x-custom-admin-id'] = storedAdminId;
+    }
+
     if (customAdmin === 'true') {
-      setIsCustomAdmin(true);
+      // Check session expiry (24 hours)
+      const isExpired = !customAdminExpiry || Date.now() > Number(customAdminExpiry);
+      if (isExpired) {
+        // Session expired — clear it
+        localStorage.removeItem('pos_custom_admin');
+        localStorage.removeItem('pos_custom_admin_id');
+        localStorage.removeItem('pos_custom_admin_name');
+        localStorage.removeItem('pos_custom_admin_expiry');
+        if ((supabase as any).rest) {
+          delete (supabase as any).rest.headers['x-custom-admin-id'];
+        }
+        setIsCustomAdmin(false);
+        setCustomAdminId(null);
+        setCustomAdminName(null);
+      } else {
+        // Verify admin_id still exists in the database
+        if (storedAdminId) {
+          const { data: adminCheck } = await supabase
+            .from('super_admin_credentials' as any)
+            .select('id')
+            .eq('id', storedAdminId)
+            .maybeSingle();
+          if (adminCheck) {
+            setIsCustomAdmin(true);
+          } else {
+            // Admin no longer exists — clear session
+            localStorage.removeItem('pos_custom_admin');
+            localStorage.removeItem('pos_custom_admin_id');
+            localStorage.removeItem('pos_custom_admin_name');
+            localStorage.removeItem('pos_custom_admin_expiry');
+            if ((supabase as any).rest) {
+              delete (supabase as any).rest.headers['x-custom-admin-id'];
+            }
+            setIsCustomAdmin(false);
+            setCustomAdminId(null);
+            setCustomAdminName(null);
+          }
+        } else {
+          // No admin_id stored — invalid session
+          localStorage.removeItem('pos_custom_admin');
+          if ((supabase as any).rest) {
+            delete (supabase as any).rest.headers['x-custom-admin-id'];
+          }
+          setIsCustomAdmin(false);
+        }
+      }
     }
 
     setLoading(false);
@@ -403,10 +455,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     const isNative = Capacitor.isNativePlatform();
 
-    // Detect Electron renderer (nodeIntegration is on so window.process exists)
-    const isElectron = typeof window !== 'undefined' &&
-      typeof (window as any).process === 'object' &&
-      (window as any).process.type === 'renderer';
+    // Detect Electron renderer via preload script
+    const isElectron = typeof window !== 'undefined' && typeof (window as any).electronAPI !== 'undefined';
 
     if (isNative) {
       // Android/iOS — open in Chrome Custom Tabs, deep-link callback handled in App.tsx
@@ -440,8 +490,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       if (data?.url) {
         // Open Google OAuth in the user's default browser (e.g. Chrome)
-        const { shell } = require('electron');
-        shell.openExternal(data.url);
+        (window as any).electronAPI.openExternal(data.url);
       }
     } else {
       // Web — redirect to app root so query params (?code=) don't clash with HashRouter hash
@@ -466,8 +515,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCustomAdminName(null);
     setNeedsBusinessSetup(false);
     localStorage.removeItem('pos_custom_admin');
+    localStorage.removeItem('pos_custom_admin_expiry');
     localStorage.removeItem('pos_custom_admin_id');
     localStorage.removeItem('pos_custom_admin_name');
+    if ((supabase as any).rest) {
+      delete (supabase as any).rest.headers['x-custom-admin-id'];
+    }
     setBusinessId(null);
     setUserRole(null);
     setBusinessInfo(null);
@@ -479,8 +532,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCustomAdminId(null);
     setCustomAdminName(null);
     localStorage.removeItem('pos_custom_admin');
+    localStorage.removeItem('pos_custom_admin_expiry');
     localStorage.removeItem('pos_custom_admin_id');
     localStorage.removeItem('pos_custom_admin_name');
+    if ((supabase as any).rest) {
+      delete (supabase as any).rest.headers['x-custom-admin-id'];
+    }
   };
 
   const superAdminLogin = async (username: string, password: string): Promise<{ error: string | null }> => {
@@ -498,7 +555,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setCustomAdminId(result.admin_id || null);
         setCustomAdminName(result.display_name || null);
         localStorage.setItem('pos_custom_admin', 'true');
-        if (result.admin_id) localStorage.setItem('pos_custom_admin_id', result.admin_id);
+        // Set 24-hour session expiry
+        localStorage.setItem('pos_custom_admin_expiry', String(Date.now() + 24 * 60 * 60 * 1000));
+        if (result.admin_id) {
+          localStorage.setItem('pos_custom_admin_id', result.admin_id);
+          if ((supabase as any).rest) {
+            (supabase as any).rest.headers['x-custom-admin-id'] = result.admin_id;
+          }
+        }
         if (result.display_name) localStorage.setItem('pos_custom_admin_name', result.display_name);
         return { error: null };
       } else {

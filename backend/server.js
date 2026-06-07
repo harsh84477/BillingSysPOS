@@ -5,10 +5,53 @@ require('dotenv').config();
 const plansRoutes = require('./routes/plans');
 const subscriptionsRoutes = require('./routes/subscriptions');
 
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+// Set security headers
+app.use(helmet());
+
+// Secure CORS Configuration
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  : ['http://localhost:5173'];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile/desktop apps, curl, or backend-to-backend)
+    if (!origin) return callback(null, true);
+    
+    if (
+      allowedOrigins.includes(origin) ||
+      allowedOrigins.includes('*') ||
+      origin.startsWith('capacitor://') ||
+      origin.startsWith('chrome-extension://') ||
+      origin.startsWith('file://') ||
+      origin.includes('localhost')
+    ) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+};
+app.use(cors(corsOptions));
+
+// Rate Limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests from this IP, please try again after 15 minutes' }
+});
+app.use(limiter);
+
+// Parse JSON with limit to prevent denial of service (max 100kb)
+app.use(express.json({ limit: '100kb' }));
 
 app.use('/api/plans', plansRoutes);
 app.use('/api/subscriptions', subscriptionsRoutes);

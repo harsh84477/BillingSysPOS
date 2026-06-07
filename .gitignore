@@ -35,3 +35,13 @@ android/.idea/
 android/*.iml
 android/app/*.iml
 # Keep android/ source in git but ignore build outputs above
+
+# Environment files (contain secrets)
+.env
+.env.*
+!.env.example
+
+# Temporary test/debug scripts
+check_buckets_temp.js
+test_query.mjs
+test_page.js

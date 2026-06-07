@@ -3,6 +3,7 @@
 // Set secret: supabase secrets set GEMINI_API_KEY=your_key_here
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,26 @@ serve(async (req: Request) => {
   }
 
   try {
+    // 1. Authenticate caller (validate Supabase JWT)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return jsonResponse({ success: false, error: "Unauthorized: Missing Authorization header", items: [] });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: authHeader }
+      }
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return jsonResponse({ success: false, error: "Unauthorized: Invalid user session", items: [] });
+    }
+
+    // 2. Validate environment
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
       return jsonResponse({
