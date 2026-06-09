@@ -517,7 +517,7 @@ export default function PrintSettingsTab() {
               : (settings?.print_thermal_page_size === '2inch' ? '2in-58mm' : settings?.print_thermal_page_size === '3inch' ? '3in-76mm' : '4in-80mm')}
           </span>
         </div>
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 bg-gray-100 dark:bg-gray-900">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 pb-28 bg-gray-100 dark:bg-gray-900">
           {tab === 'regular' ? <RegularPreview s={settings} /> : <ThermalPreview s={settings} />}
         </div>
       </div>
