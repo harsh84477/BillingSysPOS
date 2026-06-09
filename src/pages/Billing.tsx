@@ -126,7 +126,6 @@ import MobileCatalog from '@/components/billing/MobileCatalog';
 import { Capacitor } from '@capacitor/core';
 import LoyaltyRedeemDialog from '@/components/billing/LoyaltyRedeemDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
-import NumericKeyboard from '@/components/billing/NumericKeyboard';
 
 // Safe icon map — avoids the broken `icons` bulk export from lucide-react
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -1430,9 +1429,8 @@ export default function Billing() {
             <Input type="number" placeholder="Enter quantity..." value={quantityDialogValue}
               onChange={(e) => setQuantityDialogValue(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuantityDialogConfirm(); }}
-              className="text-lg h-12 text-center" autoFocus={!isMobile} min={1}
-              inputMode={isMobile ? "none" : undefined}
-              readOnly={isMobile} />
+              className="text-lg h-12 text-center" autoFocus min={1}
+              inputMode="numeric" pattern="[0-9]*" />
             {/* Add Case button — shown when product has a case size configured */}
             {quantityDialogProduct && Number((quantityDialogProduct as any).items_per_case || 0) > 0 && (
               <Button variant="outline" className="w-full gap-2" onClick={() => {
@@ -1447,14 +1445,6 @@ export default function Billing() {
                   </span>
                 )}
               </Button>
-            )}
-            {isMobile && (
-              <NumericKeyboard
-                value={quantityDialogValue}
-                onChange={setQuantityDialogValue}
-                onConfirm={handleQuantityDialogConfirm}
-                className="mt-2"
-              />
             )}
           </div>
           <DialogFooter className="gap-2">
@@ -1479,20 +1469,12 @@ export default function Billing() {
               value={cartQuantityDialogValue}
               onChange={(e) => setCartQuantityDialogValue(e.target.value)}
               className="text-2xl h-14 text-center font-bold rounded-xl"
-              autoFocus={!isMobile}
+              autoFocus
               min={1}
               onKeyDown={(e) => e.key === 'Enter' && handleCartQuantityDialogConfirm()}
-              inputMode={isMobile ? "none" : undefined}
-              readOnly={isMobile}
+              inputMode="numeric"
+              pattern="[0-9]*"
             />
-            {isMobile && (
-              <NumericKeyboard
-                value={cartQuantityDialogValue}
-                onChange={setCartQuantityDialogValue}
-                onConfirm={handleCartQuantityDialogConfirm}
-                className="mt-2"
-              />
-            )}
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setCartQuantityDialogOpen(false)}>Cancel</Button>
