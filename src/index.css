@@ -969,3 +969,14 @@ input[type="range"]::-moz-range-thumb {
     padding: 22px 24px 40px;
   }
 }
+
+/* Smooth mobile dialog repositioning when virtual keyboard slides up */
+@media (max-width: 640px) {
+  div[role="dialog"] {
+    transition: top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  }
+  div[role="dialog"]:has(:focus) {
+    top: 12% !important;
+    transform: translate(-50%, 0) !important;
+  }
+}
