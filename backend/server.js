@@ -1,9 +1,12 @@
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 require('dotenv').config();
 
 const plansRoutes = require('./routes/plans');
 const subscriptionsRoutes = require('./routes/subscriptions');
+const whatsappRoutes = require('./routes/whatsapp');
 
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -17,6 +20,18 @@ app.use(helmet());
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
   : ['http://localhost:5173'];
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+const whatsappService = require('./services/whatsappService');
+whatsappService.init(io);
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -55,9 +70,10 @@ app.use(express.json({ limit: '100kb' }));
 
 app.use('/api/plans', plansRoutes);
 app.use('/api/subscriptions', subscriptionsRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
   
   // Background Cron Job for Auto Expiry

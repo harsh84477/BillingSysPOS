@@ -30,6 +30,7 @@ import POSTab from '@/components/settings/tabs/POSTab';
 import AppThemeTab from '@/components/settings/tabs/AppThemeTab';
 import LoyaltyTab from '@/components/settings/tabs/LoyaltyTab';
 import SubscriptionManagement from '@/components/settings/SubscriptionManagement';
+import WhatsAppSettingsTab from '@/components/settings/tabs/WhatsAppSettingsTab';
 
 const TABS = [
   { id: 'business', label: 'Business', icon: '🏢' },
@@ -41,6 +42,7 @@ const TABS = [
   { id: 'pos', label: 'POS', icon: '🖥️' },
   { id: 'appearance', label: 'App Theme', icon: '🎨' },
   { id: 'loyalty', label: 'Loyalty', icon: '⭐' },
+  { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
 ];
 
 export default function Settings() {
@@ -91,6 +93,7 @@ export default function Settings() {
               {activeTab === 'pos' && <POSTab />}
               {activeTab === 'appearance' && <AppThemeTab />}
               {activeTab === 'loyalty' && <LoyaltyTab />}
+              {activeTab === 'whatsapp' && <WhatsAppSettingsTab />}
             </div>
           </div>
         )}
