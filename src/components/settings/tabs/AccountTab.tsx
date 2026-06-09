@@ -72,19 +72,15 @@ export default function AccountTab() {
 
     setSavingProfile(true);
     try {
-      // 1. Update profiles table - preserving all other fields like business_id and id
-      const updatedProfile = {
-        ...profile,
-        user_id: user.id,
-        business_id: profile?.business_id || businessId || null,
-        display_name: trimmedName,
-        mobile_number: mobileNumber.trim() || null,
-        updated_at: new Date().toISOString()
-      };
-
+      // 1. Update profiles table
       const { error: profileErr } = await supabase
         .from('profiles')
-        .upsert(updatedProfile, { onConflict: 'user_id' });
+        .update({
+          display_name: trimmedName,
+          mobile_number: mobileNumber.trim() || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
 
       if (profileErr) throw profileErr;
 

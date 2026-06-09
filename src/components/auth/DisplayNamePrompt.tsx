@@ -28,7 +28,8 @@ export default function DisplayNamePrompt({ userId, open, onComplete }: DisplayN
     try {
       const { error } = await supabase
         .from('profiles')
-        .upsert({ user_id: userId, display_name: trimmed }, { onConflict: 'user_id' });
+        .update({ display_name: trimmed })
+        .eq('user_id', userId);
 
       if (error) throw error;
       onComplete(trimmed);

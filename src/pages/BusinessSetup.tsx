@@ -81,7 +81,8 @@ export default function BusinessSetup() {
             if (ownerName?.trim()) {
                 await supabase
                     .from('profiles')
-                    .upsert({ user_id: user.id, display_name: ownerName.trim() }, { onConflict: 'user_id' });
+                    .update({ display_name: ownerName.trim() })
+                    .eq('user_id', user.id);
             }
 
             const result = data as any;
