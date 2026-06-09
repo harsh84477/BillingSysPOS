@@ -966,6 +966,7 @@ export function MobileQuickBilling() {
               min={1}
               onKeyDown={(e) => e.key === 'Enter' && confirmQuantityDialog()}
               inputMode={isMobile ? "none" : undefined}
+              readOnly={isMobile}
             />
             <div className="grid grid-cols-4 gap-1.5">
               {[1, 5, 10, 12].map(q => (
@@ -1011,6 +1012,7 @@ export function MobileQuickBilling() {
               min={1}
               onKeyDown={(e) => e.key === 'Enter' && handleCartQuantityDialogConfirm()}
               inputMode={isMobile ? "none" : undefined}
+              readOnly={isMobile}
             />
             {isMobile && (
               <NumericKeyboard

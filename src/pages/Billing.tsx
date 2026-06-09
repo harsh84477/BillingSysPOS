@@ -1431,7 +1431,8 @@ export default function Billing() {
               onChange={(e) => setQuantityDialogValue(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuantityDialogConfirm(); }}
               className="text-lg h-12 text-center" autoFocus={!isMobile} min={1}
-              inputMode={isMobile ? "none" : undefined} />
+              inputMode={isMobile ? "none" : undefined}
+              readOnly={isMobile} />
             {/* Add Case button — shown when product has a case size configured */}
             {quantityDialogProduct && Number((quantityDialogProduct as any).items_per_case || 0) > 0 && (
               <Button variant="outline" className="w-full gap-2" onClick={() => {
@@ -1482,6 +1483,7 @@ export default function Billing() {
               min={1}
               onKeyDown={(e) => e.key === 'Enter' && handleCartQuantityDialogConfirm()}
               inputMode={isMobile ? "none" : undefined}
+              readOnly={isMobile}
             />
             {isMobile && (
               <NumericKeyboard
