@@ -704,51 +704,133 @@ export default function Billing() {
     const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
     const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-    let itemLines = '';
-    cart.forEach((item, i) => {
-      const total = item.unitPrice * item.quantity;
-      itemLines += `${i + 1}. ${item.name}\n   Qty: ${item.quantity} × ${currencySymbol}${item.unitPrice.toFixed(2)} = ${currencySymbol}${total.toFixed(2)}\n\n`;
-    });
-
     let paymentLabel = 'Cash';
     if (paymentType === 'online') paymentLabel = 'UPI / Online';
     else if (paymentType === 'split') paymentLabel = 'Split (Cash + Online)';
     else if (paymentType === 'due') paymentLabel = 'Due / Credit';
 
-    let msg = `🧾 *Invoice from ${storeName}*\n\n`;
-    msg += `Invoice No: ${billNumber}\n`;
-    msg += `Customer: ${custName}\n`;
-    msg += `Date: ${dateStr} ${timeStr}\n\n`;
-    msg += `*Items Purchased*\n`;
-    msg += `--------------------------------\n`;
-    msg += itemLines;
-    msg += `--------------------------------\n`;
-    msg += `Subtotal: ${currencySymbol}${cartCalculations.subtotal.toFixed(2)}\n`;
-    if (cartCalculations.discountAmount > 0) {
-      msg += `Discount: -${currencySymbol}${cartCalculations.discountAmount.toFixed(2)}\n`;
-    }
-    if (cartCalculations.taxAmount > 0) {
-      msg += `GST: ${currencySymbol}${cartCalculations.taxAmount.toFixed(2)}\n`;
-    }
-    msg += `\n*Total Amount: ${currencySymbol}${cartCalculations.total.toFixed(2)}*\n\n`;
-    msg += `Payment: ${paymentLabel}\n`;
-    if (settings?.gst_number) {
-      msg += `GST No: ${settings.gst_number}\n`;
-    }
-    if (settings?.address) {
-      msg += `Address: ${settings.address}\n`;
-    }
-    msg += `\nThank you for shopping with us 🙏`;
-
     // Clean phone number — strip everything except digits
     let cleanPhone = phone.replace(/[^0-9]/g, '');
-    // If Indian number without country code, add 91
     if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
 
-    const encoded = encodeURIComponent(msg);
-    const url = `https://wa.me/${cleanPhone}?text=${encoded}`;
-    window.open(url, '_blank');
-    toast.success('WhatsApp message prepared!');
+    const provider = localStorage.getItem('spos_whatsapp_provider') || 'wa_redirect';
+
+    if (provider === 'meta_api') {
+      const metaToken = localStorage.getItem('spos_whatsapp_meta_token') || '';
+      const metaPhoneId = localStorage.getItem('spos_whatsapp_meta_phone_id') || '';
+      const metaTemplateName = localStorage.getItem('spos_whatsapp_meta_template_name') || 'hello_world';
+      const metaLanguage = localStorage.getItem('spos_whatsapp_meta_language') || 'en_US';
+
+      if (!metaToken || !metaPhoneId) {
+        toast.error('WhatsApp API credentials missing! Falling back to WhatsApp Link...');
+        openRedirectLink(cleanPhone);
+        return;
+      }
+
+      // Prepare template payload
+      const templatePayload: any = {
+        messaging_product: 'whatsapp',
+        to: cleanPhone,
+        type: 'template',
+        template: {
+          name: metaTemplateName,
+          language: {
+            code: metaLanguage,
+          }
+        }
+      };
+
+      // Custom templates support body variables in order
+      if (metaTemplateName !== 'hello_world') {
+        const totalStr = `${currencySymbol}${cartCalculations.total.toFixed(2)}`;
+        templatePayload.template.components = [
+          {
+            type: 'body',
+            parameters: [
+              { type: 'text', text: custName },
+              { type: 'text', text: billNumber },
+              { type: 'text', text: totalStr },
+              { type: 'text', text: storeName },
+              { type: 'text', text: paymentLabel }
+            ]
+          }
+        ];
+      }
+
+      toast.promise(
+        fetch(`https://graph.facebook.com/v19.0/${metaPhoneId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${metaToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(templatePayload)
+        }).then(async (res) => {
+          const resData = await res.json();
+          if (!res.ok) {
+            throw new Error(resData.error?.message || 'Meta API rejected request');
+          }
+          return resData;
+        }),
+        {
+          loading: 'Sending automated WhatsApp bill...',
+          success: 'WhatsApp bill sent successfully via Meta API!',
+          error: (err) => `Failed to send via Meta: ${err.message || 'Check credentials'}`
+        }
+      );
+
+    } else {
+      openRedirectLink(cleanPhone);
+    }
+
+    function openRedirectLink(phoneNo: string) {
+      const customTemplate = localStorage.getItem('spos_whatsapp_template');
+      let msg = '';
+      
+      if (customTemplate) {
+        msg = customTemplate
+          .replace(/{store_name}/g, storeName)
+          .replace(/{customer_name}/g, custName)
+          .replace(/{invoice_no}/g, billNumber)
+          .replace(/{amount}/g, `${currencySymbol}${cartCalculations.total.toFixed(2)}`);
+      } else {
+        let itemLines = '';
+        cart.forEach((item, i) => {
+          const total = item.unitPrice * item.quantity;
+          itemLines += `${i + 1}. ${item.name}\n   Qty: ${item.quantity} × ${currencySymbol}${item.unitPrice.toFixed(2)} = ${currencySymbol}${total.toFixed(2)}\n\n`;
+        });
+
+        msg = `🧾 *Invoice from ${storeName}*\n\n`;
+        msg += `Invoice No: ${billNumber}\n`;
+        msg += `Customer: ${custName}\n`;
+        msg += `Date: ${dateStr} ${timeStr}\n\n`;
+        msg += `*Items Purchased*\n`;
+        msg += `--------------------------------\n`;
+        msg += itemLines;
+        msg += `--------------------------------\n`;
+        msg += `Subtotal: ${currencySymbol}${cartCalculations.subtotal.toFixed(2)}\n`;
+        if (cartCalculations.discountAmount > 0) {
+          msg += `Discount: -${currencySymbol}${cartCalculations.discountAmount.toFixed(2)}\n`;
+        }
+        if (cartCalculations.taxAmount > 0) {
+          msg += `GST: ${currencySymbol}${cartCalculations.taxAmount.toFixed(2)}\n`;
+        }
+        msg += `\n*Total Amount: ${currencySymbol}${cartCalculations.total.toFixed(2)}*\n\n`;
+        msg += `Payment: ${paymentLabel}\n`;
+        if (settings?.gst_number) {
+          msg += `GST No: ${settings.gst_number}\n`;
+        }
+        if (settings?.address) {
+          msg += `Address: ${settings.address}\n`;
+        }
+        msg += `\nThank you for shopping with us 🙏`;
+      }
+
+      const encoded = encodeURIComponent(msg);
+      const url = `https://wa.me/${phoneNo}?text=${encoded}`;
+      window.open(url, '_blank');
+      toast.success('WhatsApp message prepared!');
+    }
   };
 
   const handleWhatsAppAfterSave = (billNumber: string) => {
@@ -965,9 +1047,20 @@ export default function Billing() {
       if ((shouldPrint === true || shouldPrint === 'save-print') && !isDraft && !isPendingOrder) {
         printBill(billNumber);
       }
-      if (shouldPrint === 'whatsapp' && !isDraft && !isPendingOrder) {
-        handleWhatsAppAfterSave(billNumber);
+      
+      // Auto-send WhatsApp if enabled, or manually triggered
+      if (!isDraft && !isPendingOrder) {
+        const provider = localStorage.getItem('spos_whatsapp_provider') || 'wa_redirect';
+        const autoSendMeta = localStorage.getItem('spos_whatsapp_meta_auto_send') === 'true';
+        const autoSendRedirect = localStorage.getItem('spos_whatsapp_auto_send') === 'true';
+
+        if (shouldPrint === 'whatsapp') {
+          handleWhatsAppAfterSave(billNumber);
+        } else if ((provider === 'meta_api' && autoSendMeta) || (provider === 'wa_redirect' && autoSendRedirect)) {
+          handleWhatsAppAfterSave(billNumber);
+        }
       }
+
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
       queryClient.invalidateQueries({ queryKey: ['draftBills'] });
