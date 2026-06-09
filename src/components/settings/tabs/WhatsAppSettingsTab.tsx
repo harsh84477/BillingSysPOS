@@ -30,6 +30,7 @@ export default function WhatsAppSettingsTab() {
   const [status, setStatus] = useState<'Disconnected' | 'QR Waiting' | 'Connecting' | 'Connected'>('Disconnected');
   const [user, setUser] = useState<{ name: string; number: string }>({ name: '', number: '' });
   const [qrCode, setQrCode] = useState<string>('');
+  const [connectionError, setConnectionError] = useState(false);
   
   // Test console state
   const [testNumber, setTestNumber] = useState('');
@@ -39,10 +40,21 @@ export default function WhatsAppSettingsTab() {
 
   useEffect(() => {
     // Establish Socket.IO real-time connection
-    const socket = io(BACKEND_URL);
+    const socket = io(BACKEND_URL, {
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 8,
+      timeout: 10000
+    });
 
     socket.on('connect', () => {
       console.log('Socket.IO connection established for WhatsApp updates');
+      setConnectionError(false);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.warn('Socket connection error:', err.message);
+      setConnectionError(true);
+      setStatus('Disconnected');
     });
 
     socket.on('whatsapp-status', (data) => {
@@ -60,6 +72,7 @@ export default function WhatsAppSettingsTab() {
 
     socket.on('disconnect', () => {
       console.log('Socket.IO connection closed');
+      setConnectionError(true);
     });
 
     // Cleanup socket on unmount
@@ -173,6 +186,19 @@ export default function WhatsAppSettingsTab() {
           )}
         </div>
       </div>
+      
+      {/* Connection Offline Alert Banner */}
+      {connectionError && (
+        <div className="bg-red-50 border border-red-200 dark:bg-red-950/10 dark:border-red-900 rounded-xl p-4 flex gap-3 text-xs items-start">
+          <AlertCircle className="h-4.5 w-4.5 text-red-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="font-bold text-red-800 dark:text-red-400">Backend Server Offline / Inaccessible</p>
+            <p className="text-red-700 dark:text-red-500 leading-relaxed">
+              Cannot connect to the POS backend server on <code className="bg-red-100 dark:bg-red-950 px-1.5 py-0.5 rounded font-mono">http://localhost:5000</code>. Please ensure the backend Node server is running (run <code className="bg-red-100 dark:bg-red-950 px-1.5 py-0.5 rounded font-mono">npm run dev</code> inside the <code className="bg-red-100 dark:bg-red-950 px-1.5 py-0.5 rounded font-mono">backend</code> folder to launch the server).
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         

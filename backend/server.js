@@ -2,7 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const plansRoutes = require('./routes/plans');
 const subscriptionsRoutes = require('./routes/subscriptions');
@@ -19,7 +20,7 @@ app.use(helmet());
 // Secure CORS Configuration
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
-  : ['http://localhost:5173'];
+  : ['http://localhost:5173', 'http://localhost:8080', 'http://localhost:3000'];
 
 const server = http.createServer(app);
 const io = new Server(server, {
