@@ -196,7 +196,18 @@ export default function Auth() {
   // Step 1: Role Selection
   if (!selectedRole) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="flex min-h-screen items-center justify-center bg-background p-4 relative">
+        <div className="absolute right-4 top-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/super-admin-login')}
+            className="flex items-center gap-1.5 shadow-sm"
+          >
+            <UserCog className="h-4 w-4 text-primary" />
+            Super Admin Login
+          </Button>
+        </div>
         <div className="w-full max-w-2xl space-y-6">
           {/* Header */}
           <div className="text-center space-y-2">
