@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { TabBar } from '@/components/settings/SettingsUI';
 
 /* ─── Tab Components ─── */
+import AccountTab from '@/components/settings/tabs/AccountTab';
 import BusinessTab from '@/components/settings/tabs/BusinessTab';
 import BillingTab from '@/components/settings/tabs/BillingTab';
 import CategoriesTab from '@/components/settings/tabs/CategoriesTab';
@@ -32,7 +33,9 @@ import LoyaltyTab from '@/components/settings/tabs/LoyaltyTab';
 import SubscriptionManagement from '@/components/settings/SubscriptionManagement';
 
 const TABS = [
+  { id: 'account', label: 'Account', icon: '👤' },
   { id: 'business', label: 'Business', icon: '🏢' },
+
   { id: 'billing', label: 'Billing', icon: '💳' },
   { id: 'categories', label: 'Categories', icon: '📁' },
   { id: 'staff', label: 'Staff', icon: '👥' },
@@ -83,6 +86,7 @@ export default function Settings() {
         ) : (
           <div className="h-full overflow-y-auto custom-scrollbar p-6 lg:p-8">
             <div className="max-w-[900px] mx-auto pb-20">
+              {activeTab === 'account' && <AccountTab />}
               {activeTab === 'business' && <BusinessTab />}
               {activeTab === 'billing' && <BillingTab />}
               {activeTab === 'categories' && <CategoriesTab />}

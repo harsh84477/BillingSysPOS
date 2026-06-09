@@ -15,6 +15,7 @@ import {
   MousePointerClick, Hash, Package,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import AccountTab from '@/components/settings/tabs/AccountTab';
 
 const lightThemes: {
   name: string; value: ThemeName; color: string; bg: string;
@@ -107,6 +108,9 @@ export default function SalesmanSettings() {
           <p className="text-xs text-muted-foreground">Personalize your experience</p>
         </div>
       </div>
+
+      {/* User Account Settings */}
+      <AccountTab />
 
       {/* ═══ App Theme ═══ */}
       <Card className="overflow-hidden">

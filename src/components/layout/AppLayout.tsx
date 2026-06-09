@@ -66,6 +66,7 @@ import {
   UserCheck,
   ClipboardList,
   MessageCircle,
+  User,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -220,8 +221,16 @@ export default function AppLayout() {
     navigate('/auth');
   };
 
+  const handleMyAccountClick = () => {
+    if (userRole === 'salesman') {
+      navigate('/salesman-settings');
+    } else {
+      navigate('/settings?tab=account');
+    }
+  };
+
   const roleLabel = userRole === 'owner' ? 'Owner' : (isSuperAdmin ? 'Super Admin' : (userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'User'));
-  const displayName = user?.email?.split('@')[0] || (isSuperAdmin ? 'Admin' : 'User');
+  const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || (isSuperAdmin ? 'Admin' : 'User');
   const currentPageTitle = pageTitleMap[location.pathname] || 'Dashboard';
   const isBillingPage = location.pathname === '/billing' || location.pathname === '/salesman-billing';
 
@@ -309,6 +318,11 @@ export default function AppLayout() {
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-48">
+            <DropdownMenuItem onClick={handleMyAccountClick}>
+              <User className="mr-2 h-4 w-4" />
+              My Account
+            </DropdownMenuItem>
+            <div className="h-[1px] bg-border my-1" />
             <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
@@ -388,7 +402,12 @@ export default function AppLayout() {
                   {displayName.charAt(0)}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleMyAccountClick}>
+                  <User className="mr-2 h-4 w-4" />
+                  My Account
+                </DropdownMenuItem>
+                <div className="h-[1px] bg-border my-1" />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
