@@ -134,15 +134,31 @@ export default function Customers() {
   /* ─── detail panel state ─── */
   const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
 
-  // ── queries ──
+  // ── queries (with offline fallback) ──
   const { data: customers = [], isLoading } = useQuery<Customer[]>({
     queryKey: ['customers'],
     queryFn: async () => {
-      let q = supabase.from('customers').select('*');
-      if (businessId) q = q.eq('business_id', businessId);
-      const { data, error } = await q.order('name');
-      if (error) throw error;
-      return data as Customer[];
+      const { offlineSyncManager } = await import('@/lib/offlineSync');
+      if (!navigator.onLine) {
+        const cached = await offlineSyncManager.getCachedCustomers();
+        if (cached) return cached as Customer[];
+        return [] as Customer[];
+      }
+      try {
+        let q = supabase.from('customers').select('*');
+        if (businessId) q = q.eq('business_id', businessId);
+        const { data, error } = await q.order('name');
+        if (error) {
+          const cached = await offlineSyncManager.getCachedCustomers();
+          if (cached) return cached as Customer[];
+          throw error;
+        }
+        if (data) offlineSyncManager.cacheCustomers(data);
+        return data as Customer[];
+      } catch {
+        const cached = await offlineSyncManager.getCachedCustomers();
+        return (cached || []) as Customer[];
+      }
     },
     enabled: !!businessId,
   });
@@ -260,6 +276,15 @@ export default function Customers() {
   // ── mutations ──
   const saveMutation = useMutation({
     mutationFn: async (customer: Partial<Customer>) => {
+      // ── OFFLINE PATH ──
+      if (!navigator.onLine && !editingCustomer) {
+        const { offlineSyncManager } = await import('@/lib/offlineSync');
+        const insertData: any = { ...customer, business_id: businessId };
+        if (isSalesman && user?.id) insertData.assigned_salesman_id = user.id;
+        await offlineSyncManager.saveCustomerOffline(insertData);
+        return { isOffline: true };
+      }
+
       if (editingCustomer) {
         const { error } = await (supabase.from('customers') as any).update(customer).eq('id', editingCustomer.id);
         if (error) throw error;
@@ -281,7 +306,7 @@ export default function Customers() {
         }
       }
     },
-    onSuccess: () => {
+    onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       if (isSalesman) {
         queryClient.invalidateQueries({ queryKey: ['salesman-stores'] });
@@ -289,7 +314,11 @@ export default function Customers() {
       }
       setIsDialogOpen(false);
       setEditingCustomer(null);
-      toast.success(editingCustomer ? 'Customer updated' : 'Customer created');
+      if (result?.isOffline) {
+        toast.success('💾 Customer saved offline! Will sync when internet is available.');
+      } else {
+        toast.success(editingCustomer ? 'Customer updated' : 'Customer created');
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });

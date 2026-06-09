@@ -162,28 +162,60 @@ export default function Products() {
   const [stockFilter, setStockFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // ── Fetch categories ──
+  // ── Fetch categories (with offline fallback) ──
   const { data: categories = [] } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
-      let query = supabase.from('categories').select('*');
-      if (businessId) query = query.eq('business_id', businessId);
-      const { data, error } = await query.order('sort_order');
-      if (error) throw error;
-      return data;
+      const { offlineSyncManager } = await import('@/lib/offlineSync');
+      if (!navigator.onLine) {
+        const cached = await offlineSyncManager.getCachedCategories();
+        if (cached) return cached;
+        return [];
+      }
+      try {
+        let query = supabase.from('categories').select('*');
+        if (businessId) query = query.eq('business_id', businessId);
+        const { data, error } = await query.order('sort_order');
+        if (error) {
+          const cached = await offlineSyncManager.getCachedCategories();
+          if (cached) return cached;
+          throw error;
+        }
+        if (data) offlineSyncManager.cacheCategories(data);
+        return data;
+      } catch {
+        const cached = await offlineSyncManager.getCachedCategories();
+        return cached || [];
+      }
     },
     enabled: !!businessId,
   });
 
-  // ── Fetch products ──
+  // ── Fetch products (with offline fallback) ──
   const { data: products, isLoading } = useQuery({
     queryKey: ['products', 'all'],
     queryFn: async () => {
-      let query = supabase.from('products').select('*, categories(name, color)');
-      if (businessId) query = query.eq('business_id', businessId);
-      const { data, error } = await query.order('name');
-      if (error) throw error;
-      return data as unknown as Product[];
+      const { offlineSyncManager } = await import('@/lib/offlineSync');
+      if (!navigator.onLine) {
+        const cached = await offlineSyncManager.getCachedProducts();
+        if (cached) return cached as unknown as Product[];
+        return [] as Product[];
+      }
+      try {
+        let query = supabase.from('products').select('*, categories(name, color)');
+        if (businessId) query = query.eq('business_id', businessId);
+        const { data, error } = await query.order('name');
+        if (error) {
+          const cached = await offlineSyncManager.getCachedProducts();
+          if (cached) return cached as unknown as Product[];
+          throw error;
+        }
+        if (data) offlineSyncManager.cacheProducts(data);
+        return data as unknown as Product[];
+      } catch {
+        const cached = await offlineSyncManager.getCachedProducts();
+        return (cached || []) as unknown as Product[];
+      }
     },
     enabled: !!businessId,
   });

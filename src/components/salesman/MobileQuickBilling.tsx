@@ -119,22 +119,54 @@ export function MobileQuickBilling() {
   const { data: products = [] as any[], isLoading: productsLoading } = useQuery({
     queryKey: ['products'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-      if (error) throw error;
-      return data;
+      const { offlineSyncManager } = await import('@/lib/offlineSync');
+      if (!navigator.onLine) {
+        const cached = await offlineSyncManager.getCachedProducts();
+        if (cached) return cached;
+        return [];
+      }
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('is_active', true)
+          .order('name');
+        if (error) {
+          const cached = await offlineSyncManager.getCachedProducts();
+          if (cached) return cached;
+          throw error;
+        }
+        if (data) offlineSyncManager.cacheProducts(data);
+        return data;
+      } catch {
+        const cached = await offlineSyncManager.getCachedProducts();
+        return cached || [];
+      }
     },
   });
 
   const { data: customers = [] } = useQuery({
     queryKey: ['customers', businessId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('customers').select('*').eq('business_id', businessId!).order('name');
-      if (error) throw error;
-      return data;
+      const { offlineSyncManager } = await import('@/lib/offlineSync');
+      if (!navigator.onLine) {
+        const cached = await offlineSyncManager.getCachedCustomers();
+        if (cached) return cached;
+        return [];
+      }
+      try {
+        const { data, error } = await supabase.from('customers').select('*').eq('business_id', businessId!).order('name');
+        if (error) {
+          const cached = await offlineSyncManager.getCachedCustomers();
+          if (cached) return cached;
+          throw error;
+        }
+        if (data) offlineSyncManager.cacheCustomers(data);
+        return data;
+      } catch {
+        const cached = await offlineSyncManager.getCachedCustomers();
+        return cached || [];
+      }
     },
     enabled: !!businessId,
   });
@@ -282,7 +314,6 @@ export function MobileQuickBilling() {
   const generateOrderMutation = useMutation({
     mutationFn: async () => {
       if (cart.length === 0) throw new Error('Cart is empty');
-      const billNumber = await generateOrderNumber();
       const salesmanName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Salesman';
       const items = cart.map(item => ({
         product_id: item.product_id,
@@ -292,6 +323,27 @@ export function MobileQuickBilling() {
         cost_price: item.cost_price,
         total_price: item.unit_price * item.quantity,
       }));
+
+      // ── OFFLINE PATH ──
+      if (!navigator.onLine) {
+        const { offlineSyncManager } = await import('@/lib/offlineSync');
+        const offlineBillNumber = `OFFLINE-${Date.now()}`;
+        await offlineSyncManager.saveDraftBillOffline({
+          bill_number: offlineBillNumber,
+          customer_id: selectedCustomerId || null,
+          salesmanName,
+          salesman_name: salesmanName,
+          subtotal,
+          discount_amount: 0,
+          tax_amount: 0,
+          total_amount: total,
+          items,
+          business_id: businessId,
+        });
+        return { isOffline: true };
+      }
+
+      const billNumber = await generateOrderNumber();
       const { data, error } = await (supabase.rpc as any)('create_draft_bill', {
         _business_id: businessId,
         _bill_number: billNumber,
@@ -308,8 +360,12 @@ export function MobileQuickBilling() {
       if (!result?.success) throw new Error(result?.error || 'Failed to create order');
       return result;
     },
-    onSuccess: () => {
-      toast.success('Order generated successfully!');
+    onSuccess: (result: any) => {
+      if (result?.isOffline) {
+        toast.success('💾 Order saved offline! Will sync when internet is available.', { duration: 5000 });
+      } else {
+        toast.success('Order generated successfully!');
+      }
       clearCart();
       setActiveView('products');
       queryClient.invalidateQueries({ queryKey: ['salesmanOrders'] });

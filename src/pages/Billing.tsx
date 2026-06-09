@@ -233,48 +233,96 @@ export default function Billing() {
   const [costWarningDialogOpen, setCostWarningDialogOpen] = useState(false);
   const [pendingPriceInfo, setPendingPriceInfo] = useState<{ productId: string; price: number } | null>(null);
 
-  // Fetch categories
+  // Fetch categories (with offline fallback)
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', businessId],
     queryFn: async () => {
-      let query = supabase
-        .from('categories')
-        .select('*');
-      if (businessId) query = query.eq('business_id', businessId);
-      const { data, error } = await query.order('sort_order');
-      if (error) throw error;
-      return data;
+      const { offlineSyncManager } = await import('@/lib/offlineSync');
+      if (!navigator.onLine) {
+        const cached = await offlineSyncManager.getCachedCategories();
+        if (cached) return cached;
+        return [];
+      }
+      try {
+        let query = supabase
+          .from('categories')
+          .select('*');
+        if (businessId) query = query.eq('business_id', businessId);
+        const { data, error } = await query.order('sort_order');
+        if (error) {
+          const cached = await offlineSyncManager.getCachedCategories();
+          if (cached) return cached;
+          throw error;
+        }
+        if (data) offlineSyncManager.cacheCategories(data);
+        return data;
+      } catch {
+        const cached = await offlineSyncManager.getCachedCategories();
+        return cached || [];
+      }
     },
     enabled: !!businessId,
   });
 
-  // Fetch products
+  // Fetch products (with offline fallback)
   const { data: products = [] } = useQuery({
     queryKey: ['products', businessId],
     queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select('*, categories(name, color)')
-        .eq('is_active', true);
-      if (businessId) query = query.eq('business_id', businessId);
-      const { data, error } = await query.order('name');
-      if (error) throw error;
-      return data;
+      const { offlineSyncManager } = await import('@/lib/offlineSync');
+      if (!navigator.onLine) {
+        const cached = await offlineSyncManager.getCachedProducts();
+        if (cached) return cached;
+        return [];
+      }
+      try {
+        let query = supabase
+          .from('products')
+          .select('*, categories(name, color)')
+          .eq('is_active', true);
+        if (businessId) query = query.eq('business_id', businessId);
+        const { data, error } = await query.order('name');
+        if (error) {
+          const cached = await offlineSyncManager.getCachedProducts();
+          if (cached) return cached;
+          throw error;
+        }
+        if (data) offlineSyncManager.cacheProducts(data);
+        return data;
+      } catch {
+        const cached = await offlineSyncManager.getCachedProducts();
+        return cached || [];
+      }
     },
     enabled: !!businessId,
   });
 
-  // Fetch customers
+  // Fetch customers (with offline fallback)
   const { data: customers = [] } = useQuery({
     queryKey: ['customers', businessId],
     queryFn: async () => {
-      let query = supabase
-        .from('customers')
-        .select('*');
-      if (businessId) query = query.eq('business_id', businessId);
-      const { data, error } = await query.order('name');
-      if (error) throw error;
-      return data;
+      const { offlineSyncManager } = await import('@/lib/offlineSync');
+      if (!navigator.onLine) {
+        const cached = await offlineSyncManager.getCachedCustomers();
+        if (cached) return cached;
+        return [];
+      }
+      try {
+        let query = supabase
+          .from('customers')
+          .select('*');
+        if (businessId) query = query.eq('business_id', businessId);
+        const { data, error } = await query.order('name');
+        if (error) {
+          const cached = await offlineSyncManager.getCachedCustomers();
+          if (cached) return cached;
+          throw error;
+        }
+        if (data) offlineSyncManager.cacheCustomers(data);
+        return data;
+      } catch {
+        const cached = await offlineSyncManager.getCachedCustomers();
+        return cached || [];
+      }
     },
     enabled: !!businessId,
   });
@@ -720,6 +768,56 @@ export default function Billing() {
         }
       }
 
+      // ─── OFFLINE PATH ───
+      if (!navigator.onLine) {
+        const { offlineSyncManager } = await import('@/lib/offlineSync');
+        const offlineBillNumber = `OFFLINE-${Date.now()}`;
+        const items = buildItemsPayload();
+        let offlineCustomerId = selectedCustomerId;
+        if (!offlineCustomerId && customerName.trim()) {
+          // Save customer offline too
+          offlineCustomerId = await offlineSyncManager.saveCustomerOffline({
+            name: customerName.trim(),
+            business_id: businessId,
+          });
+        }
+        const billData = {
+          bill_number: offlineBillNumber,
+          customer_id: offlineCustomerId || null,
+          salesmanName: user?.user_metadata?.display_name || 'Offline',
+          salesman_name: user?.user_metadata?.display_name || 'Offline',
+          subtotal: cartCalculations.subtotal,
+          discount_amount: cartCalculations.discountAmount,
+          discount_type: 'flat',
+          discount_value: 0,
+          tax_amount: cartCalculations.taxAmount,
+          total_amount: cartCalculations.total,
+          payment_type: paymentType,
+          payments: paymentType === 'cash' ? [{ mode: 'cash', amount: cartCalculations.total }]
+            : paymentType === 'online' ? [{ mode: 'upi', amount: cartCalculations.total }]
+            : paymentType === 'split' ? [
+                ...(typeof cashAmount === 'number' && cashAmount > 0 ? [{ mode: 'cash', amount: cashAmount }] : []),
+                ...(typeof onlineAmount === 'number' && onlineAmount > 0 ? [{ mode: 'upi', amount: onlineAmount }] : []),
+              ]
+            : typeof paidAmount === 'number' && paidAmount > 0 ? [{ mode: 'cash', amount: paidAmount }] : [],
+          due_amount: paymentType === 'split'
+            ? Math.max(0, cartCalculations.total - ((typeof cashAmount === 'number' ? cashAmount : 0) + (typeof onlineAmount === 'number' ? onlineAmount : 0)))
+            : paymentType === 'due'
+            ? Math.max(0, cartCalculations.total - (typeof paidAmount === 'number' ? paidAmount : 0))
+            : 0,
+          due_date: paymentType === 'due' && dueDate ? dueDate : null,
+          items,
+          business_id: businessId,
+        };
+        const isDraftMode = shouldPrint === 'draft' || isSalesman;
+        if (isDraftMode) {
+          await offlineSyncManager.saveDraftBillOffline(billData);
+        } else {
+          await offlineSyncManager.finalizeDraftBillOffline(billData);
+        }
+        return { bill: null, billNumber: offlineBillNumber, shouldPrint, isDraft: isDraftMode, isPendingOrder: isSalesman, isOffline: true };
+      }
+
       let retryCount = 0;
       const maxRetries = 3;
 
@@ -776,12 +874,6 @@ export default function Billing() {
           const salData = data as any;
           if (!salData?.success) throw new Error(salData?.error || 'Failed to create order');
 
-          await updateSalesmanTargetProgress({
-            businessId,
-            salesmanId: user?.id,
-            billAmount: cartCalculations.total,
-            billDate: new Date().toISOString(),
-          });
           return { bill: salData, billNumber: salData.bill_number || billNumber, shouldPrint, isPendingOrder };
         }
         if (isDraft) {
@@ -882,8 +974,8 @@ export default function Billing() {
 
       throw new Error('Failed to generate unique bill number after multiple attempts');
     },
-    onSuccess: ({ billNumber, shouldPrint, isDraft, isPendingOrder }) => {
-      if ((shouldPrint === true || shouldPrint === 'save-print') && !isDraft && !isPendingOrder) {
+    onSuccess: ({ billNumber, shouldPrint, isDraft, isPendingOrder, isOffline }: any) => {
+      if ((shouldPrint === true || shouldPrint === 'save-print') && !isDraft && !isPendingOrder && !isOffline) {
         printBill(billNumber);
       }
 
@@ -923,7 +1015,9 @@ export default function Billing() {
       setOnlineAmount('');
       setPaidAmount('');
       generateBillNumber().then(setPreviewBillNumber);
-      if (isPendingOrder) {
+      if (isOffline) {
+        toast.success('💾 Sale saved offline! Will sync automatically when internet is available.', { duration: 5000 });
+      } else if (isPendingOrder) {
         toast.success('Order generated! Visible in My Orders.');
       } else if (isDraft) {
         toast.success('Draft saved! Stock reserved. Resume from Draft Bills.');

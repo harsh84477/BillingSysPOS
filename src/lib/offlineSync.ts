@@ -84,60 +84,72 @@ class OfflineSyncManager {
   private businessId: string = '';
   private userId: string = '';
   private syncInterval: NodeJS.Timeout | null = null;
-  private isOnline: boolean = navigator.onLine;
+  private isOnline: boolean = typeof navigator !== 'undefined' ? navigator.onLine : true;
+  private initPromise: Promise<void> | null = null;
 
   async initialize(businessId: string, userId: string) {
     this.businessId = businessId;
     this.userId = userId;
 
-    this.db = await openDB<POSDBSchema>('pos_offline_db', 1, {
-      upgrade(db) {
-        // Bills store
-        if (!db.objectStoreNames.contains('bills')) {
-          const billsStore = db.createObjectStore('bills', { keyPath: 'id' });
-          billsStore.createIndex('syncStatus', 'syncStatus');
-          billsStore.createIndex('createdAt', 'createdAt');
-        }
+    if (this.initPromise) return this.initPromise;
 
-        // Draft bills store
-        if (!db.objectStoreNames.contains('draft_bills')) {
-          db.createObjectStore('draft_bills', { keyPath: 'id' });
-        }
+    this.initPromise = (async () => {
+      try {
+        this.db = await openDB<POSDBSchema>('pos_offline_db', 1, {
+          upgrade(db) {
+            // Bills store
+            if (!db.objectStoreNames.contains('bills')) {
+              const billsStore = db.createObjectStore('bills', { keyPath: 'id' });
+              billsStore.createIndex('syncStatus', 'syncStatus');
+              billsStore.createIndex('createdAt', 'createdAt');
+            }
 
-        // Customers store
-        if (!db.objectStoreNames.contains('customers')) {
-          const customersStore = db.createObjectStore('customers', { keyPath: 'id' });
-          customersStore.createIndex('name', 'name');
-        }
+            // Draft bills store
+            if (!db.objectStoreNames.contains('draft_bills')) {
+              db.createObjectStore('draft_bills', { keyPath: 'id' });
+            }
 
-        // Products store
-        if (!db.objectStoreNames.contains('products')) {
-          const productsStore = db.createObjectStore('products', { keyPath: 'id' });
-          productsStore.createIndex('category_id', 'category_id');
-        }
+            // Customers store
+            if (!db.objectStoreNames.contains('customers')) {
+              const customersStore = db.createObjectStore('customers', { keyPath: 'id' });
+              customersStore.createIndex('name', 'name');
+            }
 
-        // Expenses store
-        if (!db.objectStoreNames.contains('expenses')) {
-          const expensesStore = db.createObjectStore('expenses', { keyPath: 'id' });
-          expensesStore.createIndex('syncStatus', 'syncStatus');
-          expensesStore.createIndex('expenseDate', 'expenseDate');
-        }
+            // Products store
+            if (!db.objectStoreNames.contains('products')) {
+              const productsStore = db.createObjectStore('products', { keyPath: 'id' });
+              productsStore.createIndex('category_id', 'category_id');
+            }
 
-        // Sync queue
-        if (!db.objectStoreNames.contains('sync_queue')) {
-          const queueStore = db.createObjectStore('sync_queue', { keyPath: 'id' });
-          queueStore.createIndex('status', 'status');
-          queueStore.createIndex('createdAt', 'createdAt');
-        }
+            // Expenses store
+            if (!db.objectStoreNames.contains('expenses')) {
+              const expensesStore = db.createObjectStore('expenses', { keyPath: 'id' });
+              expensesStore.createIndex('syncStatus', 'syncStatus');
+              expensesStore.createIndex('expenseDate', 'expenseDate');
+            }
 
-        // Cache store
-        if (!db.objectStoreNames.contains('cache')) {
-          db.createObjectStore('cache', { keyPath: 'type' });
-        }
-      },
-    });
+            // Sync queue
+            if (!db.objectStoreNames.contains('sync_queue')) {
+              const queueStore = db.createObjectStore('sync_queue', { keyPath: 'id' });
+              queueStore.createIndex('status', 'status');
+              queueStore.createIndex('createdAt', 'createdAt');
+            }
 
-    this.setupOnlineStatusListener();
+            // Cache store
+            if (!db.objectStoreNames.contains('cache')) {
+              db.createObjectStore('cache', { keyPath: 'type' });
+            }
+          },
+        });
+
+        this.setupOnlineStatusListener();
+      } catch (err) {
+        console.warn('[OfflineSync] Failed to open IndexedDB:', err);
+        this.db = null;
+      }
+    })();
+
+    return this.initPromise;
   }
 
   private setupOnlineStatusListener() {
@@ -154,110 +166,198 @@ class OfflineSyncManager {
   // ========== BILL OPERATIONS ==========
 
   async saveDraftBillOffline(bill: any) {
-    if (!this.db) throw new Error('DB not initialized');
-    await this.db.add('draft_bills', {
-      ...bill,
-      id: bill.id || crypto.randomUUID(),
-      createdAt: Date.now(),
-    });
+    if (!this.db) return null;
+    const id = bill.id || crypto.randomUUID();
+    try {
+      await this.db.put('draft_bills', {
+        ...bill,
+        id,
+        createdAt: Date.now(),
+      });
+      await this.enqueueSyncOperation('create_draft', 'bills', id, { ...bill, id, status: 'draft' });
+      return id;
+    } catch (err) {
+      console.warn('[OfflineSync] Failed to save draft bill offline:', err);
+      return null;
+    }
   }
 
   async finalizeDraftBillOffline(bill: any) {
-    if (!this.db) throw new Error('DB not initialized');
-    const id = bill.id;
-    await this.db.delete('draft_bills', id);
+    if (!this.db) return null;
+    const id = bill.id || crypto.randomUUID();
+    try {
+      // Try to delete draft if it exists
+      try { await this.db.delete('draft_bills', id); } catch {}
 
-    // Add to bills table with pending sync status
-    await this.db.add('bills', {
-      ...bill,
-      status: 'completed',
-      syncStatus: 'pending',
-      createdAt: Date.now(),
-    });
+      // Add to bills table with pending sync status
+      await this.db.put('bills', {
+        ...bill,
+        id,
+        status: 'completed',
+        syncStatus: 'pending',
+        createdAt: Date.now(),
+      });
 
-    // Enqueue sync operation
-    await this.enqueueSyncOperation('create_bill', 'bills', id, bill);
+      // Enqueue sync operation with full bill data (including payments)
+      await this.enqueueSyncOperation('create_bill', 'bills', id, { ...bill, id });
+      return id;
+    } catch (err) {
+      console.warn('[OfflineSync] Failed to finalize bill offline:', err);
+      return null;
+    }
   }
 
   async getDraftBills() {
-    if (!this.db) throw new Error('DB not initialized');
-    return this.db.getAll('draft_bills');
+    if (!this.db) return [];
+    try {
+      return await this.db.getAll('draft_bills');
+    } catch {
+      return [];
+    }
   }
 
   async getPendingBills() {
-    if (!this.db) throw new Error('DB not initialized');
-    return this.db.getAllFromIndex('bills', 'syncStatus', 'pending');
+    if (!this.db) return [];
+    try {
+      return await this.db.getAllFromIndex('bills', 'syncStatus', 'pending');
+    } catch {
+      return [];
+    }
   }
 
   // ========== EXPENSE OPERATIONS ==========
 
   async saveExpenseOffline(expense: any) {
-    if (!this.db) throw new Error('DB not initialized');
-    const id = expense.id || crypto.randomUUID();
-    await this.db.put('expenses', {
-      ...expense,
-      id,
-      syncStatus: 'pending',
-      createdAt: Date.now(),
-    });
-
-    await this.enqueueSyncOperation('create_expense', 'expenses', id, expense);
-    return id;
+    if (!this.db) return null;
+    try {
+      const id = expense.id || crypto.randomUUID();
+      await this.db.put('expenses', {
+        ...expense,
+        id,
+        syncStatus: 'pending',
+        createdAt: Date.now(),
+      });
+      await this.enqueueSyncOperation('create_expense', 'expenses', id, expense);
+      return id;
+    } catch (err) {
+      console.warn('[OfflineSync] Failed to save expense offline:', err);
+      return null;
+    }
   }
 
   async getPendingExpenses() {
-    if (!this.db) throw new Error('DB not initialized');
-    return this.db.getAllFromIndex('expenses', 'syncStatus', 'pending');
+    if (!this.db) return [];
+    try {
+      return await this.db.getAllFromIndex('expenses', 'syncStatus', 'pending');
+    } catch {
+      return [];
+    }
   }
 
   // ========== CUSTOMER OPERATIONS ==========
 
   async cacheCustomers(customers: any[]) {
-    if (!this.db) throw new Error('DB not initialized');
-    await this.db.put('cache', {
-      type: 'customers',
-      data: customers,
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-      lastSynced: Date.now(),
-    });
+    if (!this.db) return;
+    try {
+      await this.db.put('cache', {
+        type: 'customers',
+        data: customers,
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+        lastSynced: Date.now(),
+      });
+    } catch (err) {
+      console.warn('[OfflineSync] Failed to cache customers:', err);
+    }
   }
 
   async getCachedCustomers() {
-    if (!this.db) throw new Error('DB not initialized');
-    const cache = await this.db.get('cache', 'customers');
-    if (cache && cache.expiresAt > Date.now()) {
-      return cache.data;
+    if (!this.db) return null;
+    try {
+      const cache = await this.db.get('cache', 'customers');
+      if (!cache) return null;
+      // Bypass expiration if offline — serve stale data rather than blank screen
+      if (!navigator.onLine || cache.expiresAt > Date.now()) {
+        return cache.data;
+      }
+      return null;
+    } catch {
+      return null;
     }
-    return null;
   }
 
   async saveCustomerOffline(customer: any) {
-    if (!this.db) throw new Error('DB not initialized');
-    const id = customer.id || crypto.randomUUID();
-    await this.db.put('customers', { ...customer, id });
-    await this.enqueueSyncOperation('create_customer', 'customers', id, customer);
-    return id;
+    if (!this.db) return null;
+    try {
+      const id = customer.id || crypto.randomUUID();
+      await this.db.put('customers', { ...customer, id });
+      await this.enqueueSyncOperation('create_customer', 'customers', id, customer);
+      return id;
+    } catch (err) {
+      console.warn('[OfflineSync] Failed to save customer offline:', err);
+      return null;
+    }
   }
 
   // ========== PRODUCT OPERATIONS ==========
 
   async cacheProducts(products: any[]) {
-    if (!this.db) throw new Error('DB not initialized');
-    await this.db.put('cache', {
-      type: 'products',
-      data: products,
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      lastSynced: Date.now(),
-    });
+    if (!this.db) return;
+    try {
+      await this.db.put('cache', {
+        type: 'products',
+        data: products,
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+        lastSynced: Date.now(),
+      });
+    } catch (err) {
+      console.warn('[OfflineSync] Failed to cache products:', err);
+    }
   }
 
   async getCachedProducts() {
-    if (!this.db) throw new Error('DB not initialized');
-    const cache = await this.db.get('cache', 'products');
-    if (cache && cache.expiresAt > Date.now()) {
-      return cache.data;
+    if (!this.db) return null;
+    try {
+      const cache = await this.db.get('cache', 'products');
+      if (!cache) return null;
+      // Bypass expiration if offline — serve stale data rather than blank screen
+      if (!navigator.onLine || cache.expiresAt > Date.now()) {
+        return cache.data;
+      }
+      return null;
+    } catch {
+      return null;
     }
-    return null;
+  }
+
+  // ========== CATEGORY OPERATIONS ==========
+
+  async cacheCategories(categories: any[]) {
+    if (!this.db) return;
+    try {
+      await this.db.put('cache', {
+        type: 'categories',
+        data: categories,
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+        lastSynced: Date.now(),
+      });
+    } catch (err) {
+      console.warn('[OfflineSync] Failed to cache categories:', err);
+    }
+  }
+
+  async getCachedCategories() {
+    if (!this.db) return null;
+    try {
+      const cache = await this.db.get('cache', 'categories');
+      if (!cache) return null;
+      // Bypass expiration if offline — serve stale data rather than blank screen
+      if (!navigator.onLine || cache.expiresAt > Date.now()) {
+        return cache.data;
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   // ========== SYNC OPERATIONS ==========
@@ -268,16 +368,20 @@ class OfflineSyncManager {
     recordId: string,
     data: any
   ) {
-    if (!this.db) throw new Error('DB not initialized');
-    await this.db.add('sync_queue', {
-      id: crypto.randomUUID(),
-      operationType,
-      tableName,
-      recordId,
-      data,
-      status: 'pending',
-      createdAt: Date.now(),
-    });
+    if (!this.db) return;
+    try {
+      await this.db.add('sync_queue', {
+        id: crypto.randomUUID(),
+        operationType,
+        tableName,
+        recordId,
+        data,
+        status: 'pending',
+        createdAt: Date.now(),
+      });
+    } catch (err) {
+      console.warn('[OfflineSync] Failed to enqueue sync operation:', err);
+    }
   }
 
   async syncPendingOperations() {
@@ -290,35 +394,69 @@ class OfflineSyncManager {
   }
 
   private async processSyncItem(item: any) {
-    if (!this.db) throw new Error('DB not initialized');
+    if (!this.db) return;
     const { supabase } = await import('@/integrations/supabase/client');
 
     try {
       // Mark as syncing
       await this.db.put('sync_queue', { ...item, status: 'syncing', attemptedAt: Date.now() });
 
-      let error = null;
+      let error: any = null;
       let success = false;
+      let billId: string | null = null;
 
       // Call Supabase RPCs or client methods
-      if (item.operationType === 'create_bill') {
-        const { data, error: rpcError } = await supabase.rpc('create_draft_bill', {
+      if (item.operationType === 'create_bill' || item.operationType === 'create_draft') {
+        const d = item.data;
+        const items = (d.items || []).map((i: any) => ({
+          product_id: i.product_id,
+          product_name: i.product_name || i.name || 'Product',
+          quantity: i.quantity,
+          unit_price: i.unit_price || i.unitPrice || 0,
+          cost_price: i.cost_price || i.costPrice || 0,
+          mrp_price: i.mrp_price || i.mrpPrice || i.unit_price || i.unitPrice || 0,
+          items_per_case: i.items_per_case || i.itemsPerCase || 0,
+          total_price: (i.unit_price || i.unitPrice || 0) * i.quantity,
+        }));
+
+        const { data: draftResult, error: draftErr } = await (supabase.rpc as any)('create_draft_bill', {
           _business_id: this.businessId,
-          _bill_number: item.data.bill_number,
-          _customer_id: item.data.customer_id,
-          _salesman_name: item.data.salesmanName || 'Offline User',
-          _subtotal: item.data.total_amount, // Simplified
-          _items: item.data.items.map((i: any) => ({
-            product_id: i.product_id,
-            quantity: i.quantity,
-            unit_price: i.unit_price,
-            cost_price: i.cost_price,
-            total_price: i.unit_price * i.quantity
-          })),
-          _total_amount: item.data.total_amount
-        } as any);
-        if (rpcError) error = rpcError;
-        else success = true;
+          _bill_number: d.bill_number,
+          _customer_id: d.customer_id || null,
+          _salesman_name: d.salesmanName || d.salesman_name || 'Offline User',
+          _subtotal: d.subtotal || d.total_amount || 0,
+          _discount_type: d.discount_type || 'flat',
+          _discount_value: d.discount_value || 0,
+          _discount_amount: d.discount_amount || 0,
+          _tax_amount: d.tax_amount || 0,
+          _total_amount: d.total_amount || 0,
+          _items: items,
+        });
+
+        if (draftErr) {
+          error = draftErr;
+        } else {
+          const dr = draftResult as any;
+          if (dr?.success) {
+            billId = dr.bill_id;
+            // If the offline bill was a completed bill, also finalize it
+            if (item.operationType === 'create_bill' && billId) {
+              const payments = d.payments || [{ mode: d.payment_type || 'cash', amount: d.total_amount || 0 }];
+              const { error: finalizeErr } = await (supabase.rpc as any)('finalize_bill_with_split_payments', {
+                _bill_id: billId,
+                _payments: payments,
+                _due_amount: d.due_amount || 0,
+                _due_date: d.due_date || null,
+              });
+              if (finalizeErr) {
+                console.warn('[OfflineSync] Finalize error (non-fatal):', finalizeErr.message);
+              }
+            }
+            success = true;
+          } else {
+            error = { message: dr?.error || 'Failed to create bill' };
+          }
+        }
       } else if (item.operationType === 'create_customer') {
         const { error: insertError } = await (supabase.from as any)('customers').insert({
           id: item.recordId,
@@ -360,42 +498,53 @@ class OfflineSyncManager {
         });
       }
     } catch (e) {
-      await this.db.put('sync_queue', {
-        ...item,
-        status: 'failed',
-        errorMessage: (e as Error).message,
-      });
+      try {
+        await this.db.put('sync_queue', {
+          ...item,
+          status: 'failed',
+          errorMessage: (e as Error).message,
+        });
+      } catch {}
     }
   }
 
   // ========== CLEANUP & UTILS ==========
 
   async clearAllCache() {
-    if (!this.db) throw new Error('DB not initialized');
-    await this.db.clear('cache');
+    if (!this.db) return;
+    try {
+      await this.db.clear('cache');
+    } catch {}
   }
 
   async getStorageStats() {
-    if (!this.db) throw new Error('DB not initialized');
-    const bills = await this.db.count('bills');
-    const customers = await this.db.count('customers');
-    const products = await this.db.count('products');
-    const expenses = await this.db.count('expenses');
-    const queue = await this.db.count('sync_queue');
-
-    return { bills, customers, products, expenses, queue };
+    if (!this.db) return { bills: 0, customers: 0, products: 0, expenses: 0, queue: 0 };
+    try {
+      const bills = await this.db.count('bills');
+      const customers = await this.db.count('customers');
+      const products = await this.db.count('products');
+      const expenses = await this.db.count('expenses');
+      const queue = await this.db.count('sync_queue');
+      return { bills, customers, products, expenses, queue };
+    } catch {
+      return { bills: 0, customers: 0, products: 0, expenses: 0, queue: 0 };
+    }
   }
 
   async exportOfflineData() {
-    if (!this.db) throw new Error('DB not initialized');
-    return {
-      bills: await this.db.getAll('bills'),
-      customers: await this.db.getAll('customers'),
-      products: await this.db.getAll('products'),
-      expenses: await this.db.getAll('expenses'),
-      syncQueue: await this.db.getAll('sync_queue'),
-      timestamp: new Date().toISOString(),
-    };
+    if (!this.db) return { bills: [], customers: [], products: [], expenses: [], syncQueue: [], timestamp: new Date().toISOString() };
+    try {
+      return {
+        bills: await this.db.getAll('bills'),
+        customers: await this.db.getAll('customers'),
+        products: await this.db.getAll('products'),
+        expenses: await this.db.getAll('expenses'),
+        syncQueue: await this.db.getAll('sync_queue'),
+        timestamp: new Date().toISOString(),
+      };
+    } catch {
+      return { bills: [], customers: [], products: [], expenses: [], syncQueue: [], timestamp: new Date().toISOString() };
+    }
   }
 
   destroy() {
@@ -405,6 +554,7 @@ class OfflineSyncManager {
     if (this.db) {
       this.db.close();
     }
+    this.initPromise = null;
   }
 }
 
