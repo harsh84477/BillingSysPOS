@@ -7,6 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { User, Phone, Mail, Shield, KeyRound, Loader2 } from 'lucide-react';
 import {
@@ -14,9 +15,11 @@ import {
 } from '../SettingsUI';
 
 export default function AccountTab() {
-  const { user, userRole, refreshBusinessInfo } = useAuth();
+  const { user, userRole, businessId, refreshBusinessInfo } = useAuth();
+  const queryClient = useQueryClient();
   
   // Profile state
+  const [profile, setProfile] = useState<any>(null);
   const [displayName, setDisplayName] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [loading, setLoading] = useState(true);
@@ -34,13 +37,14 @@ export default function AccountTab() {
         setLoading(true);
         const { data, error } = await supabase
           .from('profiles')
-          .select('display_name, mobile_number')
+          .select('*')
           .eq('user_id', user.id)
           .maybeSingle();
 
         if (error) throw error;
         
         if (data) {
+          setProfile(data);
           setDisplayName(data.display_name || '');
           setMobileNumber(data.mobile_number || '');
         } else {
@@ -68,15 +72,19 @@ export default function AccountTab() {
 
     setSavingProfile(true);
     try {
-      // 1. Update profiles table
+      // 1. Update profiles table - preserving all other fields like business_id and id
+      const updatedProfile = {
+        ...profile,
+        user_id: user.id,
+        business_id: profile?.business_id || businessId || null,
+        display_name: trimmedName,
+        mobile_number: mobileNumber.trim() || null,
+        updated_at: new Date().toISOString()
+      };
+
       const { error: profileErr } = await supabase
         .from('profiles')
-        .upsert({
-          user_id: user.id,
-          display_name: trimmedName,
-          mobile_number: mobileNumber.trim() || null,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
+        .upsert(updatedProfile, { onConflict: 'user_id' });
 
       if (profileErr) throw profileErr;
 
@@ -91,6 +99,9 @@ export default function AccountTab() {
 
       toast.success('Profile updated successfully!');
       
+      // Invalidate dashboard query cache to update greeting instantly
+      queryClient.invalidateQueries({ queryKey: ['profileDisplayName', user.id] });
+
       // Refresh context/auth details
       await refreshBusinessInfo();
     } catch (err: any) {
