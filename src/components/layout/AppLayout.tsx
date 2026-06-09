@@ -65,6 +65,7 @@ import {
   Store,
   UserCheck,
   ClipboardList,
+  MessageCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -108,6 +109,7 @@ const navSections: NavSection[] = [
       { name: 'Bills History', href: '/bills-history', icon: Receipt, roles: ['owner', 'manager', 'cashier'] },
       { name: 'Due Bills', href: '/due-bills', icon: AlertCircle, roles: ['owner', 'manager', 'cashier'], badgeKey: 'due' },
       { name: 'Sales Returns', href: '/sales-returns', icon: RotateCcw, roles: ['owner', 'manager'] },
+      { name: 'WhatsApp', href: '/whatsapp', icon: MessageCircle, roles: ['owner', 'manager'] },
     ],
   },
   {
@@ -179,6 +181,7 @@ const pageTitleMap: Record<string, string> = {
   '/purchases': 'Purchases',
   '/purchase-order': 'Purchase Order',
   '/sales-returns': 'Sales Returns',
+  '/whatsapp': 'WhatsApp',
   '/expenses': 'Expenses',
   '/reports': 'Reports',
   '/activity-logs': 'Activity Log',

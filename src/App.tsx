@@ -80,6 +80,7 @@ import SalesmanStores from "./pages/SalesmanStores";
 import SalesmanTargets from "./pages/SalesmanTargets";
 import SalesmanControl from "./pages/SalesmanControl";
 import SalesmanSettings from "./pages/SalesmanSettings";
+import WhatsApp from "./pages/WhatsApp";
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapApp } from "@capacitor/app";
@@ -302,6 +303,7 @@ const App = () => (
                 <Route path="/purchases" element={<Purchases />} />
                 <Route path="/purchase-order/:id" element={<PurchaseOrderDetail />} />
                 <Route path="/sales-returns" element={<SalesReturns />} />
+                <Route path="/whatsapp" element={<WhatsApp />} />
                 <Route path="/salesman-dashboard" element={<SalesmanDashboard />} />
                 <Route path="/salesman-stores" element={<SalesmanStores />} />
                 <Route path="/salesman-targets" element={<SalesmanTargets />} />
