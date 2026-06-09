@@ -41,6 +41,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import NumericKeyboard from '@/components/billing/NumericKeyboard';
 
 interface CartItem {
   product_id: string;
@@ -54,6 +56,7 @@ export function MobileQuickBilling() {
   const { businessId, user, isSalesman, billPrefix } = useAuth();
   const queryClient = useQueryClient();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
@@ -918,9 +921,10 @@ export function MobileQuickBilling() {
               value={quantityValue}
               onChange={(e) => setQuantityValue(e.target.value)}
               className="text-2xl h-14 text-center font-bold rounded-xl"
-              autoFocus
+              autoFocus={!isMobile}
               min={1}
               onKeyDown={(e) => e.key === 'Enter' && confirmQuantityDialog()}
+              inputMode={isMobile ? "none" : undefined}
             />
             <div className="grid grid-cols-4 gap-1.5">
               {[1, 5, 10, 12].map(q => (
@@ -932,6 +936,14 @@ export function MobileQuickBilling() {
                 <Button key={q} variant="outline" size="sm" className="rounded-lg text-xs font-bold h-8" onClick={() => setQuantityValue(q.toString())}>{q}</Button>
               ))}
             </div>
+            {isMobile && (
+              <NumericKeyboard
+                value={quantityValue}
+                onChange={setQuantityValue}
+                onConfirm={confirmQuantityDialog}
+                className="mt-2"
+              />
+            )}
           </div>
           <Button className="w-full h-11 rounded-xl font-bold text-sm" onClick={confirmQuantityDialog} disabled={!quantityValue || Number(quantityValue) < 1}>
             <Plus className="h-4 w-4 mr-1.5" /> Add {quantityValue || 0} to Cart

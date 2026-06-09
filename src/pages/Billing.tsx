@@ -126,6 +126,7 @@ import MobileCatalog from '@/components/billing/MobileCatalog';
 import { Capacitor } from '@capacitor/core';
 import LoyaltyRedeemDialog from '@/components/billing/LoyaltyRedeemDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
+import NumericKeyboard from '@/components/billing/NumericKeyboard';
 
 // Safe icon map — avoids the broken `icons` bulk export from lucide-react
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -152,6 +153,7 @@ export default function Billing() {
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
   const { desktopLayout, mobileLayout, listDensity } = usePosLayout();
+  const isMobile = useIsMobile();
   const { isTrial, isActive, isExpired, canCreateBill, planName, loading: subscriptionLoading } = useSubscription();
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -1490,7 +1492,8 @@ export default function Billing() {
             <Input type="number" placeholder="Enter quantity..." value={quantityDialogValue}
               onChange={(e) => setQuantityDialogValue(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleQuantityDialogConfirm(); }}
-              className="text-lg h-12 text-center" autoFocus min={1} />
+              className="text-lg h-12 text-center" autoFocus={!isMobile} min={1}
+              inputMode={isMobile ? "none" : undefined} />
             {/* Add Case button — shown when product has a case size configured */}
             {quantityDialogProduct && Number((quantityDialogProduct as any).items_per_case || 0) > 0 && (
               <Button variant="outline" className="w-full gap-2" onClick={() => {
@@ -1505,6 +1508,14 @@ export default function Billing() {
                   </span>
                 )}
               </Button>
+            )}
+            {isMobile && (
+              <NumericKeyboard
+                value={quantityDialogValue}
+                onChange={setQuantityDialogValue}
+                onConfirm={handleQuantityDialogConfirm}
+                className="mt-2"
+              />
             )}
           </div>
           <DialogFooter className="gap-2">
