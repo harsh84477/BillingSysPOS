@@ -92,6 +92,9 @@ export function MobileQuickBilling() {
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
   const [quantityDialogProduct, setQuantityDialogProduct] = useState<any>(null);
   const [quantityValue, setQuantityValue] = useState('1');
+  const [cartQuantityDialogOpen, setCartQuantityDialogOpen] = useState(false);
+  const [cartQuantityDialogItemId, setCartQuantityDialogItemId] = useState<string | null>(null);
+  const [cartQuantityDialogValue, setCartQuantityDialogValue] = useState('');
 
   // Long-press support for grid view
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -198,6 +201,32 @@ export function MobileQuickBilling() {
         ? { ...i, quantity: Math.max(1, i.quantity + delta) }
         : i
     ));
+  };
+
+  const setQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
+    setCart(cart.map(i =>
+      i.product_id === productId ? { ...i, quantity } : i
+    ));
+  };
+
+  const handleCartQuantityClick = (productId: string, currentQty: number) => {
+    setCartQuantityDialogItemId(productId);
+    setCartQuantityDialogValue(currentQty.toString());
+    setCartQuantityDialogOpen(true);
+  };
+
+  const handleCartQuantityDialogConfirm = () => {
+    const qty = parseInt(cartQuantityDialogValue, 10);
+    if (cartQuantityDialogItemId && !isNaN(qty) && qty > 0) {
+      setQuantity(cartQuantityDialogItemId, qty);
+    }
+    setCartQuantityDialogOpen(false);
+    setCartQuantityDialogItemId(null);
+    setCartQuantityDialogValue('');
   };
 
   const updatePrice = (productId: string, newPrice: number) => {
@@ -438,7 +467,13 @@ export function MobileQuickBilling() {
                     <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => updateQuantity(item.product_id, -1)}>
                       <Minus className="w-3 h-3" />
                     </Button>
-                    <span className="font-bold text-sm w-8 text-center">{item.quantity}</span>
+                    <span 
+                      className="font-bold text-sm w-8 text-center cursor-pointer hover:bg-muted/40 rounded py-0.5 select-none"
+                      onClick={() => handleCartQuantityClick(item.product_id, item.quantity)}
+                      title="Click to edit quantity"
+                    >
+                      {item.quantity}
+                    </span>
                     <Button variant="ghost" size="icon" className="h-7 w-7 rounded-md" onClick={() => updateQuantity(item.product_id, 1)}>
                       <Plus className="w-3 h-3" />
                     </Button>
@@ -704,7 +739,13 @@ export function MobileQuickBilling() {
                             <Button variant="ghost" size="icon" className="h-6 w-6 rounded" onClick={() => updateQuantity(item.product_id, -1)}>
                               <Minus className="w-3 h-3" />
                             </Button>
-                            <span className="font-bold text-sm w-6 text-center">{item.quantity}</span>
+                            <span 
+                              className="font-bold text-sm w-6 text-center cursor-pointer hover:bg-muted/40 rounded py-0.5 select-none"
+                              onClick={() => handleCartQuantityClick(item.product_id, item.quantity)}
+                              title="Click to edit quantity"
+                            >
+                              {item.quantity}
+                            </span>
                             <Button variant="ghost" size="icon" className="h-6 w-6 rounded" onClick={() => updateQuantity(item.product_id, 1)}>
                               <Plus className="w-3 h-3" />
                             </Button>
@@ -947,6 +988,41 @@ export function MobileQuickBilling() {
           </div>
           <Button className="w-full h-11 rounded-xl font-bold text-sm" onClick={confirmQuantityDialog} disabled={!quantityValue || Number(quantityValue) < 1}>
             <Plus className="h-4 w-4 mr-1.5" /> Add {quantityValue || 0} to Cart
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit Cart Quantity Dialog ── */}
+      <Dialog open={cartQuantityDialogOpen} onOpenChange={setCartQuantityDialogOpen}>
+        <DialogContent className="max-w-[300px] w-[calc(100%-2rem)] mx-auto rounded-2xl p-5">
+          <DialogHeader>
+            <DialogTitle className="text-center text-sm font-bold">Edit Quantity</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2 text-center">
+            <p className="text-xs text-muted-foreground line-clamp-1">
+              {cart.find(item => item.product_id === cartQuantityDialogItemId)?.product_name}
+            </p>
+            <Input
+              type="number"
+              value={cartQuantityDialogValue}
+              onChange={(e) => setCartQuantityDialogValue(e.target.value)}
+              className="text-2xl h-14 text-center font-bold rounded-xl"
+              autoFocus={!isMobile}
+              min={1}
+              onKeyDown={(e) => e.key === 'Enter' && handleCartQuantityDialogConfirm()}
+              inputMode={isMobile ? "none" : undefined}
+            />
+            {isMobile && (
+              <NumericKeyboard
+                value={cartQuantityDialogValue}
+                onChange={setCartQuantityDialogValue}
+                onConfirm={handleCartQuantityDialogConfirm}
+                className="mt-2"
+              />
+            )}
+          </div>
+          <Button className="w-full h-11 rounded-xl font-bold text-sm" onClick={handleCartQuantityDialogConfirm} disabled={!cartQuantityDialogValue || Number(cartQuantityDialogValue) < 1}>
+            Update Quantity
           </Button>
         </DialogContent>
       </Dialog>
