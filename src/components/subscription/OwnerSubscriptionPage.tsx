@@ -85,47 +85,47 @@ export default function OwnerSubscriptionPage({ businessId = 1 }) { // defaultin
                     <CardDescription>Upgrade to unlock more features for your business</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
+                    <div className="overflow-x-auto scrollbar-thin">
+                        <table className="w-full text-sm border-collapse min-w-[320px] md:min-w-[600px]">
                             <thead className="bg-muted">
                                 <tr>
-                                    <th className="p-3 font-semibold">Features</th>
+                                    <th className="p-2 sm:p-3 font-semibold text-xs text-muted-foreground w-28 sm:w-40 md:w-44 sticky left-0 bg-muted z-10 border-r border-border/80 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">Features</th>
                                     {allPlans.filter(p => p.is_active).map(p => (
-                                        <th key={p.id} className={`p-3 font-semibold text-center ${p.name.includes('Yearly') ? 'text-primary uppercase text-xs tracking-wider' : ''}`}>
-                                            {p.name.includes('Yearly') && <span className="block text-[10px] bg-primary/20 rounded mb-1 py-0.5">⭐ Best Value</span>}
-                                            {p.name}<br/>
-                                            <span className="text-xs font-normal">₹{p.price}</span>
+                                        <th key={p.id} className={`p-2 sm:p-3 font-semibold text-center min-w-[100px] sm:min-w-[130px] md:min-w-[150px] ${p.name.includes('Yearly') ? 'text-primary uppercase text-[10px] tracking-wider' : ''}`}>
+                                            {p.name.includes('Yearly') && <span className="block text-[8px] bg-primary/20 rounded mb-1 py-0.5 font-bold">⭐ Best Value</span>}
+                                            <p className="font-bold text-xs sm:text-sm">{p.name}</p>
+                                            <span className="text-[10px] sm:text-xs font-normal text-muted-foreground">₹{p.price}</span>
                                         </th>
                                     ))}
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
-                                <tr>
-                                    <td className="p-3 font-medium">Export Feature</td>
+                                <tr className="hover:bg-muted/20 transition-colors">
+                                    <td className="p-2 sm:p-3 text-xs font-medium sticky left-0 bg-background z-10 border-r border-border/80 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] w-28 sm:w-40 md:w-44 truncate sm:whitespace-normal leading-tight">Export Feature</td>
                                     {allPlans.filter(p => p.is_active).map(p => (
-                                        <td key={p.id} className="p-3 text-center">{p.features?.exports_enabled === 'true' ? '✅' : '❌'}</td>
+                                        <td key={p.id} className="p-2 sm:p-3 text-center min-w-[100px] sm:min-w-[130px] md:min-w-[150px] text-xs">{p.features?.exports_enabled === 'true' ? '✅' : '❌'}</td>
                                     ))}
                                 </tr>
-                                <tr>
-                                    <td className="p-3 font-medium">Max Bills/Day</td>
+                                <tr className="hover:bg-muted/20 transition-colors">
+                                    <td className="p-2 sm:p-3 text-xs font-medium sticky left-0 bg-background z-10 border-r border-border/80 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] w-28 sm:w-40 md:w-44 truncate sm:whitespace-normal leading-tight">Max Bills/Day</td>
                                     {allPlans.filter(p => p.is_active).map(p => (
-                                        <td key={p.id} className="p-3 text-center">{p.features?.max_bills_per_day === '-1' ? 'Unlimited' : p.features?.max_bills_per_day}</td>
+                                        <td key={p.id} className="p-2 sm:p-3 text-center min-w-[100px] sm:min-w-[130px] md:min-w-[150px] text-xs">{p.features?.max_bills_per_day === '-1' ? 'Unlimited' : p.features?.max_bills_per_day}</td>
                                     ))}
                                 </tr>
-                                <tr>
-                                    <td className="p-3 font-medium">Max Items Limit</td>
+                                <tr className="hover:bg-muted/20 transition-colors">
+                                    <td className="p-2 sm:p-3 text-xs font-medium sticky left-0 bg-background z-10 border-r border-border/80 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] w-28 sm:w-40 md:w-44 truncate sm:whitespace-normal leading-tight">Max Items Limit</td>
                                     {allPlans.filter(p => p.is_active).map(p => (
-                                        <td key={p.id} className="p-3 text-center">{p.features?.max_items === '-1' ? 'Unlimited' : p.features?.max_items}</td>
+                                        <td key={p.id} className="p-2 sm:p-3 text-center min-w-[100px] sm:min-w-[130px] md:min-w-[150px] text-xs">{p.features?.max_items === '-1' ? 'Unlimited' : p.features?.max_items}</td>
                                     ))}
                                 </tr>
-                                <tr>
-                                    <td className="p-3 font-medium">Action</td>
+                                <tr className="hover:bg-muted/20 transition-colors">
+                                    <td className="p-2 sm:p-3 text-xs font-medium sticky left-0 bg-background z-10 border-r border-border/80 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] w-28 sm:w-40 md:w-44 truncate sm:whitespace-normal leading-tight">Action</td>
                                     {allPlans.filter(p => p.is_active).map(p => (
-                                        <td key={p.id} className="p-3 text-center">
+                                        <td key={p.id} className="p-2 sm:p-3 text-center min-w-[100px] sm:min-w-[130px] md:min-w-[150px] text-xs">
                                             <Button 
                                                 variant={p.name.includes('Yearly') ? 'default' : 'outline'} 
                                                 size="sm" 
-                                                className="w-full"
+                                                className="w-full text-xs h-8"
                                                 onClick={() => handleUpgrade(p.id)}
                                                 disabled={subscription?.plan_name === p.name}
                                             >

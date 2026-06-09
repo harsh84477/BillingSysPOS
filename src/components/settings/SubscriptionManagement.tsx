@@ -193,16 +193,18 @@ export default function SubscriptionManagement() {
           </CardTitle>
           <CardDescription>See what each plan offers and choose the best for your business</CardDescription>
         </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm border-collapse min-w-[500px]">
+        <CardContent className="p-0 overflow-x-auto scrollbar-thin">
+          <table className="w-full text-sm border-collapse min-w-[320px] md:min-w-[600px]">
             <thead>
-              <tr className="bg-muted/40 border-b">
-                <th className="p-3 text-left text-xs font-semibold text-muted-foreground w-44 sticky left-0 bg-muted/40 z-10">Feature</th>
+              <tr className="bg-muted border-b">
+                <th className="p-2 sm:p-3 text-left text-xs font-semibold text-muted-foreground w-28 sm:w-40 md:w-44 sticky left-0 bg-muted z-10 border-r border-border/80 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                  Feature
+                </th>
                 {plans.map((plan: any) => {
                   const isCurrent = plan.name === subscription?.plan?.name;
                   const badge = plan.features?.badge;
                   return (
-                    <th key={plan.id} className={cn("p-3 text-center min-w-[130px]", isCurrent && "bg-primary/5")}>
+                    <th key={plan.id} className={cn("p-2 sm:p-3 text-center min-w-[100px] sm:min-w-[130px] md:min-w-[150px] vertical-align-top", isCurrent && "bg-primary/5")}>
                       <div className="space-y-1">
                         {badge && (
                           <Badge className="text-[8px] mb-1 bg-violet-100 text-violet-700 border-violet-200">
@@ -212,8 +214,8 @@ export default function SubscriptionManagement() {
                         {isCurrent && (
                           <Badge className="text-[8px] mb-1 bg-emerald-100 text-emerald-700 border-emerald-200">Current</Badge>
                         )}
-                        <p className="font-bold text-sm">{plan.name}</p>
-                        <p className="text-xs font-normal text-muted-foreground">
+                        <p className="font-bold text-xs sm:text-sm">{plan.name}</p>
+                        <p className="text-[10px] sm:text-xs font-normal text-muted-foreground">
                           {plan.price > 0 ? formatCurrency(plan.price) : 'Free'}
                           {plan.billing_period !== 'lifetime' && plan.billing_period !== 'free' && plan.price > 0
                             ? ` / ${plan.billing_period.replace('_', ' ')}` : ''}
@@ -227,14 +229,18 @@ export default function SubscriptionManagement() {
             <tbody>
               {FEATURE_ROWS.map(row => (
                 <tr key={row.key} className="border-b border-slate-100 dark:border-slate-800 hover:bg-muted/20 transition-colors">
-                  <td className="p-3 text-xs font-medium sticky left-0 bg-background z-10 flex items-center gap-2">
-                    <row.icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    {row.label}
+                  <td className="p-2 sm:p-3 text-xs font-medium sticky left-0 bg-background z-10 border-r border-border/80 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] w-28 sm:w-40 md:w-44">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <row.icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="truncate sm:whitespace-normal leading-tight" title={row.label}>
+                        {row.label}
+                      </span>
+                    </div>
                   </td>
                   {plans.map((plan: any) => {
                     const isCurrent = plan.name === subscription?.plan?.name;
                     return (
-                      <td key={plan.id} className={cn("p-3 text-center", isCurrent && "bg-primary/5")}>
+                      <td key={plan.id} className={cn("p-2 sm:p-3 text-center min-w-[100px] sm:min-w-[130px] md:min-w-[150px]", isCurrent && "bg-primary/5")}>
                         <CellValue value={plan.features?.[row.key]} />
                       </td>
                     );
