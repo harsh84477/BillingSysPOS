@@ -44,7 +44,7 @@ export default function WhatsApp() {
   });
   const [redirectTemplate, setRedirectTemplate] = useState(() => {
     return localStorage.getItem('spos_whatsapp_template') || 
-      '🧾 *Invoice from {store_name}*\n\nHi {customer_name},\nHere is your invoice *{invoice_no}* for amount *{amount}*.\n\nThank you for shopping with us! 🙏';
+      '🧾 *Invoice from {store_name}*\n\nHi {customer_name},\nHere is your invoice *{invoice_no}* for amount *{amount}*.\n\n*Items Purchased:*\n{product_details}\n\nThank you for shopping with us! 🙏';
   });
 
   // Meta Cloud API Settings
@@ -357,6 +357,7 @@ export default function WhatsApp() {
                         <span className="bg-background border px-1.5 py-0.5 rounded text-foreground font-semibold">&#123;customer_name&#125;</span>
                         <span className="bg-background border px-1.5 py-0.5 rounded text-foreground font-semibold">&#123;invoice_no&#125;</span>
                         <span className="bg-background border px-1.5 py-0.5 rounded text-foreground font-semibold">&#123;amount&#125;</span>
+                        <span className="bg-background border px-1.5 py-0.5 rounded text-foreground font-semibold">&#123;product_details&#125;</span>
                       </div>
                     </div>
                   </div>

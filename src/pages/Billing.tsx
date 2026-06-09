@@ -787,19 +787,20 @@ export default function Billing() {
       const customTemplate = localStorage.getItem('spos_whatsapp_template');
       let msg = '';
       
+      let itemLines = '';
+      cart.forEach((item, i) => {
+        const total = item.unitPrice * item.quantity;
+        itemLines += `${i + 1}. ${item.name}\n   Qty: ${item.quantity} × ${currencySymbol}${item.unitPrice.toFixed(2)} = ${currencySymbol}${total.toFixed(2)}\n\n`;
+      });
+
       if (customTemplate) {
         msg = customTemplate
           .replace(/{store_name}/g, storeName)
           .replace(/{customer_name}/g, custName)
           .replace(/{invoice_no}/g, billNumber)
-          .replace(/{amount}/g, `${currencySymbol}${cartCalculations.total.toFixed(2)}`);
+          .replace(/{amount}/g, `${currencySymbol}${cartCalculations.total.toFixed(2)}`)
+          .replace(/{product_details}/g, itemLines.trim());
       } else {
-        let itemLines = '';
-        cart.forEach((item, i) => {
-          const total = item.unitPrice * item.quantity;
-          itemLines += `${i + 1}. ${item.name}\n   Qty: ${item.quantity} × ${currencySymbol}${item.unitPrice.toFixed(2)} = ${currencySymbol}${total.toFixed(2)}\n\n`;
-        });
-
         msg = `🧾 *Invoice from ${storeName}*\n\n`;
         msg += `Invoice No: ${billNumber}\n`;
         msg += `Customer: ${custName}\n`;
