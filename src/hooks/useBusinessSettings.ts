@@ -100,7 +100,6 @@ export interface BusinessSettings {
   checkout_save_enabled?: boolean;
   checkout_print_enabled?: boolean;
   checkout_save_print_enabled?: boolean;
-  checkout_whatsapp_enabled?: boolean;
   checkout_draft_enabled?: boolean;
   ask_quantity_first?: boolean;
   default_payment_method?: string;

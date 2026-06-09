@@ -35,7 +35,6 @@ const FEATURE_ROWS = [
   { key: 'allow_salesmen', label: 'Salesman Roles', icon: Users },
   { key: 'profit_reports', label: 'Profit Reports', icon: Sparkles },
   { key: 'sales_analytics', label: 'Sales Analytics', icon: Sparkles },
-  { key: 'whatsapp_integration', label: 'WhatsApp Integration', icon: Zap },
   { key: 'api_access', label: 'API Access', icon: Zap },
   { key: 'custom_branding', label: 'Custom Branding', icon: Crown },
   { key: 'support', label: 'Support Level', icon: Shield },

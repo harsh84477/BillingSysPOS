@@ -162,12 +162,6 @@ export default function Billing() {
   const [customerName, setCustomerName] = useState('');
   const [discountValue, setDiscountValue] = useState(0);
   const [applyGst, setApplyGst] = useState(true);
-
-  // WhatsApp state
-  const [whatsappPhoneDialogOpen, setWhatsappPhoneDialogOpen] = useState(false);
-  const [whatsappPhone, setWhatsappPhone] = useState('');
-  const [pendingWhatsappBillNumber, setPendingWhatsappBillNumber] = useState<string | null>(null);
-
   // Quick Add Customer state
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickAddName, setQuickAddName] = useState('');
@@ -694,161 +688,6 @@ export default function Billing() {
     printBillReceipt(billData, itemsData, settings);
   };
 
-  // ── WhatsApp Bill Function ──
-  const sendWhatsApp = (billNumber: string, phone: string) => {
-    const storeName = settings?.business_name || 'Our Store';
-    const custName = selectedCustomerId
-      ? customers.find(c => c.id === selectedCustomerId)?.name || customerName || 'Customer'
-      : customerName || 'Walk-in Customer';
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-
-    let paymentLabel = 'Cash';
-    if (paymentType === 'online') paymentLabel = 'UPI / Online';
-    else if (paymentType === 'split') paymentLabel = 'Split (Cash + Online)';
-    else if (paymentType === 'due') paymentLabel = 'Due / Credit';
-
-    // Clean phone number — strip everything except digits
-    let cleanPhone = phone.replace(/[^0-9]/g, '');
-    if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
-
-    const provider = localStorage.getItem('spos_whatsapp_provider') || 'wa_redirect';
-
-    if (provider === 'meta_api') {
-      const metaToken = localStorage.getItem('spos_whatsapp_meta_token') || '';
-      const metaPhoneId = localStorage.getItem('spos_whatsapp_meta_phone_id') || '';
-      const metaTemplateName = localStorage.getItem('spos_whatsapp_meta_template_name') || 'hello_world';
-      const metaLanguage = localStorage.getItem('spos_whatsapp_meta_language') || 'en_US';
-
-      if (!metaToken || !metaPhoneId) {
-        toast.error('WhatsApp API credentials missing! Falling back to WhatsApp Link...');
-        openRedirectLink(cleanPhone);
-        return;
-      }
-
-      // Prepare template payload
-      const templatePayload: any = {
-        messaging_product: 'whatsapp',
-        to: cleanPhone,
-        type: 'template',
-        template: {
-          name: metaTemplateName,
-          language: {
-            code: metaLanguage,
-          }
-        }
-      };
-
-      // Custom templates support body variables in order
-      if (metaTemplateName !== 'hello_world') {
-        const totalStr = `${currencySymbol}${cartCalculations.total.toFixed(2)}`;
-        templatePayload.template.components = [
-          {
-            type: 'body',
-            parameters: [
-              { type: 'text', text: custName },
-              { type: 'text', text: billNumber },
-              { type: 'text', text: totalStr },
-              { type: 'text', text: storeName },
-              { type: 'text', text: paymentLabel }
-            ]
-          }
-        ];
-      }
-
-      toast.promise(
-        fetch(`https://graph.facebook.com/v19.0/${metaPhoneId}/messages`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${metaToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(templatePayload)
-        }).then(async (res) => {
-          const resData = await res.json();
-          if (!res.ok) {
-            throw new Error(resData.error?.message || 'Meta API rejected request');
-          }
-          return resData;
-        }),
-        {
-          loading: 'Sending automated WhatsApp bill...',
-          success: 'WhatsApp bill sent successfully via Meta API!',
-          error: (err) => `Failed to send via Meta: ${err.message || 'Check credentials'}`
-        }
-      );
-
-    } else {
-      openRedirectLink(cleanPhone);
-    }
-
-    function openRedirectLink(phoneNo: string) {
-      const customTemplate = localStorage.getItem('spos_whatsapp_template');
-      let msg = '';
-      
-      let itemLines = '';
-      cart.forEach((item, i) => {
-        const total = item.unitPrice * item.quantity;
-        itemLines += `${i + 1}. ${item.name}\n   Qty: ${item.quantity} × ${currencySymbol}${item.unitPrice.toFixed(2)} = ${currencySymbol}${total.toFixed(2)}\n\n`;
-      });
-
-      if (customTemplate) {
-        msg = customTemplate
-          .replace(/{store_name}/g, storeName)
-          .replace(/{customer_name}/g, custName)
-          .replace(/{invoice_no}/g, billNumber)
-          .replace(/{amount}/g, `${currencySymbol}${cartCalculations.total.toFixed(2)}`)
-          .replace(/{product_details}/g, itemLines.trim());
-      } else {
-        msg = `🧾 *Invoice from ${storeName}*\n\n`;
-        msg += `Invoice No: ${billNumber}\n`;
-        msg += `Customer: ${custName}\n`;
-        msg += `Date: ${dateStr} ${timeStr}\n\n`;
-        msg += `*Items Purchased*\n`;
-        msg += `--------------------------------\n`;
-        msg += itemLines;
-        msg += `--------------------------------\n`;
-        msg += `Subtotal: ${currencySymbol}${cartCalculations.subtotal.toFixed(2)}\n`;
-        if (cartCalculations.discountAmount > 0) {
-          msg += `Discount: -${currencySymbol}${cartCalculations.discountAmount.toFixed(2)}\n`;
-        }
-        if (cartCalculations.taxAmount > 0) {
-          msg += `GST: ${currencySymbol}${cartCalculations.taxAmount.toFixed(2)}\n`;
-        }
-        msg += `\n*Total Amount: ${currencySymbol}${cartCalculations.total.toFixed(2)}*\n\n`;
-        msg += `Payment: ${paymentLabel}\n`;
-        if (settings?.gst_number) {
-          msg += `GST No: ${settings.gst_number}\n`;
-        }
-        if (settings?.address) {
-          msg += `Address: ${settings.address}\n`;
-        }
-        msg += `\nThank you for shopping with us 🙏`;
-      }
-
-      const encoded = encodeURIComponent(msg);
-      const url = `https://wa.me/${phoneNo}?text=${encoded}`;
-      window.open(url, '_blank');
-      toast.success('WhatsApp message prepared!');
-    }
-  };
-
-  const handleWhatsAppAfterSave = (billNumber: string) => {
-    // Check if we have a customer phone
-    const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
-    const customerPhone = customer?.phone?.trim();
-
-    if (customerPhone) {
-      sendWhatsApp(billNumber, customerPhone);
-    } else {
-      // Open phone dialog
-      setPendingWhatsappBillNumber(billNumber);
-      setWhatsappPhone('');
-      setWhatsappPhoneDialogOpen(true);
-    }
-  };
-
   // Build items payload from cart — guarantees product_name is never null
   const buildItemsPayload = () =>
     cart.map(item => {
@@ -867,7 +706,7 @@ export default function Billing() {
 
   // Create bill mutation with retry logic for duplicate key handling
   const createBillMutation = useMutation({
-    mutationFn: async (shouldPrint: boolean | 'whatsapp' | 'draft' | 'save-print') => {
+    mutationFn: async (shouldPrint: boolean | 'draft' | 'save-print') => {
       // Cart item validation — catch corrupt items before they hit the DB
       const invalidItem = cart.find(item => !item.productId || !item.name);
       if (invalidItem) {
@@ -1048,19 +887,7 @@ export default function Billing() {
       if ((shouldPrint === true || shouldPrint === 'save-print') && !isDraft && !isPendingOrder) {
         printBill(billNumber);
       }
-      
-      // Auto-send WhatsApp if enabled, or manually triggered
-      if (!isDraft && !isPendingOrder) {
-        const provider = localStorage.getItem('spos_whatsapp_provider') || 'wa_redirect';
-        const autoSendMeta = localStorage.getItem('spos_whatsapp_meta_auto_send') === 'true';
-        const autoSendRedirect = localStorage.getItem('spos_whatsapp_auto_send') === 'true';
 
-        if (shouldPrint === 'whatsapp') {
-          handleWhatsAppAfterSave(billNumber);
-        } else if ((provider === 'meta_api' && autoSendMeta) || (provider === 'wa_redirect' && autoSendRedirect)) {
-          handleWhatsAppAfterSave(billNumber);
-        }
-      }
 
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
@@ -1101,8 +928,6 @@ export default function Billing() {
         toast.success('Order generated! Visible in My Orders.');
       } else if (isDraft) {
         toast.success('Draft saved! Stock reserved. Resume from Draft Bills.');
-      } else if (shouldPrint === 'whatsapp') {
-        toast.success('Bill saved! Opening WhatsApp...');
       } else if (shouldPrint === 'save-print') {
         toast.success('Bill saved & printed!');
       } else {
@@ -1692,39 +1517,6 @@ export default function Billing() {
         </DialogContent>
       </Dialog>
 
-      {/* WhatsApp Phone Number Dialog */}
-      <Dialog open={whatsappPhoneDialogOpen} onOpenChange={(open) => { setWhatsappPhoneDialogOpen(open); if (!open) setPendingWhatsappBillNumber(null); }}>
-        <DialogContent className="sm:max-w-[380px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageCircle className="h-5 w-5 text-[#25D366]" /> Enter Customer Phone
-            </DialogTitle>
-            <DialogDescription className="py-1">
-              No phone number found for this customer. Enter a WhatsApp number to send the bill.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-muted-foreground bg-muted px-3 py-2 rounded-lg">+91</span>
-              <Input type="tel" placeholder="10 digit mobile number" value={whatsappPhone}
-                onChange={(e) => setWhatsappPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                onKeyDown={(e) => { if (e.key === 'Enter' && whatsappPhone.length === 10 && pendingWhatsappBillNumber) { sendWhatsApp(pendingWhatsappBillNumber, whatsappPhone); setWhatsappPhoneDialogOpen(false); setPendingWhatsappBillNumber(null); } }}
-                className="text-lg h-12 text-center font-mono tracking-wider flex-1" autoFocus maxLength={10} />
-            </div>
-            {whatsappPhone.length > 0 && whatsappPhone.length < 10 && (
-              <p className="text-xs text-destructive font-medium">Please enter a valid 10-digit number</p>
-            )}
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { setWhatsappPhoneDialogOpen(false); setPendingWhatsappBillNumber(null); }}>Cancel</Button>
-            <Button className="bg-[#25D366] hover:bg-[#128C7E] text-white"
-              disabled={whatsappPhone.length !== 10 || !pendingWhatsappBillNumber}
-              onClick={() => { if (pendingWhatsappBillNumber) { sendWhatsApp(pendingWhatsappBillNumber, whatsappPhone); setWhatsappPhoneDialogOpen(false); setPendingWhatsappBillNumber(null); } }}>
-              <MessageCircle className="mr-2 h-4 w-4" /> Send via WhatsApp
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 
@@ -1874,13 +1666,6 @@ export default function Billing() {
                 disabled={cart.length === 0 || createBillMutation.isPending}>
                 <Printer className="h-5 w-5" />
                 {createBillMutation.isPending ? 'Processing...' : 'Save & Print'}
-              </Button>
-              <Button variant="outline" className="w-full h-10 text-sm font-semibold gap-2 border-green-300 text-green-700 hover:bg-green-50"
-                onClick={() => createBillMutation.mutate('whatsapp')}
-                disabled={cart.length === 0 || createBillMutation.isPending}
-              >
-                <MessageCircle className="h-4 w-4" />
-                Send via WhatsApp
               </Button>
             </div>
           </div>
@@ -2344,21 +2129,6 @@ export default function Billing() {
                         Save & Print
                       </Button>
                     )}
-                    {(settings?.checkout_whatsapp_enabled ?? true) && (() => {
-                      const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
-                      const hasPhone = !!(customer?.phone?.trim());
-                      return (
-                        <Button
-                          className="flex-1 h-8 text-[11px] bg-[#25D366] hover:bg-[#128C7E] text-white"
-                          disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill || !hasPhone}
-                          onClick={() => createBillMutation.mutate('whatsapp')}
-                          title={hasPhone ? 'Send bill via WhatsApp' : 'Select a customer with phone number first'}
-                        >
-                          <MessageCircle className="mr-1 h-3 w-3" />
-                          WhatsApp
-                        </Button>
-                      );
-                    })()}
                   </div>
                   {(settings?.checkout_draft_enabled ?? true) && (
                     <Button
@@ -2641,21 +2411,6 @@ export default function Billing() {
                         Save & Print
                       </Button>
                     )}
-                    {(settings?.checkout_whatsapp_enabled ?? true) && (() => {
-                      const customer = selectedCustomerId ? customers.find(c => c.id === selectedCustomerId) : null;
-                      const hasPhone = !!(customer?.phone?.trim());
-                      return (
-                        <Button
-                          className="flex-1 h-8 text-[11px] bg-[#25D366] hover:bg-[#128C7E] text-white"
-                          disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill || !hasPhone}
-                          onClick={() => createBillMutation.mutate('whatsapp')}
-                          title={hasPhone ? 'Send via WhatsApp' : 'Select a customer with phone'}
-                        >
-                          <MessageCircle className="mr-1 h-3 w-3" />
-                          WhatsApp
-                        </Button>
-                      );
-                    })()}
                   </div>
                   {(settings?.checkout_draft_enabled ?? true) && (
                     <Button

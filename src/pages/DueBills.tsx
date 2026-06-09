@@ -28,19 +28,17 @@ import {
 } from '@/components/ui/table';
 import {
     AlertCircle, CreditCard, Eye, Search, IndianRupee, Calendar,
-    CheckCircle2, Clock, AlertTriangle, MessageCircle,
+    CheckCircle2, Clock, AlertTriangle,
 } from 'lucide-react';
 import { format, isPast, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import PaymentReminderTab from '@/components/bills/PaymentReminderTab';
 
 export default function DueBills() {
     const { businessId } = useAuth();
     const queryClient = useQueryClient();
     const [search, setSearch] = useState('');
-    const [activeTab, setActiveTab] = useState<'bills' | 'reminders'>('bills');
     const [payDialog, setPayDialog] = useState<{ bill: any; method: 'cash' | 'upi' | 'split' | 'due'; cashAmount: string | number; onlineAmount: string | number } | null>(null);
 
     // Fetch unpaid/partial bills
@@ -176,41 +174,7 @@ export default function DueBills() {
                     </h1>
                     <p className="spos-page-subhead">Manage unpaid & partially paid bills</p>
                 </div>
-                {/* Tab Toggle */}
-                <div className="flex items-center gap-1 bg-muted rounded-xl p-1 shrink-0">
-                    <button
-                        onClick={() => setActiveTab('bills')}
-                        className={cn(
-                            'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all',
-                            activeTab === 'bills'
-                                ? 'bg-background text-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground'
-                        )}
-                    >
-                        Bills
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('reminders')}
-                        className={cn(
-                            'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1',
-                            activeTab === 'reminders'
-                                ? 'bg-background text-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground'
-                        )}
-                    >
-                        <MessageCircle className="h-3 w-3" />
-                        Reminders
-                    </button>
-                </div>
             </div>
-
-            {/* Reminders Tab */}
-            {activeTab === 'reminders' && (
-                <PaymentReminderTab dueBills={dueBills} />
-            )}
-
-            {/* Bills Tab Content */}
-            {activeTab === 'bills' && (<>
 
             {/* Summary Cards */}
             <div className="grid grid-cols-3 gap-3">
@@ -461,7 +425,6 @@ export default function DueBills() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            </>)}
         </div>
     );
 }

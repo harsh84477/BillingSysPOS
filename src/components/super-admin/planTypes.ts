@@ -63,7 +63,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
     label: 'Premium Features',
     icon: 'sparkles',
     features: [
-      { key: 'whatsapp_integration', label: 'WhatsApp Integration', description: 'Send bills via WhatsApp' },
+
       { key: 'api_access', label: 'API Access', description: 'REST API for integrations' },
       { key: 'ai_reports', label: 'AI Reports', description: 'AI-powered business insights' },
       { key: 'custom_branding', label: 'Custom Branding', description: 'Your own logo & colors' },
@@ -204,7 +204,7 @@ export interface PlanFeatures {
   profit_reports?: boolean;
   sales_analytics?: boolean;
   inventory_reports?: boolean;
-  whatsapp_integration?: boolean;
+
   api_access?: boolean;
   ai_reports?: boolean;
   custom_branding?: boolean;
