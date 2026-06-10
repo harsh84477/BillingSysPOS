@@ -10,9 +10,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Printer } from 'lucide-react';
+import { Printer, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { printBillReceipt } from './BillReceiptPrint';
+import { DEFAULT_WHATSAPP_TEMPLATE, formatWhatsAppMessage } from '@/lib/whatsappConfig';
 import {
   Table,
   TableBody,
@@ -89,6 +90,41 @@ export function BillDetailsDialog({ bill, open, onOpenChange }: BillDetailsDialo
     }
   };
 
+  const handleWhatsAppShare = () => {
+    if (!bill) return;
+
+    const phone = bill.customers?.phone || '';
+    const cleanPhone = phone.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+
+    const template = localStorage.getItem('invoice_adda_whatsapp_template') || DEFAULT_WHATSAPP_TEMPLATE;
+
+    const message = formatWhatsAppMessage(
+      {
+        bill_number: bill.bill_number,
+        created_at: bill.created_at,
+        customer_name: bill.customers?.name || 'Walk-in Customer',
+        subtotal: bill.subtotal,
+        discount_amount: bill.discount_amount,
+        tax_amount: bill.tax_amount,
+        total_amount: bill.total_amount,
+        payment_status: bill.status === 'completed' ? 'Paid' : bill.status === 'cancelled' ? 'Cancelled' : 'Draft',
+        payment_method: 'Cash/UPI',
+      },
+      billItems.map((item) => ({
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+      })),
+      settings || {},
+      template
+    );
+
+    const url = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
   if (!bill) return null;
 
   return (
@@ -100,10 +136,23 @@ export function BillDetailsDialog({ bill, open, onOpenChange }: BillDetailsDialo
               <DialogTitle className="text-xl">Bill Details</DialogTitle>
               <p className="text-sm font-bold text-muted-foreground mr-1">#{bill.bill_number}</p>
             </div>
-            <Button size="sm" variant="outline" onClick={handlePrint} className="h-9 px-4">
-              <Printer className="mr-2 h-4 w-4" />
-              Print
-            </Button>
+            <div className="flex items-center gap-2">
+              {localStorage.getItem('invoice_adda_whatsapp_enabled') !== 'false' && (
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={handleWhatsAppShare} 
+                  className="h-9 px-4 text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-900/50 dark:hover:bg-emerald-950/20"
+                >
+                  <MessageSquare className="mr-2 h-4 w-4 fill-emerald-600 dark:fill-emerald-400 text-emerald-600 dark:text-emerald-400" />
+                  WhatsApp
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={handlePrint} className="h-9 px-4">
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 

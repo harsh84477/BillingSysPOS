@@ -49,13 +49,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Search, FileText, Calendar, Eye, Trash2, Download, Filter, X, TrendingUp, Receipt, Clock, Printer, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { Search, FileText, Calendar, Eye, Trash2, Download, Filter, X, TrendingUp, Receipt, Clock, Printer, ChevronRight, CheckCircle2, MessageSquare } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import { exportStyledExcel } from '@/lib/exportToExcel';
 import { exportPdf } from '@/lib/exportPdf';
 import { BillDetailsDialog } from '@/components/bills/BillDetailsDialog';
 import { printBillReceipt } from '@/components/bills/BillReceiptPrint';
+import { DEFAULT_WHATSAPP_TEMPLATE, formatWhatsAppMessage } from '@/lib/whatsappConfig';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -217,6 +218,44 @@ export default function BillsHistory() {
       printBillReceipt(bill, items, settings);
     } catch (error) {
       toast({ title: 'Error loading bill items', variant: 'destructive' });
+    }
+  };
+
+  const handleWhatsAppShare = async (bill: Bill) => {
+    try {
+      const items = await fetchBillItems(bill.id);
+      const phone = (bill as any).customers?.phone || '';
+      const cleanPhone = phone.replace(/\D/g, '');
+      const formattedPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+
+      const template = localStorage.getItem('invoice_adda_whatsapp_template') || DEFAULT_WHATSAPP_TEMPLATE;
+
+      const message = formatWhatsAppMessage(
+        {
+          bill_number: bill.bill_number,
+          created_at: bill.created_at,
+          customer_name: (bill as any).customers?.name || 'Walk-in Customer',
+          subtotal: bill.subtotal,
+          discount_amount: bill.discount_amount,
+          tax_amount: bill.tax_amount,
+          total_amount: bill.total_amount,
+          payment_status: bill.status === 'completed' ? 'Paid' : bill.status === 'cancelled' ? 'Cancelled' : 'Draft',
+          payment_method: 'Cash/UPI',
+        },
+        items.map((item) => ({
+          product_name: item.product_name,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+        })),
+        settings || {},
+        template
+      );
+
+      const url = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`;
+      window.open(url, '_blank');
+    } catch (error) {
+      toast({ title: 'Error generating WhatsApp share link', variant: 'destructive' });
     }
   };
 
@@ -665,6 +704,17 @@ export default function BillsHistory() {
                           <CheckCircle2 className="h-3.5 w-3.5" />
                         </Button>
                       )}
+                      {localStorage.getItem('invoice_adda_whatsapp_enabled') !== 'false' && (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 text-emerald-600 dark:text-emerald-400" 
+                          onClick={() => handleWhatsAppShare(bill)}
+                          title="Share on WhatsApp"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5 fill-emerald-600 dark:fill-emerald-400 text-emerald-600 dark:text-emerald-400" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePrintBill(bill)}>
                         <Printer className="h-3.5 w-3.5" />
                       </Button>
@@ -732,6 +782,17 @@ export default function BillsHistory() {
                                 title="Open Draft Order"
                               >
                                 <CheckCircle2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {localStorage.getItem('invoice_adda_whatsapp_enabled') !== 'false' && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => handleWhatsAppShare(bill)} 
+                                className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300"
+                                title="Share on WhatsApp"
+                              >
+                                <MessageSquare className="h-4 w-4 fill-emerald-600 dark:fill-emerald-400 text-emerald-600 dark:text-emerald-400" />
                               </Button>
                             )}
                             <Button variant="ghost" size="icon" onClick={() => handlePrintBill(bill)} title="Print Bill">

@@ -126,6 +126,7 @@ import MobileCatalog from '@/components/billing/MobileCatalog';
 import { Capacitor } from '@capacitor/core';
 import LoyaltyRedeemDialog from '@/components/billing/LoyaltyRedeemDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { DEFAULT_WHATSAPP_TEMPLATE, formatWhatsAppMessage } from '@/lib/whatsappConfig';
 
 // Safe icon map — avoids the broken `icons` bulk export from lucide-react
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -709,6 +710,61 @@ export default function Billing() {
     generateBillNumber().then(setPreviewBillNumber);
   }, []);
 
+  // Checkout success dialog state
+  const [successBillInfo, setSuccessBillInfo] = useState<{
+    billNumber: string;
+    total: number;
+    customerName: string;
+    customerPhone?: string;
+    items: any[];
+    subtotal: number;
+    discount_amount: number;
+    tax_amount: number;
+    payment_method: string;
+    isOffline: boolean;
+  } | null>(null);
+
+  const handleWhatsAppShareSuccess = (info: any) => {
+    const phone = info.customerPhone || '';
+    const cleanPhone = phone.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+
+    const template = localStorage.getItem('invoice_adda_whatsapp_template') || DEFAULT_WHATSAPP_TEMPLATE;
+
+    const message = formatWhatsAppMessage(
+      {
+        bill_number: info.billNumber,
+        created_at: new Date(),
+        customer_name: info.customerName,
+        subtotal: info.subtotal,
+        discount_amount: info.discount_amount,
+        tax_amount: info.tax_amount,
+        total_amount: info.total,
+        payment_status: 'Paid',
+        payment_method: info.payment_method || 'Cash',
+      },
+      info.items,
+      settings || {},
+      template
+    );
+
+    const url = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
+  const handlePrintSuccess = (info: any) => {
+    const billData = {
+      bill_number: info.billNumber,
+      subtotal: info.subtotal,
+      discount_amount: info.discount_amount,
+      tax_amount: info.tax_amount,
+      total_amount: info.total,
+      created_at: new Date().toISOString(),
+      customers: { name: info.customerName, phone: info.customerPhone }
+    };
+    printBillReceipt(billData, info.items, settings);
+  };
+
   // Print bill function using unified central component
   const printBill = (billNumber: string) => {
     const billData = {
@@ -975,6 +1031,36 @@ export default function Billing() {
       throw new Error('Failed to generate unique bill number after multiple attempts');
     },
     onSuccess: ({ billNumber, shouldPrint, isDraft, isPendingOrder, isOffline }: any) => {
+      // Setup customer details for receipt preview/share
+      const selectedCustomer = selectedCustomerId
+        ? customers.find((c) => c.id === selectedCustomerId)
+        : customerName.trim()
+          ? { name: customerName.trim(), phone: '' }
+          : { name: 'Walk-in Customer', phone: '' };
+
+      const itemsData = cart.map((item) => ({
+        product_name: item.name,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        total_price: item.unitPrice * item.quantity,
+      }));
+
+      // Set checkout success dialog info if not saving as draft/pending order
+      if (!isDraft && !isPendingOrder) {
+        setSuccessBillInfo({
+          billNumber,
+          total: cartCalculations.total,
+          customerName: selectedCustomer?.name || 'Walk-in Customer',
+          customerPhone: (selectedCustomer as any)?.phone || '',
+          items: itemsData,
+          subtotal: cartCalculations.subtotal,
+          discount_amount: cartCalculations.discountAmount,
+          tax_amount: cartCalculations.taxAmount,
+          payment_method: paymentType,
+          isOffline,
+        });
+      }
+
       if ((shouldPrint === true || shouldPrint === 'save-print') && !isDraft && !isPendingOrder && !isOffline) {
         printBill(billNumber);
       }
@@ -1592,6 +1678,75 @@ export default function Billing() {
             <Button variant="outline" onClick={() => { setCostWarningDialogOpen(false); setPendingPriceInfo(null); }}>Cancel & Revert</Button>
             <Button variant="destructive" onClick={confirmCostWarning}>Accept Price</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Checkout Success Dialog */}
+      <Dialog open={!!successBillInfo} onOpenChange={(open) => { if (!open) setSuccessBillInfo(null); }}>
+        <DialogContent className="max-w-[400px] w-[calc(100%-2rem)] mx-auto rounded-2xl p-6 text-center">
+          <DialogHeader>
+            <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center text-green-600 dark:text-green-400 mb-2 animate-bounce">
+              ✓
+            </div>
+            <DialogTitle className="text-center text-lg font-bold">
+              {successBillInfo?.isOffline ? 'Saved Offline' : 'Sale Completed!'}
+            </DialogTitle>
+            <DialogDescription className="text-center text-xs">
+              {successBillInfo?.isOffline 
+                ? 'Your invoice is queued offline and will sync to the server automatically.'
+                : 'The invoice has been created and registered on the server.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          {successBillInfo && (
+            <div className="py-4 space-y-3">
+              <div className="bg-muted/30 rounded-xl p-4 space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Invoice No:</span>
+                  <span className="font-bold">#{successBillInfo.billNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Customer:</span>
+                  <span className="font-semibold">{successBillInfo.customerName}</span>
+                </div>
+                <div className="flex justify-between border-t border-dashed pt-1.5 mt-1.5">
+                  <span className="font-bold text-base">Total Paid:</span>
+                  <span className="font-black text-emerald-600 text-lg">
+                    {currencySymbol}{Number(successBillInfo.total).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2">
+                {localStorage.getItem('invoice_adda_whatsapp_enabled') !== 'false' && (
+                  <Button
+                    className="w-full bg-[#25D366] hover:bg-[#20ba59] text-white flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-semibold shadow-md border-none"
+                    onClick={() => handleWhatsAppShareSuccess(successBillInfo)}
+                  >
+                    <MessageCircle className="h-4 w-4 fill-white text-white" />
+                    Share on WhatsApp
+                  </Button>
+                )}
+                {!successBillInfo.isOffline && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-11 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
+                    onClick={() => handlePrintSuccess(successBillInfo)}
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print Receipt
+                  </Button>
+                )}
+                <Button
+                  className="w-full h-11 rounded-xl text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
+                  onClick={() => setSuccessBillInfo(null)}
+                >
+                  New Sale
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

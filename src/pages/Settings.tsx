@@ -28,9 +28,9 @@ import CategoriesTab from '@/components/settings/tabs/CategoriesTab';
 import StaffTab from '@/components/settings/tabs/StaffTab';
 import PrintSettingsTab from '@/components/settings/PrintSettingsTab';
 import POSTab from '@/components/settings/tabs/POSTab';
-import AppThemeTab from '@/components/settings/tabs/AppThemeTab';
 import LoyaltyTab from '@/components/settings/tabs/LoyaltyTab';
 import SubscriptionManagement from '@/components/settings/SubscriptionManagement';
+import WhatsappTab from '@/components/settings/tabs/WhatsappTab';
 
 const TABS = [
   { id: 'account', label: 'Account', icon: '👤' },
@@ -44,6 +44,7 @@ const TABS = [
   { id: 'pos', label: 'POS', icon: '🖥️' },
   { id: 'appearance', label: 'App Theme', icon: '🎨' },
   { id: 'loyalty', label: 'Loyalty', icon: '⭐' },
+  { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
 ];
 
 export default function Settings() {
@@ -95,6 +96,7 @@ export default function Settings() {
               {activeTab === 'pos' && <POSTab />}
               {activeTab === 'appearance' && <AppThemeTab />}
               {activeTab === 'loyalty' && <LoyaltyTab />}
+              {activeTab === 'whatsapp' && <WhatsappTab />}
             </div>
           </div>
         )}
