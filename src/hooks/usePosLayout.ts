@@ -1,72 +1,80 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 export function usePosLayout(settings?: any) {
-  const [desktopLayout, setDesktopLayout] = useState<'grid' | 'list'>(() => {
+  const [desktopLayout, setDesktopLayoutState] = useState<'grid' | 'list'>(() => {
     return (localStorage.getItem('pos_desktop_layout') as 'grid' | 'list') || 'grid';
   });
 
-  const [mobileLayout, setMobileLayout] = useState<'grid' | 'list'>(() => {
+  const [mobileLayout, setMobileLayoutState] = useState<'grid' | 'list'>(() => {
     return (localStorage.getItem('pos_mobile_layout') as 'grid' | 'list') || 'grid';
   });
 
-  const [listDensity, setListDensity] = useState<'compact' | 'comfortable' | 'spacious'>(() => {
+  const [listDensity, setListDensityState] = useState<'compact' | 'comfortable' | 'spacious'>(() => {
     return (localStorage.getItem('pos_list_density') as 'compact' | 'comfortable' | 'spacious') || 'comfortable';
   });
 
-  const [desktopColumns, setDesktopColumns] = useState<number>(() => {
+  const [desktopColumns, setDesktopColumnsState] = useState<number>(() => {
     const val = localStorage.getItem('pos_desktop_columns');
-    return val ? parseInt(val, 10) : 0; // 0 means use default
+    return val ? parseInt(val, 10) : 0;
   });
 
-  const [gridGap, setGridGap] = useState<number>(() => {
+  const [gridGap, setGridGapState] = useState<number>(() => {
     const val = localStorage.getItem('pos_grid_gap');
-    return val ? parseInt(val, 10) : 0; // 0 means use default
+    return val ? parseInt(val, 10) : 0;
   });
 
-  const [mobileColumns, setMobileColumns] = useState<number>(() => {
+  const [mobileColumns, setMobileColumnsState] = useState<number>(() => {
     const val = localStorage.getItem('pos_mobile_columns');
-    return val ? parseInt(val, 10) : 0; // 0 means use default
+    return val ? parseInt(val, 10) : 0;
   });
 
-  const [askQuantityFirst, setAskQuantityFirst] = useState<boolean>(() => {
+  const [askQuantityFirst, setAskQuantityFirstState] = useState<boolean | null>(() => {
     const val = localStorage.getItem('pos_ask_quantity_first');
-    return val === 'true';
+    return val !== null ? val === 'true' : null;
   });
 
-  useEffect(() => {
-    localStorage.setItem('pos_desktop_layout', desktopLayout);
-  }, [desktopLayout]);
+  // Safe setter wrappers that also persist to local storage
+  const setDesktopLayout = (val: 'grid' | 'list') => {
+    setDesktopLayoutState(val);
+    localStorage.setItem('pos_desktop_layout', val);
+  };
 
-  useEffect(() => {
-    localStorage.setItem('pos_mobile_layout', mobileLayout);
-  }, [mobileLayout]);
+  const setMobileLayout = (val: 'grid' | 'list') => {
+    setMobileLayoutState(val);
+    localStorage.setItem('pos_mobile_layout', val);
+  };
 
-  useEffect(() => {
-    localStorage.setItem('pos_list_density', listDensity);
-  }, [listDensity]);
+  const setListDensity = (val: 'compact' | 'comfortable' | 'spacious') => {
+    setListDensityState(val);
+    localStorage.setItem('pos_list_density', val);
+  };
 
-  useEffect(() => {
-    localStorage.setItem('pos_desktop_columns', String(desktopColumns));
-  }, [desktopColumns]);
+  const setDesktopColumns = (val: number) => {
+    setDesktopColumnsState(val);
+    localStorage.setItem('pos_desktop_columns', String(val));
+  };
 
-  useEffect(() => {
-    localStorage.setItem('pos_grid_gap', String(gridGap));
-  }, [gridGap]);
+  const setGridGap = (val: number) => {
+    setGridGapState(val);
+    localStorage.setItem('pos_grid_gap', String(val));
+  };
 
-  useEffect(() => {
-    localStorage.setItem('pos_mobile_columns', String(mobileColumns));
-  }, [mobileColumns]);
+  const setMobileColumns = (val: number) => {
+    setMobileColumnsState(val);
+    localStorage.setItem('pos_mobile_columns', String(val));
+  };
 
-  useEffect(() => {
-    localStorage.setItem('pos_ask_quantity_first', String(askQuantityFirst));
-  }, [askQuantityFirst]);
+  const setAskQuantityFirst = (val: boolean) => {
+    setAskQuantityFirstState(val);
+    localStorage.setItem('pos_ask_quantity_first', String(val));
+  };
 
   // Resolve values against settings defaults
   const resolvedDesktopColumns = desktopColumns > 0 ? desktopColumns : (settings?.product_columns ?? 5);
   const resolvedGridGap = gridGap > 0 ? gridGap : (settings?.grid_gap ?? 8);
   const resolvedMobileColumns = mobileColumns > 0 ? mobileColumns : (settings?.mobile_product_columns ?? 3);
   
-  const resolvedAskQuantityFirst = localStorage.getItem('pos_ask_quantity_first') !== null
+  const resolvedAskQuantityFirst = askQuantityFirst !== null
     ? askQuantityFirst
     : (settings?.ask_quantity_first ?? false);
 
@@ -83,7 +91,7 @@ export function usePosLayout(settings?: any) {
     setGridGap,
     mobileColumns,
     setMobileColumns,
-    askQuantityFirst,
+    askQuantityFirst: resolvedAskQuantityFirst, // return the resolved value directly for simpler state usage
     setAskQuantityFirst,
     resolvedDesktopColumns,
     resolvedGridGap,
