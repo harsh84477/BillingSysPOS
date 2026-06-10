@@ -826,12 +826,12 @@
 
 /* ─── POS Product Grid ─── */
 .pos-product-grid {
-  --pos-cols: 2;
+  --pos-cols: var(--pos-cols-mobile, 2);
 }
 
 @media (min-width: 640px) {
   .pos-product-grid {
-    --pos-cols: 3;
+    --pos-cols: var(--pos-cols-tablet, 3);
   }
 }
 

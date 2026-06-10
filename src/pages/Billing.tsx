@@ -153,7 +153,11 @@ export default function Billing() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
-  const { desktopLayout, mobileLayout, listDensity } = usePosLayout();
+  const { 
+    desktopLayout, mobileLayout, listDensity, 
+    resolvedDesktopColumns, resolvedGridGap, resolvedMobileColumns, 
+    resolvedAskQuantityFirst 
+  } = usePosLayout(settings);
   const isMobile = useIsMobile();
   const { isTrial, isActive, isExpired, canCreateBill, planName, loading: subscriptionLoading } = useSubscription();
 
@@ -385,7 +389,7 @@ export default function Billing() {
   // Add to cart - round prices to avoid floating point issues
   const addToCart = (product: typeof products[0]) => {
     // 💡 NEW: Respect "Ask quantity first" setting
-    if (settings?.ask_quantity_first) {
+    if (resolvedAskQuantityFirst) {
       setQuantityDialogProduct(product);
       setQuantityDialogValue('');
       setQuantityDialogOpen(true);
@@ -1186,8 +1190,8 @@ export default function Billing() {
   };
 
   // ─── Dynamic grid settings from admin ───
-  const productColumns = settings?.product_columns ?? 5;
-  const gridGap = settings?.grid_gap ?? 8;
+  const productColumns = resolvedDesktopColumns;
+  const gridGap = resolvedGridGap;
   const buttonSize = settings?.product_button_size ?? 'medium';
   const showStockBadge = settings?.show_stock_badge ?? true;
   const showProductCode = settings?.show_product_code ?? false;
@@ -2108,6 +2112,8 @@ export default function Billing() {
                 gridTemplateColumns: `repeat(var(--pos-cols, ${productColumns}), minmax(0, 1fr))`,
                 gap: `${gridGap}px`,
                 ['--pos-cols-desktop' as string]: productColumns,
+                ['--pos-cols-tablet' as string]: resolvedMobileColumns,
+                ['--pos-cols-mobile' as string]: Math.max(2, resolvedMobileColumns - 1),
               } : {}}
             >
               {filteredProducts.map((product) => (

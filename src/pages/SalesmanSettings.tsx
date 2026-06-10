@@ -1,18 +1,19 @@
 /**
  * pages/SalesmanSettings.tsx — Dedicated settings for salesman role
  * - App Theme: Light themes & Dark themes separated
- * - Quick Bill Layout: Grid / List
+ * - Grid & Sizes: Layout and sizing configuration for POS screen
  * - Billing Preferences: Ask Quantity First toggle
  */
-import React, { useState } from 'react';
+import React from 'react';
 import { useTheme, ThemeName } from '@/contexts/ThemeContext';
+import { usePosLayout } from '@/hooks/usePosLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import {
   Settings, Palette, LayoutGrid, List, Check, Sun, Moon,
-  MousePointerClick, Hash, Package,
+  MousePointerClick, Hash, Package, Columns, Gap, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AccountTab from '@/components/settings/tabs/AccountTab';
@@ -37,28 +38,24 @@ const darkThemes: {
   { name: 'Midnight Blue',  value: 'midnight-blue',  color: '#60a5fa', bg: '#0c1222' },
 ];
 
-type BillLayout = 'grid' | 'list';
-
 export default function SalesmanSettings() {
   const { theme: currentTheme, setTheme } = useTheme();
-  const [billLayout, setBillLayout] = useState<BillLayout>(() =>
-    (localStorage.getItem('salesman_bill_layout') as BillLayout) || 'grid'
-  );
-  const [askQuantityFirst, setAskQuantityFirst] = useState<boolean>(() =>
-    localStorage.getItem('salesman_ask_quantity_first') === 'true'
-  );
-
-  const handleLayoutChange = (layout: BillLayout) => {
-    setBillLayout(layout);
-    localStorage.setItem('salesman_bill_layout', layout);
-  };
-
-  const handleAskQuantityFirst = (value: boolean) => {
-    setAskQuantityFirst(value);
-    localStorage.setItem('salesman_ask_quantity_first', String(value));
-  };
+  
+  const {
+    desktopLayout, setDesktopLayout,
+    mobileLayout, setMobileLayout,
+    listDensity, setListDensity,
+    desktopColumns, setDesktopColumns,
+    gridGap, setGridGap,
+    mobileColumns, setMobileColumns,
+    askQuantityFirst, setAskQuantityFirst
+  } = usePosLayout();
 
   const isDarkTheme = darkThemes.some(t => t.value === currentTheme);
+
+  const currentDesktopCols = desktopColumns > 0 ? desktopColumns : 5;
+  const currentMobileCols = mobileColumns > 0 ? mobileColumns : 3;
+  const currentGridGap = gridGap > 0 ? gridGap : 8;
 
   const ThemeButton = ({ opt, isDark }: { opt: typeof lightThemes[0]; isDark: boolean }) => {
     const active = currentTheme === opt.value;
@@ -149,71 +146,141 @@ export default function SalesmanSettings() {
         </CardContent>
       </Card>
 
-      {/* ═══ Quick Bill Layout ═══ */}
+      {/* ═══ Grid & Sizes (POS Customizer) ═══ */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <LayoutGrid className="h-4 w-4 text-primary" /> Quick Bill Layout
+            <LayoutGrid className="h-4 w-4 text-primary" /> Grid & Sizes
           </CardTitle>
-          <CardDescription className="text-xs">Choose how products appear in Quick Bill</CardDescription>
+          <CardDescription className="text-xs">Configure product grid and sizes for POS screen</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3">
-            {/* Grid option */}
-            <button
-              onClick={() => handleLayoutChange('grid')}
-              className={cn(
-                'rounded-xl border-2 p-4 text-left transition-all',
-                billLayout === 'grid' ? 'border-primary bg-primary/5 shadow-md' : 'border-border hover:border-primary/30'
-              )}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <div className={cn('p-2 rounded-lg', billLayout === 'grid' ? 'bg-primary/10' : 'bg-muted')}>
-                  <LayoutGrid className={cn('h-5 w-5', billLayout === 'grid' ? 'text-primary' : 'text-muted-foreground')} />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">Grid View</p>
-                  <p className="text-[10px] text-muted-foreground">Card layout with images</p>
-                </div>
-                {billLayout === 'grid' && <Badge className="ml-auto text-[10px]">Active</Badge>}
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <h4 className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground">Visual Layout</h4>
+            
+            {/* Desktop Layout */}
+            <div className="flex items-center justify-between py-1 border-b border-border/50">
+              <div>
+                <p className="text-xs font-semibold">Desktop Layout</p>
+                <p className="text-[10px] text-muted-foreground">List or Grid view for computer</p>
               </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[1, 2, 3, 4, 5, 6].map(i => (
-                  <div key={i} className="aspect-square rounded-md bg-muted/60 flex items-center justify-center">
-                    <div className="w-3 h-3 rounded bg-muted-foreground/10" />
-                  </div>
-                ))}
-              </div>
-            </button>
+              <select 
+                value={desktopLayout} 
+                onChange={(e) => setDesktopLayout(e.target.value as any)}
+                className="w-32 bg-background border border-input rounded-lg px-2 py-1 text-xs outline-none cursor-pointer hover:bg-muted/40 transition-colors"
+              >
+                <option value="grid">Grid View</option>
+                <option value="list">List View</option>
+              </select>
+            </div>
 
-            {/* List option */}
-            <button
-              onClick={() => handleLayoutChange('list')}
-              className={cn(
-                'rounded-xl border-2 p-4 text-left transition-all',
-                billLayout === 'list' ? 'border-primary bg-primary/5 shadow-md' : 'border-border hover:border-primary/30'
-              )}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <div className={cn('p-2 rounded-lg', billLayout === 'list' ? 'bg-primary/10' : 'bg-muted')}>
-                  <List className={cn('h-5 w-5', billLayout === 'list' ? 'text-primary' : 'text-muted-foreground')} />
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">List View</p>
-                  <p className="text-[10px] text-muted-foreground">Compact rows with actions</p>
-                </div>
-                {billLayout === 'list' && <Badge className="ml-auto text-[10px]">Active</Badge>}
+            {/* Mobile Layout */}
+            <div className="flex items-center justify-between py-1 border-b border-border/50">
+              <div>
+                <p className="text-xs font-semibold">Mobile Layout</p>
+                <p className="text-[10px] text-muted-foreground">List or Grid view for mobile screen</p>
               </div>
-              <div className="space-y-1.5">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="h-5 rounded bg-muted/60 flex items-center px-2 gap-2">
-                    <div className="w-3 h-3 rounded bg-muted-foreground/10" />
-                    <div className="flex-1 h-2 rounded bg-muted-foreground/10" />
-                    <div className="w-6 h-2 rounded bg-muted-foreground/10" />
-                  </div>
-                ))}
+              <select 
+                value={mobileLayout} 
+                onChange={(e) => setMobileLayout(e.target.value as any)}
+                className="w-32 bg-background border border-input rounded-lg px-2 py-1 text-xs outline-none cursor-pointer hover:bg-muted/40 transition-colors"
+              >
+                <option value="grid">Grid View</option>
+                <option value="list">List View</option>
+              </select>
+            </div>
+
+            {/* List View Density */}
+            <div className="flex items-center justify-between py-1">
+              <div>
+                <p className="text-xs font-semibold">List View Density</p>
+                <p className="text-[10px] text-muted-foreground">Size of components in List View</p>
               </div>
-            </button>
+              <select 
+                value={listDensity} 
+                onChange={(e) => setListDensity(e.target.value as any)}
+                className="w-32 bg-background border border-input rounded-lg px-2 py-1 text-xs outline-none cursor-pointer hover:bg-muted/40 transition-colors"
+              >
+                <option value="compact">Compact</option>
+                <option value="comfortable">Comfortable</option>
+                <option value="spacious">Spacious</option>
+              </select>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-3">
+            <h4 className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground">Grid Configurations</h4>
+            
+            {/* Desktop Columns */}
+            <div className="flex items-center justify-between py-1 border-b border-border/50">
+              <div>
+                <p className="text-xs font-semibold">Desktop Columns</p>
+                <p className="text-[10px] text-muted-foreground">Number of product columns (2–8) in Grid View</p>
+              </div>
+              <div className="flex items-center gap-1.5 bg-muted/30 rounded-lg p-0.5 border border-border/50">
+                <button
+                  onClick={() => setDesktopColumns(Math.max(2, currentDesktopCols - 1))}
+                  className="h-7 w-7 rounded-md bg-card border border-border flex items-center justify-center font-bold text-xs hover:bg-muted active:scale-95 transition-all"
+                >
+                  −
+                </button>
+                <span className="w-8 text-center text-xs font-mono font-bold">{currentDesktopCols}</span>
+                <button
+                  onClick={() => setDesktopColumns(Math.min(8, currentDesktopCols + 1))}
+                  className="h-7 w-7 rounded-md bg-card border border-border flex items-center justify-center font-bold text-xs hover:bg-muted active:scale-95 transition-all"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Grid Gap */}
+            <div className="flex items-center justify-between py-1 border-b border-border/50">
+              <div>
+                <p className="text-xs font-semibold">Grid Gap</p>
+                <p className="text-[10px] text-muted-foreground">Spacing between cards (px)</p>
+              </div>
+              <div className="flex items-center gap-1.5 bg-muted/30 rounded-lg p-0.5 border border-border/50">
+                <button
+                  onClick={() => setGridGap(Math.max(4, currentGridGap - 1))}
+                  className="h-7 w-7 rounded-md bg-card border border-border flex items-center justify-center font-bold text-xs hover:bg-muted active:scale-95 transition-all"
+                >
+                  −
+                </button>
+                <span className="w-8 text-center text-xs font-mono font-bold">{currentGridGap}px</span>
+                <button
+                  onClick={() => setGridGap(Math.min(30, currentGridGap + 1))}
+                  className="h-7 w-7 rounded-md bg-card border border-border flex items-center justify-center font-bold text-xs hover:bg-muted active:scale-95 transition-all"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Columns */}
+            <div className="flex items-center justify-between py-1">
+              <div>
+                <p className="text-xs font-semibold">Mobile Columns</p>
+                <p className="text-[10px] text-muted-foreground">Number of columns on mobile in Grid View</p>
+              </div>
+              <div className="flex items-center gap-1.5 bg-muted/30 rounded-lg p-0.5 border border-border/50">
+                <button
+                  onClick={() => setMobileColumns(Math.max(2, currentMobileCols - 1))}
+                  className="h-7 w-7 rounded-md bg-card border border-border flex items-center justify-center font-bold text-xs hover:bg-muted active:scale-95 transition-all"
+                >
+                  −
+                </button>
+                <span className="w-8 text-center text-xs font-mono font-bold">{currentMobileCols}</span>
+                <button
+                  onClick={() => setMobileColumns(Math.min(4, currentMobileCols + 1))}
+                  className="h-7 w-7 rounded-md bg-card border border-border flex items-center justify-center font-bold text-xs hover:bg-muted active:scale-95 transition-all"
+                >
+                  +
+                </button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -240,7 +307,7 @@ export default function SalesmanSettings() {
                 </p>
               </div>
             </div>
-            <Switch checked={askQuantityFirst} onCheckedChange={handleAskQuantityFirst} />
+            <Switch checked={askQuantityFirst} onCheckedChange={setAskQuantityFirst} />
           </div>
 
           {/* Hint cards */}
@@ -251,11 +318,11 @@ export default function SalesmanSettings() {
             <div className="space-y-1.5 text-[11px] text-muted-foreground">
               <div className="flex items-start gap-2">
                 <LayoutGrid className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                <span><strong>Grid View:</strong> Tap to add 1 item. Long-press to enter quantity.</span>
+                <span><strong>Grid View:</strong> Tap cards to select products. Gaps and sizes can be adjusted above.</span>
               </div>
               <div className="flex items-start gap-2">
                 <List className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                <span><strong>List View:</strong> Use +1 and +Case buttons for quick adding.</span>
+                <span><strong>List View:</strong> Choose Compact, Comfortable, or Spacious densities to fit your screen.</span>
               </div>
             </div>
           </div>
