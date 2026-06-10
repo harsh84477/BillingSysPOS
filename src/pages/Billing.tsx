@@ -1065,6 +1065,38 @@ export default function Billing() {
         printBill(billNumber);
       }
 
+      if (shouldPrint === 'whatsapp') {
+        const phone = (selectedCustomer as any)?.phone || '';
+        const cleanPhone = phone.replace(/\D/g, '');
+        const formattedPhone = cleanPhone.length === 10 ? '91' + cleanPhone : cleanPhone;
+        const template = localStorage.getItem('invoice_adda_whatsapp_template') || DEFAULT_WHATSAPP_TEMPLATE;
+
+        const message = formatWhatsAppMessage(
+          {
+            bill_number: billNumber,
+            created_at: new Date(),
+            customer_name: selectedCustomer?.name || 'Walk-in Customer',
+            subtotal: cartCalculations.subtotal,
+            discount_amount: cartCalculations.discountAmount,
+            tax_amount: cartCalculations.taxAmount,
+            total_amount: cartCalculations.total,
+            payment_status: 'Paid',
+            payment_method: paymentType,
+          },
+          itemsData.map((item) => ({
+            product_name: item.product_name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price,
+          })),
+          settings || {},
+          template
+        );
+
+        const url = `https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank');
+      }
+
 
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['bills'] });
@@ -2362,6 +2394,16 @@ export default function Billing() {
                         Save & Print
                       </Button>
                     )}
+                    {localStorage.getItem('invoice_adda_whatsapp_enabled') !== 'false' && (
+                      <Button
+                        className="flex-1 h-8 text-[11px] bg-[#25D366] hover:bg-[#20ba59] text-white border-none"
+                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                        onClick={() => createBillMutation.mutate('whatsapp')}
+                      >
+                        <MessageCircle className="mr-1 h-3 w-3 fill-white text-white" />
+                        WhatsApp
+                      </Button>
+                    )}
                   </div>
                   {(settings?.checkout_draft_enabled ?? true) && (
                     <Button
@@ -2642,6 +2684,16 @@ export default function Billing() {
                       >
                         <Printer className="mr-1 h-3 w-3" />
                         Save & Print
+                      </Button>
+                    )}
+                    {localStorage.getItem('invoice_adda_whatsapp_enabled') !== 'false' && (
+                      <Button
+                        className="flex-1 h-8 text-[11px] bg-[#25D366] hover:bg-[#20ba59] text-white border-none"
+                        disabled={cart.length === 0 || createBillMutation.isPending || !canCreateBill}
+                        onClick={() => createBillMutation.mutate('whatsapp')}
+                      >
+                        <MessageCircle className="mr-1 h-3 w-3 fill-white text-white" />
+                        WhatsApp
                       </Button>
                     )}
                   </div>
