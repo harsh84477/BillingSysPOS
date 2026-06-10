@@ -36,6 +36,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
+    icon: path.join(__dirname, 'public', 'icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -43,6 +44,11 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
     },
   });
+
+  // Set Windows taskbar/notification icon
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('Invoice Adda');
+  }
 
   // Always load dist/index.html — works both in dev (npx electron .) and packaged
   mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));

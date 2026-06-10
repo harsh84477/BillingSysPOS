@@ -101,6 +101,7 @@
     "jsdom": "^20.0.3",
     "postcss": "^8.5.6",
     "puppeteer": "^24.39.1",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
@@ -110,12 +111,16 @@
   "build": {
     "appId": "com.invoiceadda.app",
     "productName": "Invoice Adda",
+    "copyright": "Copyright © 2026 Invoice Adda",
     "directories": {
       "output": "release"
     },
     "files": [
       "dist/**/*",
-      "electron.cjs"
+      "electron.cjs",
+      "preload.cjs",
+      "public/icon.png",
+      "public/icon.ico"
     ],
     "win": {
       "target": "nsis",
@@ -124,7 +129,9 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+      "createDesktopShortcut": true,
+      "installerIcon": "public/icon.ico",
+      "uninstallerIcon": "public/icon.ico"
     },
     "asar": false
   }
