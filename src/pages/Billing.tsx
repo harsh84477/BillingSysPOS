@@ -387,9 +387,9 @@ export default function Billing() {
   }, [cart, discountValue, loyaltyDiscount, taxRate, applyGst]);
 
   // Add to cart - round prices to avoid floating point issues
-  const addToCart = (product: typeof products[0]) => {
+  const addToCart = (product: typeof products[0], bypassAskQty = false) => {
     // 💡 NEW: Respect "Ask quantity first" setting
-    if (resolvedAskQuantityFirst) {
+    if (resolvedAskQuantityFirst && !bypassAskQty) {
       setQuantityDialogProduct(product);
       setQuantityDialogValue('');
       setQuantityDialogOpen(true);
@@ -1419,7 +1419,7 @@ export default function Billing() {
           )}
           <Button 
             className={cn("font-bold gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-emerald-200 shadow-none border", btnHeight)}
-            onClick={(e) => { e.stopPropagation(); addToCart(product); }}
+            onClick={(e) => { e.stopPropagation(); addToCart(product, true); }}
             disabled={isOutOfStock}
           >
             <Plus className={cn(ds === 'compact' ? 'h-3 w-3' : 'h-3.5 w-3.5')} /> ADD 1
