@@ -26,7 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBusinessSettings } from '@/hooks/useBusinessSettings';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useBilling } from '@/hooks/useBillingSystem';
 import { usePosLayout } from '@/hooks/usePosLayout';
 import { Button } from '@/components/ui/button';
@@ -150,6 +150,7 @@ interface CartItem {
 export default function Billing() {
   const { user, businessId, billPrefix, userRole, isAdmin, isManager, isSalesman } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { data: settings } = useBusinessSettings();
   const { desktopLayout, mobileLayout, listDensity } = usePosLayout();
@@ -205,6 +206,19 @@ export default function Billing() {
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+
+  // Auto-select customer from navigation state (Take Order from Stores page)
+  React.useEffect(() => {
+    const state = location.state as { customerId?: string; customerName?: string } | null;
+    if (state?.customerId) {
+      setSelectedCustomerId(state.customerId);
+      if (state.customerName) {
+        setCustomerName(state.customerName);
+      }
+      // Clear the state so it doesn't persist on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // Long-press quantity dialog state
   const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);

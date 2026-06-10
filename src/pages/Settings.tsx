@@ -31,6 +31,7 @@ import POSTab from '@/components/settings/tabs/POSTab';
 import LoyaltyTab from '@/components/settings/tabs/LoyaltyTab';
 import SubscriptionManagement from '@/components/settings/SubscriptionManagement';
 import WhatsappTab from '@/components/settings/tabs/WhatsappTab';
+import AppThemeTab from '@/components/settings/tabs/AppThemeTab';
 
 const TABS = [
   { id: 'account', label: 'Account', icon: '👤' },

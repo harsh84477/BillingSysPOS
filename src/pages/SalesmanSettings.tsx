@@ -40,7 +40,7 @@ const darkThemes: {
 type BillLayout = 'grid' | 'list';
 
 export default function SalesmanSettings() {
-  const { currentTheme, setTheme } = useTheme();
+  const { theme: currentTheme, setTheme } = useTheme();
   const [billLayout, setBillLayout] = useState<BillLayout>(() =>
     (localStorage.getItem('salesman_bill_layout') as BillLayout) || 'grid'
   );

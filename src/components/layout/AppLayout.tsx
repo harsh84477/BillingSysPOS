@@ -103,7 +103,7 @@ const navSections: NavSection[] = [
     label: 'BILLING',
     items: [
       { name: 'New Bill', href: '/billing', icon: ShoppingCart, roles: ['owner', 'manager', 'cashier'] },
-      { name: 'Quick Bill', href: '/salesman-billing', icon: ShoppingCart, roles: ['salesman'] },
+      { name: 'New Bill', href: '/salesman-billing', icon: ShoppingCart, roles: ['salesman'] },
       { name: 'Draft Bills', href: '/draft-bills', icon: FileText, roles: ['owner', 'manager', 'cashier'], badgeKey: 'drafts' },
       { name: 'My Orders', href: '/salesman-my-orders', icon: ClipboardList, roles: ['salesman'] },
       { name: 'Salesman Orders', href: '/salesman-orders', icon: ClipboardList, roles: ['owner', 'manager'] },
@@ -169,7 +169,7 @@ const mobileNavItems = [
 const pageTitleMap: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/billing': 'New Bill',
-  '/salesman-billing': 'Quick Bill',
+  '/salesman-billing': 'New Bill',
   '/draft-bills': 'Draft Bills',
   '/bills-history': 'Bills History',
   '/salesman-orders': 'Salesman Orders',
