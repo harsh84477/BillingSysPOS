@@ -45,3 +45,7 @@ android/app/*.iml
 check_buckets_temp.js
 test_query.mjs
 test_page.js
+
+# Windows installer binaries (exceeds GitHub 100MB limit)
+windows-installer/
+
